@@ -31,7 +31,7 @@ function pianoFromRow(r) {
   const p = { ...DEFAULT_PIANO };
   for (const k of Object.keys(DEFAULT_PIANO)) if (r[k] != null) p[k] = r[k];
   p.voci = fixVoci(r.voci);
-  ["stipendio", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
+  ["stipendio", "entrate_extra", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
   // Dati della prima versione (senza mensilità): la ricavo dagli importi
   if (r.mensilita == null) p.mensilita = N(p.quattordicesima) > 0 ? 14 : N(p.tredicesima) > 0 ? 13 : 12;
   if (![12, 13, 14].includes(p.mensilita)) p.mensilita = 13;
@@ -58,7 +58,7 @@ function depositoFromRow(r) {
 }
 const depositoRow = (d) => ({ saldo_iniziale: N(d.saldo_iniziale), periodi: fixPeriodi(d.periodi), tasse: N(d.tasse), bollo: N(d.bollo) });
 function meseFromRow(r) {
-  return { stipendio: N(r.stipendio), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
+  return { stipendio: N(r.stipendio), entrate_extra: r.entrate_extra == null ? null : N(r.entrate_extra), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
 }
 
 /** Piano per chi parte da zero: inizia dal mese corrente e non ha fine. */
@@ -123,7 +123,7 @@ export function savePiano() {
     const p = state.piano;
     return sb.from("piani").upsert({
       user_id: state.user.id,
-      stipendio: N(p.stipendio), risparmio: N(p.risparmio), soglia: N(p.soglia),
+      stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), soglia: N(p.soglia),
       tredicesima: N(p.tredicesima), quattordicesima: N(p.quattordicesima),
       mensilita: N(p.mensilita), mese_13: N(p.mese_13), mese_14: N(p.mese_14), senza_fine: !!p.senza_fine,
       extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
@@ -142,7 +142,7 @@ export function saveMese(id) {
     const m = state.mesi[id];
     return sb.from("mesi").upsert({
       user_id: state.user.id, mese: id,
-      stipendio: N(m.stipendio), risparmio: N(m.risparmio), prelievo: N(m.prelievo),
+      stipendio: N(m.stipendio), entrate_extra: m.entrate_extra == null ? null : N(m.entrate_extra), risparmio: N(m.risparmio), prelievo: N(m.prelievo),
       extra: m.extra == null ? null : N(m.extra), voci: cleanVoci(m.voci), updated_at: now(),
     });
   });

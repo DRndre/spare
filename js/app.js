@@ -213,6 +213,7 @@ function vociEditor(container, getVoci, change, prefix) {
 
 function formula(m, c, extraNome) {
   let f = `<b>${eur(m.stipendio)}</b> stipendio`;
+  if (N(m.entrate_extra)) f += ` + <b>${eur(m.entrate_extra)}</b> entrate extra`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
   return f + ` − spese <b>${eur(c.spese)}</b> − al deposito <b>${eur(c.toDep)}</b>`;
 }
@@ -241,7 +242,7 @@ function fillBar(bar, leg, m, c) {
 function ensureMese(id) {
   if (!state.mesi[id]) {
     const t = monthData(id, state.piano, state.mesi);
-    state.mesi[id] = { stipendio: t.stipendio, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
+    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: t.entrate_extra, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
   }
   return state.mesi[id];
 }
@@ -284,6 +285,7 @@ function renderMesi(v) {
 
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
+  fs.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Altre entrate di questo mese" }));
   if (ex) fs.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? "Va nel conto deposito" : "Resta in tasca" }));
   fs.appendChild(moneyField("Risparmio al conto deposito", m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
   fs.appendChild(moneyField("Prelievo dal conto deposito", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: "Se tiri fuori soldi dal deposito" }));
@@ -383,10 +385,11 @@ function renderModello(v) {
   const p = state.piano, ms = months();
   const nCustom = ms.filter((id) => state.mesi[id]).length;
   v.insertAdjacentHTML("beforeend", `<p class="hint flush">Il Modello è il mese tipo: i mesi che non hai personalizzato lo seguono. ${nCustom ? `Mesi personalizzati: ${nCustom} (non cambiano se modifichi qui).` : "Nessun mese personalizzato."}</p>`);
-  const m = { stipendio: N(p.stipendio), risparmio: N(p.risparmio), voci: p.voci, prelievo: 0, extra: 0 };
+  const m = { stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), voci: p.voci, prelievo: 0, extra: 0 };
   v.appendChild(hero(m, calcMonth(m, p), ""));
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
+  fs.appendChild(moneyField("Entrate extra", N(p.entrate_extra), (n) => { p.entrate_extra = n; savePiano(); }, { id: "t-entr", hint: "Seconde entrate più o meno fisse (0 se non ne hai)" }));
   fs.appendChild(moneyField("Risparmio al conto deposito", N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
   fs.appendChild(moneyField("Soglia resto in tasca (facoltativa)", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "Ti avvisa se il resto scende sotto questa cifra. 0 = nessun avviso" }));
   v.appendChild(fs);
@@ -458,7 +461,7 @@ function render() {
   window.scrollTo(0, y);
 }
 const currentMonth = () => (view === "modello"
-  ? { stipendio: N(state.piano.stipendio), risparmio: N(state.piano.risparmio), voci: state.piano.voci, prelievo: 0, extra: 0 }
+  ? { stipendio: N(state.piano.stipendio), entrate_extra: N(state.piano.entrate_extra), risparmio: N(state.piano.risparmio), voci: state.piano.voci, prelievo: 0, extra: 0 }
   : monthData(sel, state.piano, state.mesi));
 function updateGroupSums() {
   const voci = currentMonth().voci;

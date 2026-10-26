@@ -72,3 +72,7 @@ create policy "solo i miei dati" on public.mesi
 
 grant select, insert, update, delete on public.piani, public.depositi, public.mesi to authenticated;
 revoke all on public.piani, public.depositi, public.mesi from anon;
+
+-- Entrate extra (aggiunte dopo)
+alter table public.piani add column if not exists entrate_extra numeric not null default 0;
+alter table public.mesi add column if not exists entrate_extra numeric;  -- null = come il Modello

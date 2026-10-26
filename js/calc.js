@@ -13,6 +13,7 @@ const MNL = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Lugl
 
 export const DEFAULT_PIANO = {
   stipendio: 0,
+  entrate_extra: 0, // altre entrate mensili più o meno fisse
   risparmio: 0,
   soglia: 0, // 0 = nessuna soglia: avviso solo se il resto va sotto zero
   tredicesima: 0,
@@ -106,20 +107,21 @@ export function monthData(id, piano, mesi) {
     return {
       custom: true,
       stipendio: N(d.stipendio),
+      entrate_extra: d.entrate_extra == null ? N(piano.entrate_extra) : N(d.entrate_extra),
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
       voci: d.voci || [],
     };
   }
-  return { custom: false, stipendio: N(piano.stipendio), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: piano.voci || [] };
+  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: N(piano.entrate_extra), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: piano.voci || [] };
 }
 
 export function calcMonth(m, piano) {
   const spese = round(m.voci.reduce((a, v) => a + N(v.importo), 0));
   const extraDep = piano.extra_al_deposito ? N(m.extra) : 0;
   const toDep = round(N(m.risparmio) + extraDep);
-  const entrate = round(N(m.stipendio) + N(m.extra));
+  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + N(m.extra));
   const resto = round(entrate - spese - toDep);
   return { spese, toDep, entrate, resto, extraDep };
 }
