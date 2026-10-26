@@ -283,10 +283,7 @@ function renderDeposito(v) {
   const ms = months(), dep = state.deposito;
   const d = simulaDeposito(ms, state.piano, state.mesi, dep);
   const periodi = ordinaPeriodi(dep.periodi);
-    v.insertAdjacentHTML("beforeend", `<div class="tiles">
-    <div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del conto deposito</span></div>
-    <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito ? " + 13ª e 14ª" : ""} meno prelievi</span></div>
-    <div class="tile"><span class="label">Interessi netti</span><span class="v">${eur(d.totNetto)}</span><span class="hint">Dopo le tasse; bollo stimato ${eur(d.totBollo)}</span></div></div>
+  v.insertAdjacentHTML("beforeend", `<div class="tiles" id="dep-tiles">${depTiles(d, ms)}</div>
     ${periodi.length ? "" : `<div class="note">Aggiungi qui sotto il tasso del tuo conto deposito: finché non c'è, gli interessi restano a zero.</div>`}`);
 
   // Tassi nel tempo
@@ -301,7 +298,7 @@ function renderDeposito(v) {
     da.onchange = () => { p.da = da.value; saveDeposito(); render(); };
     const wi = document.createElement("span"); wi.className = "imp";
     const t = document.createElement("input"); t.type = "text"; t.inputMode = "decimal"; t.id = "p-t-" + p.id; t.value = fmt.format(N(p.tasso)); t.setAttribute("aria-label", "Tasso lordo annuo");
-    t.addEventListener("input", () => { const n = parseNum(t.value); if (!isNaN(n) && n >= 0 && n < 100) { p.tasso = round(n); saveDeposito(); } });
+    t.addEventListener("input", () => { const n = parseNum(t.value); if (!isNaN(n) && n >= 0 && n < 100) { p.tasso = round(n); saveDeposito(); refresh(); } });
     t.addEventListener("blur", () => { const n = parseNum(t.value); t.value = fmt.format(isNaN(n) ? N(p.tasso) : round(n)); render(); });
     wi.append(t, Object.assign(document.createElement("span"), { className: "eur", textContent: "%" }));
     const nome = document.createElement("input"); nome.type = "text"; nome.id = "p-n-" + p.id; nome.value = p.nome || ""; nome.placeholder = "Banca o conto (facoltativo)"; nome.setAttribute("aria-label", "Nome del conto");
@@ -330,14 +327,22 @@ function renderDeposito(v) {
   fs.appendChild(moneyField("Imposta di bollo annua", N(dep.bollo), (n) => { dep.bollo = n; saveDeposito(); }, { id: "d-bollo", unit: "%", hint: "Di solito 0,2% (alcune banche la pagano loro: metti 0)" }));
   v.appendChild(fs);
 
+  v.insertAdjacentHTML("beforeend", `<section class="card"><div class="card-head"><h2>Mese per mese</h2><span class="hint">Versamenti e prelievi si cambiano nella scheda Mesi</span></div><div class="tbl-wrap" id="dep-table">${depTable(d)}</div></section>`);
+}
+
+function depTiles(d, ms) {
+  return `<div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del conto deposito</span></div>
+    <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito ? " + 13ª e 14ª" : ""} meno prelievi</span></div>
+    <div class="tile"><span class="label">Interessi netti</span><span class="v">${eur(d.totNetto)}</span><span class="hint">Dopo le tasse; bollo stimato ${eur(d.totBollo)}</span></div>`;
+}
+function depTable(d) {
   const maxS = Math.max(1, ...d.rows.map((r) => r.saldo));
   let html = '<table><thead><tr><th>Mese</th><th>Tasso</th><th>Versato</th><th>Interessi netti</th><th>Bollo</th><th>Saldo</th><th aria-hidden="true"></th></tr></thead><tbody>';
   d.rows.forEach((r) => {
     const vers = r.versato - r.prelievo, e2 = extraInfo(r.id, state.piano);
     html += `<tr class="${r.cambio ? "promo-end" : ""}"><td>${monthLabel(r.id)}${r.extra && e2 ? ` <span class="tag">${e2.corto}</span>` : ""}</td><td title="${r.periodo?.nome ? esc(r.periodo.nome) : ""}">${fmt.format(r.tasso)}%</td><td class="${vers < 0 ? "neg" : ""}">${vers >= 0 ? "+" : ""}${fmt.format(vers)}</td><td>+${fmt.format(r.netto)}</td><td>−${fmt.format(r.bollo)}</td><td>${fmt.format(r.saldo)}</td><td><span class="mini" style="width:${Math.max(2, Math.round((r.saldo / maxS) * 80))}px"></span></td></tr>`;
   });
-  html += "</tbody></table>";
-  v.insertAdjacentHTML("beforeend", `<section class="card"><div class="card-head"><h2>Mese per mese</h2><span class="hint">Versamenti e prelievi si cambiano nella scheda Mesi</span></div><div class="tbl-wrap">${html}</div></section>`);
+  return html + "</tbody></table>";
 }
 
 function renderModello(v) {
@@ -390,7 +395,13 @@ function updateGroupSums() {
 }
 // Aggiornamento leggero mentre scrivi: cambia solo i numeri, non gli input.
 function refresh() {
-  if (view === "deposito") return;
+  if (view === "deposito") {
+    // Mentre scrivi aggiorno riquadri e tabella, senza toccare i campi
+    const ms = months(), d = simulaDeposito(ms, state.piano, state.mesi, state.deposito);
+    if ($("dep-tiles")) $("dep-tiles").innerHTML = depTiles(d, ms);
+    if ($("dep-table")) $("dep-table").innerHTML = depTable(d);
+    return;
+  }
   const m = currentMonth(), c = calcMonth(m, state.piano), q = (s) => document.querySelector(`[data-live="${s}"]`);
   if (q("resto")) { q("resto").textContent = eur(c.resto); q("resto").classList.toggle("neg", c.resto < 0); }
   if (q("chip")) { q("chip").dataset.k = statoResto(c.resto, state.piano.soglia); q("chip").textContent = testoResto(c.resto, state.piano.soglia); }

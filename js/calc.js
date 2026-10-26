@@ -118,13 +118,12 @@ export function testoResto(resto, soglia) {
 
 const MESE_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-/** Periodi validi, ordinati per mese di inizio. */
+/** Periodi validi, ordinati per mese di inizio (stessi oggetti, non copie: si possono modificare). */
 export function ordinaPeriodi(periodi) {
-  return (Array.isArray(periodi) ? periodi : [])
+  const list = Array.isArray(periodi) ? periodi : [];
+  return list
     .filter((p) => p && MESE_RE.test(p.da))
-    .map((p, i) => ({ ...p, _i: i }))
-    .sort((a, b) => (a.da < b.da ? -1 : a.da > b.da ? 1 : a._i - b._i))
-    .map(({ _i, ...p }) => p);
+    .sort((a, b) => (a.da < b.da ? -1 : a.da > b.da ? 1 : list.indexOf(a) - list.indexOf(b)));
 }
 
 /** Periodo in vigore in un mese: l'ultimo iniziato entro quel mese (null se nessuno). */
