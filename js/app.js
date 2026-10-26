@@ -8,6 +8,7 @@ import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
 } from "./store.js";
 import { LOGO } from "./logo.js";
+const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
 
 const $ = (id) => document.getElementById(id);
@@ -105,7 +106,7 @@ onStatus(setStatus);
 function showAuth(mode = "login", msg = "") {
   $("app").hidden = true;
   const a = $("auth"); a.hidden = false;
-  document.title = "Spare | " + { login: "Accedi", signup: "Crea account", reset: "Recupera password", newpass: "Nuova password" }[mode];
+  document.title = SLOGAN;
   const titles = { login: "Accedi", signup: "Crea il tuo account", reset: "Recupera la password", newpass: "Scegli una nuova password" };
   a.innerHTML = `
     <form class="auth-card" id="authForm" novalidate>
@@ -553,7 +554,7 @@ function render() {
   needsRender = false;
   const v = $("view"), y = window.scrollY;
   v.innerHTML = "";
-  document.title = "Spare | " + (empty ? "Benvenuto" : view === "mesi" ? "Mesi" : view === "modello" ? "Modello" : T().tab);
+  document.title = empty ? SLOGAN : "Spare | " + (view === "mesi" ? "Mesi" : view === "modello" ? "Modello" : T().tab);
   if (empty) { renderOnboarding(v); return; }
   document.querySelector('.tabs button[data-v="deposito"]').textContent = T().tab;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));

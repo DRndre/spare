@@ -1,7 +1,7 @@
 {
   "name": "Spare",
   "short_name": "Spare",
-  "description": "Spese del mese, resto in tasca e risparmi.",
+  "description": "Spese del mese, resto in tasca e risparmi: sai sempre quanto ti resta.",
   "lang": "it",
   "start_url": "./",
   "scope": "./",

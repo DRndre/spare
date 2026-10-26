@@ -42,7 +42,9 @@ Online su **https://drndre.github.io/gestione-spese/** (GitHub Pages, branch `ma
   carattere da caricare) con sotto la barra colorata delle spese. Usato in alto nella pagina e nell'accesso.
 - `icons/` — icone dell'app (scritta Fraunces + barra), `favicon.svg`/`favicon-32.png` ("s" + barra).
   In `icons/alternativa-inter/` c'è la prima versione dell'icona con la scritta in Inter, tenuta come alternativa.
-- Titolo della scheda del browser: "Spare | Mesi", "Spare | Deposito" (o "Risparmi"), "Spare | Modello", "Spare | Accedi".
+- Titolo della scheda del browser: "Spare | Mesi", "Spare | Deposito" (o "Risparmi"), "Spare | Modello" dentro l'app;
+  slogan **"Spare | Quanto ti resta?"** per accesso, benvenuto e anteprima del link (tag og: in `index.html`,
+  immagine `icons/anteprima.png` 1200×630).
 - `supabase/schema.sql` — schema completo, rieseguibile (contiene anche gli `alter table` successivi).
 
 ## Modello dei dati
