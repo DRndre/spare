@@ -32,6 +32,11 @@ Online su **https://drndre.github.io/gestione-spese/** (GitHub Pages, branch `ma
 - `css/style.css` — "stile iPhone": colori di sistema Apple come variabili, tema chiaro e scuro, carattere **Inter**
   ovunque, file in `fonts/inter.woff2` (niente Google Fonts). Blu `--accent` per tutta l'app,
   arancio `--ing` solo per tredicesima/quattordicesima.
+- `js/logo.js` + `icons/logo.svg` — logo "spare": scritta in **Fraunces 800** trasformata in disegno (niente
+  carattere da caricare) con sotto la barra colorata delle spese. Usato in alto nella pagina e nell'accesso.
+- `icons/` — icone dell'app (scritta Fraunces + barra), `favicon.svg`/`favicon-32.png` ("s" + barra).
+  In `icons/alternativa-inter/` c'è la prima versione dell'icona con la scritta in Inter, tenuta come alternativa.
+- Titolo della scheda del browser: "Spare | Mesi", "Spare | Deposito" (o "Risparmi"), "Spare | Modello", "Spare | Accedi".
 - `supabase/schema.sql` — schema completo, rieseguibile (contiene anche gli `alter table` successivi).
 
 ## Modello dei dati

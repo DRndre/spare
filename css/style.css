@@ -225,3 +225,8 @@ h2 { font-weight: 600; }
 .goal-pct { font-weight: 700; color: var(--accent); }
 .goal-bar { height: 10px; border-radius: 999px; background: var(--c-resto); overflow: hidden; }
 .goal-bar span { display: block; height: 100%; background: var(--c-risp); border-radius: 999px; }
+
+/* Logo */
+h1.brand, #brand { line-height: 0; }
+.logo { display: block; height: 40px; width: auto; color: var(--fg); }
+.auth-card .logo { height: 46px; margin-bottom: 6px; }

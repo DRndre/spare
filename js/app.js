@@ -7,6 +7,7 @@ import {
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
 } from "./store.js";
+import { LOGO } from "./logo.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -103,10 +104,11 @@ onStatus(setStatus);
 function showAuth(mode = "login", msg = "") {
   $("app").hidden = true;
   const a = $("auth"); a.hidden = false;
+  document.title = "Spare | " + { login: "Accedi", signup: "Crea account", reset: "Recupera password", newpass: "Nuova password" }[mode];
   const titles = { login: "Accedi", signup: "Crea il tuo account", reset: "Recupera la password", newpass: "Scegli una nuova password" };
   a.innerHTML = `
     <form class="auth-card" id="authForm" novalidate>
-      <h1>Spare</h1>
+      <h1 class="brand">${LOGO}</h1>
       <h2>${titles[mode]}</h2>
       ${mode !== "newpass" ? `<label class="lf" for="au-email"><span class="label">Email</span><input type="email" id="au-email" autocomplete="email" required></label>` : ""}
       ${mode !== "reset" ? `<label class="lf" for="au-pass"><span class="label">Password</span><input type="password" id="au-pass" autocomplete="${mode === "login" ? "current-password" : "new-password"}" minlength="8" required></label>` : ""}
@@ -182,7 +184,7 @@ async function start() {
 async function boot() {
   if (!configured) {
     $("auth").hidden = false;
-    $("auth").innerHTML = '<div class="auth-card"><h1>Spare</h1><p>Manca la configurazione di Supabase: inserisci URL e chiave in <code>js/config.js</code> (vedi README).</p></div>';
+    $("auth").innerHTML = '<div class="auth-card"><h1 class="brand">' + LOGO + '</h1><p>Manca la configurazione di Supabase: inserisci URL e chiave in <code>js/config.js</code> (vedi README).</p></div>';
     return;
   }
   sb.auth.onAuthStateChange((event, session) => {
@@ -548,6 +550,7 @@ function render() {
   needsRender = false;
   const v = $("view"), y = window.scrollY;
   v.innerHTML = "";
+  document.title = "Spare | " + (empty ? "Benvenuto" : view === "mesi" ? "Mesi" : view === "modello" ? "Modello" : T().tab);
   if (empty) { renderOnboarding(v); return; }
   document.querySelector('.tabs button[data-v="deposito"]').textContent = T().tab;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
@@ -599,6 +602,7 @@ document.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => {
   history.replaceState(null, "", "#" + view);
   render(); window.scrollTo(0, 0);
 }));
+$("brand").innerHTML = LOGO;
 $("menuBtn").onclick = () => { const m = $("menu"); m.hidden = !m.hidden; $("menuBtn").setAttribute("aria-expanded", String(!m.hidden)); };
 document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.closest("#menu, #menuBtn")) { $("menu").hidden = true; $("menuBtn").setAttribute("aria-expanded", "false"); } });
 $("doExport").onclick = () => {
