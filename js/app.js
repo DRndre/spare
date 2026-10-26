@@ -40,12 +40,57 @@ function yearsBar(ms, anno, onPick, id) {
 /** Scritte che cambiano se si usa o no un conto deposito. */
 const usaDep = () => !!state.piano.usa_deposito;
 const T = () => usaDep()
-  ? { risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", prelHint: "Se tiri fuori soldi dal deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
-  : { risp: "Risparmio del mese", prel: "Prelievo dai risparmi", prelHint: "Se usi soldi messi da parte", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
-/** Quanto è stato messo da parte dall'inizio fino al mese indicato (senza interessi). */
-function messoDaParte(fino) {
-  const ms = months().filter((id) => id <= fino);
-  return simulaDeposito(ms, state.piano, state.mesi, { saldo_iniziale: state.deposito.saldo_iniziale, periodi: [], tasse: 0, bollo: 0 }).saldo;
+  ? { tab: "Deposito", risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", prelHint: "Se tiri fuori soldi dal deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
+  : { tab: "Risparmi", risp: "Risparmio del mese", prel: "Prelievo dai risparmi", prelHint: "Se usi soldi messi da parte", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
+/** Simulazione dei risparmi: con il conto deposito ci sono gli interessi, senza no. */
+function simula(ms) {
+  const dep = state.deposito;
+  return simulaDeposito(ms, state.piano, state.mesi, usaDep() ? dep : { saldo_iniziale: dep.saldo_iniziale, periodi: [], tasse: 0, bollo: 0 });
+}
+/** Saldo alla fine del mese indicato (o quello di partenza se il mese è prima dell'inizio). */
+function saldoAl(d, id) {
+  let s = N(state.deposito.saldo_iniziale);
+  for (const r of d.rows) { if (r.id > id) break; s = r.saldo; }
+  return s;
+}
+/** Stato dell'obiettivo: percentuale di oggi e mese in cui lo raggiungi continuando così. */
+function goalStatus(ms) {
+  const dep = state.deposito, g = N(dep.obiettivo);
+  if (!(g > 0)) return '<span class="hint">Scrivi una cifra per vedere a che punto sei e quando ci arrivi.</span>';
+  const d = simula(ms), oggi = meseCorrente(), ora = saldoAl(d, oggi);
+  const pct = Math.max(0, Math.min(100, (ora / g) * 100));
+  let quando;
+  if (N(dep.saldo_iniziale) >= g) quando = "Obiettivo già raggiunto.";
+  else {
+    // Oltre la fine del periodo continuo con il Modello, per al massimo 50 anni
+    const lungo = ms.concat(monthRange(addMonths(ms[ms.length - 1], 1), addMonths(ms[ms.length - 1], 600)));
+    const hit = simula(lungo).rows.find((r) => r.saldo >= g);
+    if (!hit) quando = "Con i risparmi di ora non ci arrivi: prova ad aumentare il risparmio del mese.";
+    else if (hit.id <= oggi) quando = `Raggiunto a <b>${monthLabelLong(hit.id)}</b>.`;
+    else {
+      const [y1, m1] = oggi.split("-").map(Number), [y2, m2] = hit.id.split("-").map(Number), n = (y2 - y1) * 12 + (m2 - m1);
+      quando = `Continuando così ci arrivi a <b>${monthLabelLong(hit.id)}</b> (tra ${n} ${n === 1 ? "mese" : "mesi"}).`;
+    }
+  }
+  const nome = dep.obiettivo_nome ? esc(dep.obiettivo_nome) + ": " : "";
+  return `<div class="goal-top"><span>${nome}<b>${eur(ora)}</b> di ${eur(g)}</span><span class="goal-pct">${Math.round(pct)}%</span></div>
+    <div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct}%"></span></div>
+    <div class="hint">${quando}</div>`;
+}
+function goalCard(v, ms) {
+  const dep = state.deposito;
+  const card = document.createElement("section"); card.className = "card pad goal";
+  card.innerHTML = `<div class="card-head flush"><h2>Obiettivo</h2><span class="hint">Facoltativo: lascia 0 se non ti serve</span></div>`;
+  const fs = document.createElement("div"); fs.className = "fields";
+  fs.appendChild(moneyField("Cifra da raggiungere", N(dep.obiettivo), (n) => { dep.obiettivo = n; saveDeposito(); }, { id: "g-imp" }));
+  const nf = document.createElement("label"); nf.className = "field"; nf.htmlFor = "g-nome";
+  nf.innerHTML = `<span class="label">Per cosa</span><input type="text" id="g-nome" placeholder="es. Caparra casa" autocomplete="off"><span class="hint">Facoltativo</span>`;
+  const ni = nf.querySelector("input"); ni.value = dep.obiettivo_nome || "";
+  ni.addEventListener("input", () => { dep.obiettivo_nome = ni.value; saveDeposito(); refresh(); });
+  fs.appendChild(nf);
+  card.appendChild(fs);
+  card.insertAdjacentHTML("beforeend", `<div class="goal-status" id="goal-status">${goalStatus(ms)}</div>`);
+  v.appendChild(card);
 }
 /** "13ª e 14ª", "13ª" o "" secondo le mensilità. */
 const extraNomi = () => (N(state.piano.mensilita) >= 14 ? "13ª e 14ª" : N(state.piano.mensilita) >= 13 ? "13ª" : "");
@@ -300,7 +345,6 @@ function renderMesi(v) {
   fs.appendChild(moneyField(T().risp, m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
   fs.appendChild(moneyField(T().prel, m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
   v.appendChild(fs);
-  if (!usaDep()) v.insertAdjacentHTML("beforeend", `<div class="note">Messo da parte fino a ${monthLabelLong(sel)}: <b data-live="dapartetot">${eur(messoDaParte(sel))}</b></div>`);
 
   vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-");
 
@@ -366,6 +410,7 @@ function renderDeposito(v) {
   fs.appendChild(moneyField("Imposta di bollo annua", N(dep.bollo), (n) => { dep.bollo = n; saveDeposito(); }, { id: "d-bollo", unit: "%", hint: "Di solito 0,2% (alcune banche la pagano loro: metti 0)" }));
   v.appendChild(fs);
 
+  goalCard(v, ms);
   const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
   if (!anni.includes(depAnno)) depAnno = anni.includes(meseCorrente().slice(0, 4)) ? meseCorrente().slice(0, 4) : anni[0];
   const tc = document.createElement("section"); tc.className = "card";
@@ -376,6 +421,39 @@ function renderDeposito(v) {
   v.appendChild(tc);
 }
 
+function renderRisparmi(v) {
+  const ms = months(), dep = state.deposito, d = simula(ms);
+  v.insertAdjacentHTML("beforeend", `<div class="tiles" id="dep-tiles">${risTiles(d, ms)}</div>`);
+  const fs = document.createElement("div"); fs.className = "fields solo";
+  fs.appendChild(moneyField("Già da parte all'inizio", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "r-saldo", hint: `Risparmi che avevi già a ${monthLabelLong(ms[0])} (0 se nessuno)` }));
+  v.appendChild(fs);
+  goalCard(v, ms);
+  const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
+  if (!anni.includes(depAnno)) depAnno = anni.includes(meseCorrente().slice(0, 4)) ? meseCorrente().slice(0, 4) : anni[0];
+  const tc = document.createElement("section"); tc.className = "card";
+  tc.innerHTML = `<div class="card-head"><h2>Mese per mese</h2><span class="hint">Risparmi e prelievi si cambiano nella scheda Mesi</span></div>`;
+  const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; render(); }, "dy-"); yb.classList.add("in-card");
+  tc.appendChild(yb);
+  tc.insertAdjacentHTML("beforeend", `<div class="tbl-wrap" id="dep-table">${risTable(d, depAnno)}</div>`);
+  v.appendChild(tc);
+}
+function risTiles(d, ms) {
+  const oggi = meseCorrente(), fine = ms[ms.length - 1];
+  const prel = d.rows.reduce((a, r) => a + r.prelievo, 0), vers = d.rows.reduce((a, r) => a + r.versato, 0);
+  const quando = oggi < ms[0] ? "all'inizio" : oggi > fine ? "a " + monthLabel(fine) : "a " + monthLabel(oggi);
+  return `<div class="tile ing"><span class="label">Da parte oggi</span><span class="v">${eur(saldoAl(d, oggi))}</span><span class="hint">Messo da parte fino ${quando}</span></div>
+    <div class="tile"><span class="label">A ${monthLabel(fine)}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Se continui così</span></div>
+    <div class="tile"><span class="label">Versato / prelevato</span><span class="v">${eur(vers)}</span><span class="hint">${prel > 0 ? "Prelevati " + eur(prel) : "Nessun prelievo"}${state.piano.extra_al_deposito && extraNomi() ? " · con " + extraNomi() : ""}</span></div>`;
+}
+function risTable(d, anno) {
+  const maxS = Math.max(1, ...d.rows.map((r) => r.saldo));
+  let html = '<table><thead><tr><th>Mese</th><th>Da parte</th><th>Prelievi</th><th>Totale</th><th aria-hidden="true"></th></tr></thead><tbody>';
+  d.rows.filter((r) => !anno || r.id.startsWith(anno)).forEach((r) => {
+    const e2 = extraInfo(r.id, state.piano);
+    html += `<tr><td>${monthLabel(r.id)}${r.extra && e2 ? ` <span class="tag">${e2.corto}</span>` : ""}</td><td>+${fmt.format(r.versato)}</td><td class="${r.prelievo ? "neg" : ""}">${r.prelievo ? "−" + fmt.format(r.prelievo) : "–"}</td><td>${fmt.format(r.saldo)}</td><td><span class="mini" style="width:${Math.max(2, Math.round((r.saldo / maxS) * 80))}px"></span></td></tr>`;
+  });
+  return html + "</tbody></table>";
+}
 function depTiles(d, ms) {
   return `<div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del conto deposito</span></div>
     <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito && extraNomi() ? " + " + extraNomi() : ""} meno prelievi</span></div>
@@ -407,15 +485,9 @@ function renderModello(v) {
 
   // Conto deposito sì / no
   const ud = document.createElement("label"); ud.className = "check"; ud.htmlFor = "t-usadep";
-  ud.innerHTML = `<input type="checkbox" id="t-usadep"${usaDep() ? " checked" : ""}><span><b>Uso un conto deposito</b><br><span class="hint">${usaDep() ? "Trovi la scheda Conto Deposito con tassi e interessi. Togli la spunta se non ne hai uno." : "Spunta se tieni i risparmi su un conto deposito: comparirà la scheda con tassi e interessi."}</span></span>`;
+  ud.innerHTML = `<input type="checkbox" id="t-usadep"${usaDep() ? " checked" : ""}><span><b>Uso un conto deposito</b><br><span class="hint">${usaDep() ? "Nella scheda Deposito ci sono tassi e interessi. Togli la spunta se non ne hai uno: avrai la scheda Risparmi, senza interessi." : "Ora c'è la scheda Risparmi (senza interessi). Spunta se tieni i risparmi su un conto deposito: diventa la scheda Deposito con tassi e interessi."}</span></span>`;
   ud.querySelector("input").onchange = (e) => { p.usa_deposito = e.target.checked; savePiano(); render(); };
   v.appendChild(ud);
-  if (!usaDep()) {
-    const fg = document.createElement("div"); fg.className = "fields solo";
-    fg.appendChild(moneyField("Già da parte all'inizio", N(state.deposito.saldo_iniziale), (n) => { state.deposito.saldo_iniziale = n; saveDeposito(); }, { id: "t-giadaparte", hint: "Risparmi che avevi già nel primo mese (0 se nessuno)" }));
-    v.appendChild(fg);
-  }
-
   // Mensilità: 12, 13 o 14, con il mese di 13ª e 14ª
   const sel12 = (id, label, value, opts, onCh, hint = "") => {
     const f = document.createElement("label"); f.className = "field"; f.htmlFor = id;
@@ -477,10 +549,9 @@ function render() {
   const v = $("view"), y = window.scrollY;
   v.innerHTML = "";
   if (empty) { renderOnboarding(v); return; }
-  if (view === "deposito" && !usaDep()) view = "mesi";
-  document.querySelector('.tabs button[data-v="deposito"]').hidden = !usaDep();
+  document.querySelector('.tabs button[data-v="deposito"]').textContent = T().tab;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
-  if (view === "mesi") renderMesi(v); else if (view === "deposito") renderDeposito(v); else renderModello(v);
+  if (view === "mesi") renderMesi(v); else if (view === "deposito") (usaDep() ? renderDeposito : renderRisparmi)(v); else renderModello(v);
   updateGroupSums();
   window.scrollTo(0, y);
 }
@@ -495,9 +566,10 @@ function updateGroupSums() {
 function refresh() {
   if (view === "deposito") {
     // Mentre scrivi aggiorno riquadri e tabella, senza toccare i campi
-    const ms = months(), d = simulaDeposito(ms, state.piano, state.mesi, state.deposito);
-    if ($("dep-tiles")) $("dep-tiles").innerHTML = depTiles(d, ms);
-    if ($("dep-table")) $("dep-table").innerHTML = depTable(d, depAnno);
+    const ms = months(), d = simula(ms);
+    if ($("dep-tiles")) $("dep-tiles").innerHTML = usaDep() ? depTiles(d, ms) : risTiles(d, ms);
+    if ($("dep-table")) $("dep-table").innerHTML = usaDep() ? depTable(d, depAnno) : risTable(d, depAnno);
+    if ($("goal-status")) $("goal-status").innerHTML = goalStatus(ms);
     return;
   }
   const m = currentMonth(), c = calcMonth(m, state.piano), q = (s) => document.querySelector(`[data-live="${s}"]`);
@@ -506,7 +578,6 @@ function refresh() {
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
   if (q("spese")) q("spese").textContent = eur(c.spese);
-  if (q("dapartetot")) q("dapartetot").textContent = eur(messoDaParte(sel));
   updateGroupSums();
   if (view === "mesi") {
     const chip = $("chip-" + sel);

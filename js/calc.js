@@ -49,6 +49,8 @@ export const mesiPiano = (piano, oggi) => monthRange(piano.mese_inizio, meseFine
 export const DEFAULT_DEPOSITO = {
   saldo_iniziale: 0,
   periodi: [],
+  obiettivo: 0, // cifra da raggiungere (0 = nessun obiettivo)
+  obiettivo_nome: "",
   tasse: 26,
   bollo: 0.2,
 };

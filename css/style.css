@@ -216,3 +216,12 @@ h2 { font-weight: 600; }
 .btn.primary { color: #FFFFFF; }
 .years button { font-family: var(--f-body); font-variant-numeric: tabular-nums; }
 .years button[aria-pressed="true"] { color: #FFFFFF; }
+
+/* Obiettivo di risparmio */
+.goal .card-head { padding: 0; border: 0; }
+.goal .field { background: var(--bg); }
+.goal-status { display: flex; flex-direction: column; gap: 6px; }
+.goal-top { display: flex; justify-content: space-between; gap: 10px; font-variant-numeric: tabular-nums; }
+.goal-pct { font-weight: 700; color: var(--accent); }
+.goal-bar { height: 10px; border-radius: 999px; background: var(--c-resto); overflow: hidden; }
+.goal-bar span { display: block; height: 100%; background: var(--c-risp); border-radius: 999px; }

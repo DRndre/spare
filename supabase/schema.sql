@@ -79,3 +79,7 @@ alter table public.mesi add column if not exists entrate_extra numeric;  -- null
 
 -- Conto deposito sì/no (false per i nuovi account)
 alter table public.piani add column if not exists usa_deposito boolean not null default false;
+
+-- Obiettivo di risparmio (0 = nessuno)
+alter table public.depositi add column if not exists obiettivo numeric not null default 0;
+alter table public.depositi add column if not exists obiettivo_nome text not null default '';

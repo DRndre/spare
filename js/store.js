@@ -54,11 +54,12 @@ function depositoFromRow(r) {
     saldo_iniziale: N(r.saldo_iniziale),
     // I backup vecchi non hanno "periodi": li ricavo da promo + tasso dopo la promo.
     periodi: r.periodi === undefined ? periodiDaVecchi(r) : fixPeriodi(r.periodi),
+    obiettivo: N(r.obiettivo), obiettivo_nome: String(r.obiettivo_nome || ""),
     tasse: r.tasse == null ? DEFAULT_DEPOSITO.tasse : N(r.tasse),
     bollo: r.bollo == null ? DEFAULT_DEPOSITO.bollo : N(r.bollo),
   };
 }
-const depositoRow = (d) => ({ saldo_iniziale: N(d.saldo_iniziale), periodi: fixPeriodi(d.periodi), tasse: N(d.tasse), bollo: N(d.bollo) });
+const depositoRow = (d) => ({ saldo_iniziale: N(d.saldo_iniziale), periodi: fixPeriodi(d.periodi), obiettivo: N(d.obiettivo), obiettivo_nome: String(d.obiettivo_nome || ""), tasse: N(d.tasse), bollo: N(d.bollo) });
 function meseFromRow(r) {
   return { stipendio: N(r.stipendio), entrate_extra: r.entrate_extra == null ? null : N(r.entrate_extra), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
 }
