@@ -2,7 +2,10 @@
 
 App web personale di Andrea per gestire le spese mensili. Pensata per lui, ma multi-utente:
 un amico può crearsi un account e avere il suo piano, separato.
-Online su **https://drndre.github.io/gestione-spese/** (GitHub Pages, branch `main`, cartella root).
+Online su **https://drndre.github.io/spare/** (repository `DRndre/spare`, GitHub Pages, branch `main`, cartella root).
+Il vecchio indirizzo `https://drndre.github.io/gestione-spese/` è il repository `DRndre/gestione-spese`, che contiene
+solo una pagina che reindirizza qui (e toglie il vecchio service worker): non metterci altro.
+Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github.io/spare/`.
 
 ## Come lavorare con Andrea
 - Rispondi in **italiano**, con parole semplici (non è un utente da gergo tecnico), e vai dritto al punto.
@@ -10,7 +13,7 @@ Online su **https://drndre.github.io/gestione-spese/** (GitHub Pages, branch `ma
 - Quando serve cambiare il database, dai la **query SQL completa e pronta da incollare** in Supabase
   (SQL Editor → New query → Run) e aggiorna anche `supabase/schema.sql`.
 - Dopo ogni push **controlla che GitHub Pages abbia pubblicato**: una volta la pubblicazione è rimasta
-  bloccata "queued". Comando: `gh api repos/DRndre/gestione-spese/actions/runs --jq '.workflow_runs[0] | "\(.head_sha[0:7]) \(.status) \(.conclusion)"'`.
+  bloccata "queued". Comando: `gh api repos/DRndre/spare/actions/runs --jq '.workflow_runs[0] | "\(.head_sha[0:7]) \(.status) \(.conclusion)"'`.
   Se resta bloccata, un commit vuoto la fa ripartire.
 - Ricordagli di ricaricare con Ctrl + Maiusc + R per vedere le modifiche.
 
