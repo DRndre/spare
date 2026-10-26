@@ -283,22 +283,11 @@ function renderDeposito(v) {
   const ms = months(), dep = state.deposito;
   const d = simulaDeposito(ms, state.piano, state.mesi, dep);
   const periodi = ordinaPeriodi(dep.periodi);
-  const nomeP = (p) => (p.nome ? ` – ${esc(p.nome)}` : "");
-  let nota;
-  if (!periodi.length) nota = "Aggiungi qui sotto il tasso del tuo conto deposito: finché non c'è, gli interessi restano a zero.";
-  else {
-    const dentro = periodi.filter((p) => p.da > ms[0] && p.da <= ms[ms.length - 1]);
-    const p0 = periodoDelMese(ms[0], periodi);
-    nota = p0
-      ? `Da <b>${monthLabelLong(ms[0] > p0.da ? ms[0] : p0.da)}</b> il tasso è ${fmt.format(N(p0.tasso))}% lordo${nomeP(p0)}.`
-      : `Prima di <b>${monthLabelLong(periodi[0].da)}</b> non c'è un tasso: interessi a zero.`;
-    dentro.filter((p) => p !== p0).forEach((p) => { nota += ` Da <b>${monthLabelLong(p.da)}</b> ${fmt.format(N(p.tasso))}%${nomeP(p)}.`; });
-  }
-  v.insertAdjacentHTML("beforeend", `<div class="tiles">
+    v.insertAdjacentHTML("beforeend", `<div class="tiles">
     <div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del conto deposito</span></div>
     <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito ? " + 13ª e 14ª" : ""} meno prelievi</span></div>
     <div class="tile"><span class="label">Interessi netti</span><span class="v">${eur(d.totNetto)}</span><span class="hint">Dopo le tasse; bollo stimato ${eur(d.totBollo)}</span></div></div>
-    <div class="note">${nota}</div>`);
+    ${periodi.length ? "" : `<div class="note">Aggiungi qui sotto il tasso del tuo conto deposito: finché non c'è, gli interessi restano a zero.</div>`}`);
 
   // Tassi nel tempo
   const opts = monthRange("2025-01", "2030-12");
@@ -360,7 +349,7 @@ function renderModello(v) {
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
   fs.appendChild(moneyField("Risparmio al conto deposito", N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
-  fs.appendChild(moneyField("Soglia minima resto", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "La tua regola" }));
+  fs.appendChild(moneyField("Soglia resto in tasca (facoltativa)", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "Ti avvisa se il resto scende sotto questa cifra. 0 = nessun avviso" }));
   fs.appendChild(moneyField("Tredicesima (dicembre)", N(p.tredicesima), (n) => { p.tredicesima = n; savePiano(); }, { id: "t-13", cls: "extra", hint: "Netto stimato: correggilo con la busta" }));
   fs.appendChild(moneyField("Quattordicesima (giugno)", N(p.quattordicesima), (n) => { p.quattordicesima = n; savePiano(); }, { id: "t-14", cls: "extra", hint: "Metti 0 se il contratto non la prevede" }));
   v.appendChild(fs);

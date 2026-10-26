@@ -8,7 +8,7 @@ create table if not exists public.piani (
   user_id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
   stipendio numeric not null default 0,
   risparmio numeric not null default 0,
-  soglia numeric not null default 600,
+  soglia numeric not null default 0,
   tredicesima numeric not null default 0,
   quattordicesima numeric not null default 0,
   extra_al_deposito boolean not null default true,

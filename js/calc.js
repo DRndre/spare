@@ -14,7 +14,7 @@ const MNL = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Lugl
 export const DEFAULT_PIANO = {
   stipendio: 0,
   risparmio: 0,
-  soglia: 600,
+  soglia: 0, // 0 = nessuna soglia: avviso solo se il resto va sotto zero
   tredicesima: 1000,
   quattordicesima: 1000,
   extra_al_deposito: true,
@@ -105,12 +105,13 @@ export function calcMonth(m, piano) {
 
 export function statoResto(resto, soglia) {
   if (resto < 0) return "bad";
-  if (resto < N(soglia)) return "warn";
+  if (N(soglia) > 0 && resto < N(soglia)) return "warn";
   return "good";
 }
 
 export function testoResto(resto, soglia) {
   if (resto < 0) return "In rosso di " + eur(-resto);
+  if (!(N(soglia) > 0)) return "";
   if (resto < N(soglia)) return eur(round(N(soglia) - resto)) + " sotto la soglia di " + eur(N(soglia));
   return "Sopra la soglia di " + eur(N(soglia));
 }

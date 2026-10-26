@@ -68,7 +68,6 @@ input, select, button { font: inherit; color: inherit; }
 .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
 .tabs button { flex: 1; border: 0; background: transparent; border-radius: 9px; padding: 9px 10px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .tabs button[aria-selected="true"] { background: var(--accent); color: var(--surface); }
-.tabs button[data-v="deposito"][aria-selected="true"] { background: var(--ing); }
 #view { display: flex; flex-direction: column; gap: 18px; }
 
 /* Mesi */
@@ -158,17 +157,17 @@ td:first-child { font-family: var(--f-body); font-weight: 500; }
 tbody tr.sel { background: var(--accent-soft); }
 tbody tr.click { cursor: pointer; }
 tbody tr.click:hover { background: var(--bg); }
-tr.promo-end td { border-top: 2px solid var(--ing); }
+tr.promo-end td { border-top: 2px solid var(--accent); }
 td.neg { color: var(--bad); }
-.mini { display: inline-block; height: 8px; border-radius: 4px; background: var(--ing); vertical-align: middle; }
+.mini { display: inline-block; height: 8px; border-radius: 4px; background: var(--accent); vertical-align: middle; }
 tfoot td { font-weight: 600; border-top: 2px solid var(--line); }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .tile .v { font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.tile.ing { border-color: var(--ing); }
-.tile.ing .v { color: var(--ing); }
-.note { border-left: 3px solid var(--ing); background: var(--ing-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: .85rem; }
+.tile.ing { border-color: var(--accent); }
+.tile.ing .v { color: var(--accent); }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: .85rem; }
 
 footer { font-size: .78rem; color: var(--muted); text-align: center; }
 
@@ -181,3 +180,5 @@ footer { font-size: .78rem; color: var(--muted); text-align: center; }
   th, td { padding: 8px; }
 }
 @media (prefers-reduced-motion: no-preference) { .bar span { transition: flex-basis .35s ease; } }
+
+.chip:empty { display: none; }
