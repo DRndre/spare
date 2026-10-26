@@ -17,8 +17,9 @@
   --f-num: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
 }
+/* Tema scuro: automatico (segue il dispositivo) oppure scelto a mano dal menu (data-theme sull'html) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #000000; --surface: #1C1C1E; --fg: #FFFFFF; --muted: #8E8E93; --line: #38383A;
     --accent: #0A84FF; --accent-soft: #0A2A4D; --ing: #FF9F0A; --ing-soft: #3A2A10;
     --good: #30D158; --good-soft: #12321C; --warn: #FF9F0A; --warn-soft: #3A2A10; --bad: #FF453A; --bad-soft: #3A1715;
@@ -27,6 +28,14 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #1C1C1E; --fg: #FFFFFF; --muted: #8E8E93; --line: #38383A;
+  --accent: #0A84FF; --accent-soft: #0A2A4D; --ing: #FF9F0A; --ing-soft: #3A2A10;
+  --good: #30D158; --good-soft: #12321C; --warn: #FF9F0A; --warn-soft: #3A2A10; --bad: #FF453A; --bad-soft: #3A1715;
+  --c-casa: #0A84FF; --c-auto: #5E5CE6; --c-abb: #BF5AF2; --c-persona: #FF9F0A; --c-altro: #8E8E93; --c-risp: #30D158; --c-resto: #3A3A3C;
+  --seg-bg: #2C2C2E; --seg-on: #636366; --seg-fg: #FFFFFF; --seg-shadow: none;
+  color-scheme: dark;
+  }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
@@ -57,6 +66,12 @@ input, select, button { font: inherit; color: inherit; }
 .menu { position: absolute; right: 0; top: 42px; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; min-width: 200px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); display: flex; flex-direction: column; }
 .menu button { text-align: left; border: 0; background: transparent; padding: 9px 12px; border-radius: 8px; cursor: pointer; }
 .menu button:hover { background: var(--bg); }
+.menu-sep { height: 1px; background: var(--line); margin: 4px 0; }
+.menu-tema { padding: 6px 12px 8px; display: flex; flex-direction: column; gap: 6px; }
+.menu-tema .label { font-size: .78rem; color: var(--muted); }
+.seg { display: flex; background: var(--seg-bg); border-radius: 9px; padding: 2px; gap: 2px; }
+.menu .seg button { flex: 1; text-align: center; padding: 5px 8px; border-radius: 7px; font-size: .85rem; color: var(--seg-fg); }
+.menu .seg button[aria-pressed="true"] { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 600; }
 .menu-who { font-size: .78rem; color: var(--muted); padding: 6px 12px 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; word-break: break-all; }
 
 /* Login */
@@ -230,3 +245,33 @@ h2 { font-weight: 600; }
 h1.brand, #brand { line-height: 0; }
 .logo { display: block; height: 40px; width: auto; color: var(--fg); }
 .auth-card .logo { height: 46px; margin-bottom: 6px; }
+
+/* Finestra sopra l'app (guida e aiuto) */
+body.no-scroll { overflow: hidden; }
+.sheet-bg { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .35); display: flex; align-items: flex-end; justify-content: center; padding: 0; }
+.sheet { background: var(--bg); width: 100%; max-width: 620px; max-height: 92vh; max-height: 92dvh; border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -8px 30px rgba(0, 0, 0, .2); }
+@media (min-width: 700px) { .sheet-bg { align-items: center; padding: 24px; } .sheet { border-radius: 18px; } }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.sheet-body { padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; flex: 1; -webkit-overflow-scrolling: touch; }
+.sheet-foot { display: flex; justify-content: space-between; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--surface); }
+.sheet-foot .btn { padding: 10px 18px; font-size: 1rem; }
+.sheet-foot .btn:only-child { margin-left: auto; }
+.steps { display: flex; gap: 6px; }
+.steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+.steps span.done { background: var(--accent); opacity: .45; }
+.steps span.on { background: var(--accent); }
+.step-title { margin: 0; font-size: 1.2rem; font-weight: 700; }
+.sheet .field { background: var(--surface); }
+.sheet .note { margin: 0; }
+.wiz-group { padding-bottom: 6px; }
+.wiz-row { grid-template-columns: minmax(0, 1fr) 120px; padding-top: 4px; padding-bottom: 4px; }
+.wiz-ck { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.wiz-ck input { width: 20px; height: 20px; accent-color: var(--accent); }
+.wiz-row .imp input:disabled { opacity: .35; }
+.wiz-altra { grid-template-columns: minmax(0, 1fr) 110px 120px; padding-top: 4px; padding-bottom: 4px; }
+.wiz-altra input[type=text]:not([inputmode]), .wiz-altra select { border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; background: var(--surface); color: inherit; font: inherit; width: 100%; }
+@media (max-width: 560px) { .wiz-altra { grid-template-columns: minmax(0, 1fr) 100px; } .wiz-altra select { grid-column: 1 / -1; } }
+.wiz-hero { text-align: left; }
+.faq { background: var(--surface); border-radius: 14px; padding: 4px 16px; }
+.faq summary { cursor: pointer; font-weight: 600; padding: 10px 0; list-style-position: inside; }
+.faq p { margin: 0 0 12px; color: var(--fg); line-height: 1.55; }

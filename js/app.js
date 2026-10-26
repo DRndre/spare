@@ -8,6 +8,7 @@ import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
 } from "./store.js";
 import { LOGO } from "./logo.js";
+import { apriGuida, apriAiuto } from "./guida.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -307,10 +308,10 @@ function ensureMese(id) {
 /* ---------- Viste ---------- */
 function renderOnboarding(v) {
   v.innerHTML = `<section class="card pad"><h2>Benvenuto</h2>
-    <p>Non hai ancora dati. Puoi caricare un backup (il file <code>.json</code> esportato da Spare) oppure partire da zero e inserire stipendio e spese nel Modello.</p>
-    <div class="actions"><button class="btn primary" type="button" id="ob-import">Importa un backup</button><button class="btn" type="button" id="ob-zero">Parto da zero</button></div></section>`;
+    <p>Spare ti dice quanto ti resta in tasca ogni mese e quanto metti da parte. Per iniziare rispondi a qualche domanda: ci vogliono un paio di minuti e puoi cambiare tutto anche dopo.</p>
+    <div class="actions"><button class="btn primary" type="button" id="ob-zero">Inizia la configurazione</button><button class="btn" type="button" id="ob-import">Ho un backup da importare</button></div></section>`;
   $("ob-import").onclick = () => $("importFile").click();
-  $("ob-zero").onclick = () => { empty = false; savePiano(); saveDeposito(); view = "modello"; render(); };
+  $("ob-zero").onclick = () => guida(true);
 }
 
 function renderMesi(v) {
@@ -612,6 +613,14 @@ $("doExport").onclick = () => {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   $("menu").hidden = true;
 };
+function guida(primaVolta) {
+  apriGuida({
+    state, savePiano, saveDeposito, primaVolta,
+    onDone: () => { empty = false; view = "mesi"; sel = meseIniziale(months()); history.replaceState(null, "", "#mesi"); render(); window.scrollTo(0, 0); },
+  });
+}
+$("doGuida").onclick = () => { $("menu").hidden = true; guida(empty); };
+$("doAiuto").onclick = () => { $("menu").hidden = true; apriAiuto(); };
 $("doImport").onclick = () => { $("menu").hidden = true; $("importFile").click(); };
 $("importFile").onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = "";
@@ -624,6 +633,20 @@ $("importFile").onchange = async (e) => {
     render();
   } catch (err) { setStatus("error", "Importazione non riuscita: " + (err.message || "file non valido")); }
 };
+/* ---------- Tema chiaro / scuro (per dispositivo) ---------- */
+function temaAttuale() { try { return localStorage.getItem("spare-tema") || "auto"; } catch (e) { return "auto"; } }
+function applicaTema(t) {
+  const root = document.documentElement;
+  if (t === "light" || t === "dark") root.dataset.theme = t; else delete root.dataset.theme;
+  try { if (t === "auto") localStorage.removeItem("spare-tema"); else localStorage.setItem("spare-tema", t); } catch (e) { /* memoria del browser non disponibile */ }
+  // colore della barra del browser/telefono
+  const scuro = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => { m.content = scuro ? "#000000" : "#F2F2F7"; if (t !== "auto") m.removeAttribute("media"); });
+  document.querySelectorAll("#temaSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.t === t)));
+}
+document.querySelectorAll("#temaSeg button").forEach((b) => (b.onclick = () => applicaTema(b.dataset.t)));
+applicaTema(temaAttuale());
+
 $("doLogout").onclick = async () => { $("menu").hidden = true; await sb.auth.signOut(); };
 
 boot();
