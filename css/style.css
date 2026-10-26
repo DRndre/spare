@@ -275,3 +275,12 @@ body.no-scroll { overflow: hidden; }
 .faq { background: var(--surface); border-radius: 14px; padding: 4px 16px; }
 .faq summary { cursor: pointer; font-weight: 600; padding: 10px 0; list-style-position: inside; }
 .faq p { margin: 0 0 12px; color: var(--fg); line-height: 1.55; }
+
+/* Pulsante menu: hamburger quando è chiuso, X quando è aperto */
+.hamb path { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; transform-box: fill-box; transform-origin: center; transition: transform .28s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+#menuBtn[aria-expanded="true"] .l1 { transform: translateY(4.5px) rotate(45deg); }
+#menuBtn[aria-expanded="true"] .l2 { opacity: 0; transform: scaleX(.2); }
+#menuBtn[aria-expanded="true"] .l3 { transform: translateY(-4.5px) rotate(-45deg); }
+.menu { transform-origin: top right; animation: menuIn .18s ease-out; }
+@keyframes menuIn { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hamb path, .menu { transition: none; animation: none; } }

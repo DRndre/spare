@@ -607,14 +607,22 @@ document.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => {
   render(); window.scrollTo(0, 0);
 }));
 $("brand").innerHTML = LOGO;
-$("menuBtn").onclick = () => { const m = $("menu"); m.hidden = !m.hidden; $("menuBtn").setAttribute("aria-expanded", String(!m.hidden)); };
-document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.closest("#menu, #menuBtn")) { $("menu").hidden = true; $("menuBtn").setAttribute("aria-expanded", "false"); } });
+/** Apre o chiude il menu: il pulsante passa da hamburger a X (animazione in CSS). */
+function setMenu(aperto) {
+  $("menu").hidden = !aperto;
+  $("menuBtn").setAttribute("aria-expanded", String(aperto));
+  $("menuBtn").setAttribute("aria-label", aperto ? "Chiudi menu" : "Apri menu");
+}
+const chiudiMenu = () => setMenu(false);
+$("menuBtn").onclick = () => setMenu($("menu").hidden);
+document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.closest("#menu, #menuBtn")) chiudiMenu(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("menu").hidden) { chiudiMenu(); $("menuBtn").focus(); } });
 $("doExport").onclick = () => {
   const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
   a.download = "spare-backup-" + new Date().toISOString().slice(0, 10) + ".json";
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  $("menu").hidden = true;
+  chiudiMenu();
 };
 /** Senza guida: salvo un piano vuoto e apro il Modello, dove si inserisce tutto a mano. */
 function saltaGuida() { empty = false; savePiano(); saveDeposito(); view = "modello"; history.replaceState(null, "", "#modello"); render(); window.scrollTo(0, 0); }
@@ -624,9 +632,9 @@ function guida(primaVolta) {
     onDone: () => { empty = false; view = "mesi"; sel = meseIniziale(months()); history.replaceState(null, "", "#mesi"); render(); window.scrollTo(0, 0); },
   });
 }
-$("doGuida").onclick = () => { $("menu").hidden = true; guida(empty); };
-$("doAiuto").onclick = () => { $("menu").hidden = true; apriAiuto(); };
-$("doImport").onclick = () => { $("menu").hidden = true; $("importFile").click(); };
+$("doGuida").onclick = () => { chiudiMenu(); guida(empty); };
+$("doAiuto").onclick = () => { chiudiMenu(); apriAiuto(); };
+$("doImport").onclick = () => { chiudiMenu(); $("importFile").click(); };
 $("importFile").onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = "";
   if (!f) return;
@@ -652,7 +660,7 @@ function applicaTema(t) {
 document.querySelectorAll("#temaSeg button").forEach((b) => (b.onclick = () => applicaTema(b.dataset.t)));
 applicaTema(temaAttuale());
 
-$("doLogout").onclick = async () => { $("menu").hidden = true; await sb.auth.signOut(); };
+$("doLogout").onclick = async () => { chiudiMenu(); await sb.auth.signOut(); };
 
 boot();
 
