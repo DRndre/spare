@@ -1,7 +1,7 @@
-// Interfaccia: login, schede Mesi / Conto Arancio / Modello.
+// Interfaccia: login, schede Mesi / Conto Deposito / Modello.
 import {
   CATS, N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
-  extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito,
+  extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
@@ -192,7 +192,7 @@ function vociEditor(container, getVoci, change, prefix) {
 function formula(m, c, extraNome) {
   let f = `<b>${eur(m.stipendio)}</b> stipendio`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
-  return f + ` − spese <b>${eur(c.spese)}</b> − al Conto Arancio <b>${eur(c.toDep)}</b>`;
+  return f + ` − spese <b>${eur(c.spese)}</b> − al deposito <b>${eur(c.toDep)}</b>`;
 }
 function hero(m, c, extraNome) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
@@ -206,7 +206,7 @@ function hero(m, c, extraNome) {
 }
 function fillBar(bar, leg, m, c) {
   const parts = CATS.map((x) => ({ n: x.n, c: x.c, v: m.voci.filter((v) => v.cat === x.k).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
-  if (c.toDep > 0) parts.push({ n: "Conto Arancio", c: "--c-risp", v: c.toDep });
+  if (c.toDep > 0) parts.push({ n: "Conto Deposito", c: "--c-risp", v: c.toDep });
   const base = Math.max(c.entrate, parts.reduce((a, p) => a + p.v, 0)) || 1;
   bar.innerHTML = ""; leg.innerHTML = "";
   parts.forEach((p) => { const s = document.createElement("span"); s.style.flex = `0 0 ${(p.v / base) * 100}%`; s.style.background = `var(${p.c})`; s.title = p.n + ": " + eur(p.v); bar.appendChild(s); });
@@ -258,9 +258,9 @@ function renderMesi(v) {
 
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
-  if (ex) fs.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? "Va nel Conto Arancio" : "Resta in tasca" }));
-  fs.appendChild(moneyField("Risparmio al Conto Arancio", m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
-  fs.appendChild(moneyField("Prelievo dal Conto Arancio", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: "Se tiri fuori soldi dal deposito" }));
+  if (ex) fs.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? "Va nel conto deposito" : "Resta in tasca" }));
+  fs.appendChild(moneyField("Risparmio al conto deposito", m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
+  fs.appendChild(moneyField("Prelievo dal conto deposito", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: "Se tiri fuori soldi dal deposito" }));
   v.appendChild(fs);
 
   vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-");
@@ -282,28 +282,70 @@ function renderMesi(v) {
 function renderDeposito(v) {
   const ms = months(), dep = state.deposito;
   const d = simulaDeposito(ms, state.piano, state.mesi, dep);
-  const fineDentro = ms.includes(d.finePromo);
+  const periodi = ordinaPeriodi(dep.periodi);
+  const nomeP = (p) => (p.nome ? ` – ${esc(p.nome)}` : "");
+  let nota;
+  if (!periodi.length) nota = "Aggiungi qui sotto il tasso del tuo conto deposito: finché non c'è, gli interessi restano a zero.";
+  else {
+    const dentro = periodi.filter((p) => p.da > ms[0] && p.da <= ms[ms.length - 1]);
+    const p0 = periodoDelMese(ms[0], periodi);
+    nota = p0
+      ? `Da <b>${monthLabelLong(ms[0] > p0.da ? ms[0] : p0.da)}</b> il tasso è ${fmt.format(N(p0.tasso))}% lordo${nomeP(p0)}.`
+      : `Prima di <b>${monthLabelLong(periodi[0].da)}</b> non c'è un tasso: interessi a zero.`;
+    dentro.filter((p) => p !== p0).forEach((p) => { nota += ` Da <b>${monthLabelLong(p.da)}</b> ${fmt.format(N(p.tasso))}%${nomeP(p)}.`; });
+  }
   v.insertAdjacentHTML("beforeend", `<div class="tiles">
-    <div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del Conto Arancio</span></div>
+    <div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del conto deposito</span></div>
     <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito ? " + 13ª e 14ª" : ""} meno prelievi</span></div>
     <div class="tile"><span class="label">Interessi netti</span><span class="v">${eur(d.totNetto)}</span><span class="hint">Dopo le tasse; bollo stimato ${eur(d.totBollo)}</span></div></div>
-    <div class="note">Il ${fmt.format(N(dep.tasso_promo))}% lordo vale da <b>${monthLabelLong(dep.inizio_promo)}</b> per ${N(dep.mesi_promo)} mesi. ${fineDentro ? `Da <b>${monthLabelLong(d.finePromo)}</b> scende allo ${fmt.format(N(dep.tasso_base))}%: sposta i soldi prima. ` : ""}Per tenere il 4% devono arrivare almeno 1.000 € al mese sul conto corrente ING.</div>`);
+    <div class="note">${nota}</div>`);
+
+  // Tassi nel tempo
+  const opts = monthRange("2025-01", "2030-12");
+  const card = document.createElement("section"); card.className = "card";
+  card.innerHTML = `<div class="card-head"><h2>Tasso nel tempo</h2><span class="hint">Ogni tasso vale dal suo mese fino al successivo</span></div>`;
+  if (!periodi.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessun tasso: aggiungi il primo qui sotto.</div>');
+  periodi.forEach((p) => {
+    const r = document.createElement("div"); r.className = "row periodo";
+    const da = document.createElement("select"); da.id = "p-da-" + p.id; da.setAttribute("aria-label", "Dal mese");
+    da.innerHTML = opts.map((id) => `<option value="${id}"${id === p.da ? " selected" : ""}>da ${monthLabel(id)}</option>`).join("");
+    da.onchange = () => { p.da = da.value; saveDeposito(); render(); };
+    const wi = document.createElement("span"); wi.className = "imp";
+    const t = document.createElement("input"); t.type = "text"; t.inputMode = "decimal"; t.id = "p-t-" + p.id; t.value = fmt.format(N(p.tasso)); t.setAttribute("aria-label", "Tasso lordo annuo");
+    t.addEventListener("input", () => { const n = parseNum(t.value); if (!isNaN(n) && n >= 0 && n < 100) { p.tasso = round(n); saveDeposito(); } });
+    t.addEventListener("blur", () => { const n = parseNum(t.value); t.value = fmt.format(isNaN(n) ? N(p.tasso) : round(n)); render(); });
+    wi.append(t, Object.assign(document.createElement("span"), { className: "eur", textContent: "%" }));
+    const nome = document.createElement("input"); nome.type = "text"; nome.id = "p-n-" + p.id; nome.value = p.nome || ""; nome.placeholder = "Banca o conto (facoltativo)"; nome.setAttribute("aria-label", "Nome del conto");
+    nome.addEventListener("input", () => { p.nome = nome.value; saveDeposito(); });
+    nome.addEventListener("blur", () => render());
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.setAttribute("aria-label", "Elimina questo tasso");
+    del.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    del.onclick = () => confirmInline(r, `Eliminare il tasso da ${monthLabel(p.da)}?`, "Elimina", () => { dep.periodi = dep.periodi.filter((x) => x.id !== p.id); saveDeposito(); render(); });
+    r.append(da, wi, nome, del); card.appendChild(r);
+  });
+  const add = document.createElement("div"); add.className = "add solo";
+  const ab = document.createElement("button"); ab.type = "button"; ab.className = "btn primary"; ab.id = "p-add";
+  ab.textContent = periodi.length ? "Aggiungi un cambio di tasso" : "Aggiungi il tasso";
+  ab.onclick = () => {
+    const last = periodi[periodi.length - 1];
+    const da = last ? addMonths(last.da, 12) : ms[0];
+    dep.periodi = [...(dep.periodi || []), { id: uid(), da: opts.includes(da) ? da : opts[opts.length - 1], tasso: last ? N(last.tasso) : 0, nome: "" }];
+    saveDeposito(); render(); document.querySelector(".row.periodo:last-of-type input")?.focus();
+  };
+  add.appendChild(ab); card.appendChild(add);
+  v.appendChild(card);
 
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Saldo di partenza", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "d-saldo", hint: "Già sul conto all'inizio del periodo" }));
-  fs.appendChild(moneyField("Tasso promo lordo", N(dep.tasso_promo), (n) => { dep.tasso_promo = n; saveDeposito(); }, { id: "d-tasso", unit: "%" }));
-  fs.appendChild(moneyField("Tasso dopo la promo", N(dep.tasso_base), (n) => { dep.tasso_base = n; saveDeposito(); }, { id: "d-base", unit: "%" }));
-  const ls = document.createElement("label"); ls.className = "field"; ls.htmlFor = "d-inizio";
-  ls.innerHTML = `<span class="label">Inizio promo</span><select id="d-inizio">${ms.map((id) => `<option value="${id}"${id === dep.inizio_promo ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select><span class="hint">Mese del primo versamento</span>`;
-  ls.querySelector("select").onchange = (e) => { dep.inizio_promo = e.target.value; saveDeposito(); render(); };
-  fs.appendChild(ls);
+  fs.appendChild(moneyField("Tasse sugli interessi", N(dep.tasse), (n) => { dep.tasse = n; saveDeposito(); }, { id: "d-tasse", unit: "%", hint: "In Italia 26%" }));
+  fs.appendChild(moneyField("Imposta di bollo annua", N(dep.bollo), (n) => { dep.bollo = n; saveDeposito(); }, { id: "d-bollo", unit: "%", hint: "Di solito 0,2% (alcune banche la pagano loro: metti 0)" }));
   v.appendChild(fs);
 
   const maxS = Math.max(1, ...d.rows.map((r) => r.saldo));
   let html = '<table><thead><tr><th>Mese</th><th>Tasso</th><th>Versato</th><th>Interessi netti</th><th>Bollo</th><th>Saldo</th><th aria-hidden="true"></th></tr></thead><tbody>';
   d.rows.forEach((r) => {
     const vers = r.versato - r.prelievo, e2 = extraInfo(r.id, state.piano);
-    html += `<tr class="${r.id === d.finePromo ? "promo-end" : ""}"><td>${monthLabel(r.id)}${r.extra && e2 ? ` <span class="tag">${e2.corto}</span>` : ""}</td><td>${fmt.format(r.tasso)}%</td><td class="${vers < 0 ? "neg" : ""}">${vers >= 0 ? "+" : ""}${fmt.format(vers)}</td><td>+${fmt.format(r.netto)}</td><td>−${fmt.format(r.bollo)}</td><td>${fmt.format(r.saldo)}</td><td><span class="mini" style="width:${Math.max(2, Math.round((r.saldo / maxS) * 80))}px"></span></td></tr>`;
+    html += `<tr class="${r.cambio ? "promo-end" : ""}"><td>${monthLabel(r.id)}${r.extra && e2 ? ` <span class="tag">${e2.corto}</span>` : ""}</td><td title="${r.periodo?.nome ? esc(r.periodo.nome) : ""}">${fmt.format(r.tasso)}%</td><td class="${vers < 0 ? "neg" : ""}">${vers >= 0 ? "+" : ""}${fmt.format(vers)}</td><td>+${fmt.format(r.netto)}</td><td>−${fmt.format(r.bollo)}</td><td>${fmt.format(r.saldo)}</td><td><span class="mini" style="width:${Math.max(2, Math.round((r.saldo / maxS) * 80))}px"></span></td></tr>`;
   });
   html += "</tbody></table>";
   v.insertAdjacentHTML("beforeend", `<section class="card"><div class="card-head"><h2>Mese per mese</h2><span class="hint">Versamenti e prelievi si cambiano nella scheda Mesi</span></div><div class="tbl-wrap">${html}</div></section>`);
@@ -317,7 +359,7 @@ function renderModello(v) {
   v.appendChild(hero(m, calcMonth(m, p), ""));
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
-  fs.appendChild(moneyField("Risparmio al Conto Arancio", N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
+  fs.appendChild(moneyField("Risparmio al conto deposito", N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
   fs.appendChild(moneyField("Soglia minima resto", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "La tua regola" }));
   fs.appendChild(moneyField("Tredicesima (dicembre)", N(p.tredicesima), (n) => { p.tredicesima = n; savePiano(); }, { id: "t-13", cls: "extra", hint: "Netto stimato: correggilo con la busta" }));
   fs.appendChild(moneyField("Quattordicesima (giugno)", N(p.quattordicesima), (n) => { p.quattordicesima = n; savePiano(); }, { id: "t-14", cls: "extra", hint: "Metti 0 se il contratto non la prevede" }));
@@ -333,7 +375,7 @@ function renderModello(v) {
   v.appendChild(per);
 
   const ck = document.createElement("label"); ck.className = "check"; ck.htmlFor = "t-extradep";
-  ck.innerHTML = `<input type="checkbox" id="t-extradep"${p.extra_al_deposito ? " checked" : ""}><span><b>Metti tredicesima e quattordicesima nel Conto Arancio</b><br><span class="hint">Se lo togli, restano nel resto in tasca di giugno e dicembre.</span></span>`;
+  ck.innerHTML = `<input type="checkbox" id="t-extradep"${p.extra_al_deposito ? " checked" : ""}><span><b>Metti tredicesima e quattordicesima nel conto deposito</b><br><span class="hint">Se lo togli, restano nel resto in tasca di giugno e dicembre.</span></span>`;
   ck.querySelector("input").onchange = (e) => { p.extra_al_deposito = e.target.checked; savePiano(); render(); };
   v.appendChild(ck);
   vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-");

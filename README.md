@@ -1,6 +1,6 @@
 # Conti del mese
 
-Web app per gestire le spese mensili: resto in tasca mese per mese, tredicesima e quattordicesima, e simulazione del conto deposito (Conto Arancio ING al 4% per 12 mesi).
+Web app per gestire le spese mensili: resto in tasca mese per mese, tredicesima e quattordicesima, e simulazione del conto deposito con i tassi che cambiano nel tempo (es. 4% per un anno, poi un altro conto al 2,5%).
 
 - **Frontend**: HTML, CSS e JavaScript semplici (moduli ES), senza build. Pubblicata con GitHub Pages.
 - **Dati**: Supabase (Postgres + login con email e password). Ogni utente vede solo i propri dati.
@@ -14,7 +14,7 @@ css/style.css           grafica; colori in variabili, tema chiaro e scuro
 js/config.js            URL e chiave pubblica di Supabase
 js/calc.js              calcoli puri: mesi, resto, 13ª/14ª, simulazione deposito
 js/store.js             lettura e salvataggio su Supabase, backup
-js/app.js               interfaccia: login, schede Mesi / Conto Arancio / Modello
+js/app.js               interfaccia: login, schede Mesi / Conto Deposito / Modello
 sw.js                   cache per aprire l'app offline
 manifest.webmanifest    nome e icone per l'installazione
 supabase/schema.sql     tabelle e regole di accesso del database
@@ -70,6 +70,10 @@ che possa registrarsi solo tu, in Supabase disattiva **Authentication → Sign I
 dopo aver creato il tuo account.
 
 ## Come sono calcolati gli interessi
+Nella scheda *Conto Deposito*, sezione *Tasso nel tempo*, ogni riga dice da che mese vale un tasso lordo
+(e, se vuoi, il nome della banca). Vale fino alla riga successiva: quando cambi conto o il tasso cambia,
+aggiungi una riga.
+
 Stima mensile: versamenti a inizio mese, interesse = saldo × tasso ÷ 12, meno il 26% di imposta sulle
 rendite e il bollo dello 0,2% annuo ripartito sui mesi. La banca liquida e arrotonda a modo suo, quindi
 le cifre reali possono differire di qualche centesimo.

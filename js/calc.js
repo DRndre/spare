@@ -23,12 +23,11 @@ export const DEFAULT_PIANO = {
   voci: [],
 };
 
+// periodi: [{ id, da: "AAAA-MM", tasso: % lordo annuo, nome: "banca/conto" }]
+// Ogni periodo vale dal suo mese fino al periodo successivo.
 export const DEFAULT_DEPOSITO = {
   saldo_iniziale: 0,
-  tasso_promo: 4,
-  tasso_base: 0.2,
-  inizio_promo: "2026-11",
-  mesi_promo: 12,
+  periodi: [],
   tasse: 26,
   bollo: 0.2,
 };
@@ -68,7 +67,6 @@ export function monthRange(start, end) {
 
 export const monthLabel = (id) => { const [y, m] = id.split("-"); return MN[+m - 1] + " " + y; };
 export const monthLabelLong = (id) => { const [y, m] = id.split("-"); return MNL[+m - 1] + " " + y; };
-const monthDiff = (a, b) => { const [ay, am] = a.split("-").map(Number); const [by, bm] = b.split("-").map(Number); return (by - ay) * 12 + (bm - am); };
 export const addMonths = (id, n) => { let [y, m] = id.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + String(m).padStart(2, "0"); };
 
 /** Mensilità extra del mese: tredicesima a dicembre, quattordicesima a giugno. */
@@ -117,33 +115,56 @@ export function testoResto(resto, soglia) {
   return "Sopra la soglia di " + eur(N(soglia));
 }
 
-export function promoAttiva(id, dep) {
-  const d = monthDiff(dep.inizio_promo, id);
-  return d >= 0 && d < N(dep.mesi_promo);
+const MESE_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** Periodi validi, ordinati per mese di inizio. */
+export function ordinaPeriodi(periodi) {
+  return (Array.isArray(periodi) ? periodi : [])
+    .filter((p) => p && MESE_RE.test(p.da))
+    .map((p, i) => ({ ...p, _i: i }))
+    .sort((a, b) => (a.da < b.da ? -1 : a.da > b.da ? 1 : a._i - b._i))
+    .map(({ _i, ...p }) => p);
+}
+
+/** Periodo in vigore in un mese: l'ultimo iniziato entro quel mese (null se nessuno). */
+export function periodoDelMese(id, periodi) {
+  let cur = null;
+  for (const p of ordinaPeriodi(periodi)) if (p.da <= id) cur = p;
+  return cur;
+}
+
+/** Converte le vecchie impostazioni (promo + tasso dopo la promo) in periodi. */
+export function periodiDaVecchi(d) {
+  if (d == null || d.tasso_promo == null || !MESE_RE.test(d.inizio_promo || "")) return [];
+  return [
+    { id: "p1", da: d.inizio_promo, tasso: N(d.tasso_promo), nome: "" },
+    { id: "p2", da: addMonths(d.inizio_promo, N(d.mesi_promo) || 12), tasso: N(d.tasso_base), nome: "" },
+  ];
 }
 
 /**
- * Simulazione del Conto Arancio mese per mese.
+ * Simulazione del conto deposito mese per mese.
  * Versamenti a inizio mese; interesse mensile = saldo × tasso / 12,
  * meno le tasse sulle rendite (26%) e il bollo (0,2% annuo, ripartito sui mesi). È una stima.
  */
 export function simulaDeposito(months, piano, mesi, dep) {
-  let saldo = N(dep.saldo_iniziale), totNetto = 0, totBollo = 0, totVersato = 0;
-  const rows = months.map((id) => {
+  let saldo = N(dep.saldo_iniziale), totNetto = 0, totBollo = 0, totVersato = 0, prima = null;
+  const rows = months.map((id, i) => {
     const m = monthData(id, piano, mesi);
     const c = calcMonth(m, piano);
     const versato = c.toDep;
     const prelievo = Math.min(N(m.prelievo), saldo + versato);
     saldo = saldo + versato - prelievo;
-    const promo = promoAttiva(id, dep);
-    const tasso = promo ? N(dep.tasso_promo) : N(dep.tasso_base);
+    const periodo = periodoDelMese(id, dep.periodi);
+    const tasso = periodo ? N(periodo.tasso) : 0;
+    const cambio = i > 0 && periodo && periodo !== prima && periodo.da === id;
+    prima = periodo;
     const lordo = (saldo * tasso) / 100 / 12;
     const netto = lordo * (1 - N(dep.tasse) / 100);
     const bollo = (saldo * N(dep.bollo)) / 100 / 12;
     saldo = saldo + netto - bollo;
     totNetto += netto; totBollo += bollo; totVersato += versato - prelievo;
-    return { id, versato, prelievo, tasso, promo, lordo, netto, bollo, saldo, extra: c.extraDep };
+    return { id, versato, prelievo, tasso, periodo, cambio, lordo, netto, bollo, saldo, extra: c.extraDep };
   });
-  const fine = addMonths(dep.inizio_promo, N(dep.mesi_promo));
-  return { rows, totNetto, totBollo, totVersato, saldo, finePromo: fine };
+  return { rows, totNetto, totBollo, totVersato, saldo };
 }

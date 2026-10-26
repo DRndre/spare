@@ -18,7 +18,7 @@ create table if not exists public.piani (
   updated_at timestamptz not null default now()
 );
 
--- 2. Conto deposito (Conto Arancio ING)
+-- 2. Conto deposito (le colonne *_promo/tasso_base sono della prima versione: ora si usa "periodi")
 create table if not exists public.depositi (
   user_id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
   saldo_iniziale numeric not null default 0,
@@ -28,8 +28,10 @@ create table if not exists public.depositi (
   mesi_promo integer not null default 12,
   tasse numeric not null default 26,
   bollo numeric not null default 0.2,
+  periodi jsonb not null default '[]'::jsonb,  -- [{id, da: "AAAA-MM", tasso, nome}]
   updated_at timestamptz not null default now()
 );
+alter table public.depositi add column if not exists periodi jsonb not null default '[]'::jsonb;
 
 -- 3. Mesi personalizzati (solo quelli che modifichi; gli altri seguono il piano)
 create table if not exists public.mesi (

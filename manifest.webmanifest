@@ -1,7 +1,7 @@
 {
   "name": "Conti del mese",
   "short_name": "Conti",
-  "description": "Spese mensili, resto in tasca e Conto Arancio mese per mese.",
+  "description": "Spese mensili, resto in tasca e conto deposito mese per mese.",
   "lang": "it",
   "start_url": "./",
   "scope": "./",

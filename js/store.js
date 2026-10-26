@@ -2,7 +2,7 @@
 // del database (Row Level Security) fanno vedere a ciascuno solo le proprie.
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
-import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, CATS } from "./calc.js";
+import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, CATS, periodiDaVecchi } from "./calc.js";
 
 export const configured = !SUPABASE_URL.includes("INSERISCI") && !SUPABASE_ANON_KEY.includes("INSERISCI");
 export const sb = configured
@@ -34,12 +34,22 @@ function pianoFromRow(r) {
   ["stipendio", "risparmio", "soglia", "tredicesima", "quattordicesima"].forEach((k) => (p[k] = N(p[k])));
   return p;
 }
-function depositoFromRow(r) {
-  const d = { ...DEFAULT_DEPOSITO };
-  for (const k of Object.keys(DEFAULT_DEPOSITO)) if (r[k] != null) d[k] = r[k];
-  ["saldo_iniziale", "tasso_promo", "tasso_base", "mesi_promo", "tasse", "bollo"].forEach((k) => (d[k] = N(d[k])));
-  return d;
+function fixPeriodi(v) {
+  return Array.isArray(v)
+    ? v.filter((x) => x && /^\d{4}-(0[1-9]|1[0-2])$/.test(x.da))
+        .map((x) => ({ id: String(x.id || uid()), da: x.da, tasso: N(x.tasso), nome: String(x.nome || "") }))
+    : [];
 }
+function depositoFromRow(r) {
+  return {
+    saldo_iniziale: N(r.saldo_iniziale),
+    // I backup vecchi non hanno "periodi": li ricavo da promo + tasso dopo la promo.
+    periodi: r.periodi === undefined ? periodiDaVecchi(r) : fixPeriodi(r.periodi),
+    tasse: r.tasse == null ? DEFAULT_DEPOSITO.tasse : N(r.tasse),
+    bollo: r.bollo == null ? DEFAULT_DEPOSITO.bollo : N(r.bollo),
+  };
+}
+const depositoRow = (d) => ({ saldo_iniziale: N(d.saldo_iniziale), periodi: fixPeriodi(d.periodi), tasse: N(d.tasse), bollo: N(d.bollo) });
 function meseFromRow(r) {
   return { stipendio: N(r.stipendio), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
 }
@@ -55,7 +65,7 @@ export async function loadAll() {
   for (const r of [p, d, m]) if (r.error) throw r.error;
   // Non sovrascrivere ciò che l'utente sta modificando in questo momento
   if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : { ...DEFAULT_PIANO, voci: [] };
-  if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO };
+  if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO, periodi: [] };
   const next = {};
   (m.data || []).forEach((r) => { next[r.mese] = busy("mese:" + r.mese) && state.mesi[r.mese] ? state.mesi[r.mese] : meseFromRow(r); });
   Object.keys(state.mesi).forEach((id) => { if (!next[id] && busy("mese:" + id)) next[id] = state.mesi[id]; });
@@ -110,11 +120,7 @@ export function savePiano() {
 export function saveDeposito() {
   schedule("deposito", () => {
     const d = state.deposito;
-    return sb.from("depositi").upsert({
-      user_id: state.user.id,
-      saldo_iniziale: N(d.saldo_iniziale), tasso_promo: N(d.tasso_promo), tasso_base: N(d.tasso_base),
-      inizio_promo: d.inizio_promo, mesi_promo: N(d.mesi_promo), tasse: N(d.tasse), bollo: N(d.bollo), updated_at: now(),
-    });
+    return sb.from("depositi").upsert({ user_id: state.user.id, ...depositoRow(d), updated_at: now() });
   });
 }
 export function saveMese(id) {
@@ -149,7 +155,7 @@ export async function importData(json) {
   const u = state.user.id, t = now(), p = state.piano, d = state.deposito;
   const r1 = await sb.from("piani").upsert({ user_id: u, ...p, voci: cleanVoci(p.voci), updated_at: t });
   if (r1.error) throw r1.error;
-  const r2 = await sb.from("depositi").upsert({ user_id: u, ...d, updated_at: t });
+  const r2 = await sb.from("depositi").upsert({ user_id: u, ...depositoRow(d), updated_at: t });
   if (r2.error) throw r2.error;
   const r3 = await sb.from("mesi").delete().eq("user_id", u);
   if (r3.error) throw r3.error;
