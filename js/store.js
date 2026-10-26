@@ -1,0 +1,159 @@
+// Archivio dati su Supabase. Ogni riga appartiene a un utente (user_id) e le regole
+// del database (Row Level Security) fanno vedere a ciascuno solo le proprie.
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, CATS } from "./calc.js";
+
+export const configured = !SUPABASE_URL.includes("INSERISCI") && !SUPABASE_ANON_KEY.includes("INSERISCI");
+export const sb = configured
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } })
+  : null;
+
+export const state = {
+  user: null,
+  piano: { ...DEFAULT_PIANO },
+  deposito: { ...DEFAULT_DEPOSITO },
+  mesi: {},
+};
+
+const listeners = new Set();
+export const onStatus = (fn) => listeners.add(fn);
+const status = (s, t) => listeners.forEach((fn) => fn(s, t));
+
+function fixVoci(v) {
+  return Array.isArray(v)
+    ? v.map((x) => ({ id: String(x.id || uid()), nome: String(x.nome || ""), importo: N(x.importo), cat: CATS.some((c) => c.k === x.cat) ? x.cat : "altro" }))
+    : [];
+}
+const cleanVoci = (v) => fixVoci(v);
+
+function pianoFromRow(r) {
+  const p = { ...DEFAULT_PIANO };
+  for (const k of Object.keys(DEFAULT_PIANO)) if (r[k] != null) p[k] = r[k];
+  p.voci = fixVoci(r.voci);
+  ["stipendio", "risparmio", "soglia", "tredicesima", "quattordicesima"].forEach((k) => (p[k] = N(p[k])));
+  return p;
+}
+function depositoFromRow(r) {
+  const d = { ...DEFAULT_DEPOSITO };
+  for (const k of Object.keys(DEFAULT_DEPOSITO)) if (r[k] != null) d[k] = r[k];
+  ["saldo_iniziale", "tasso_promo", "tasso_base", "mesi_promo", "tasse", "bollo"].forEach((k) => (d[k] = N(d[k])));
+  return d;
+}
+function meseFromRow(r) {
+  return { stipendio: N(r.stipendio), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
+}
+
+/** Carica tutto dell'utente collegato. Restituisce true se l'utente non ha ancora dati. */
+export async function loadAll() {
+  const uidUser = state.user.id;
+  const [p, d, m] = await Promise.all([
+    sb.from("piani").select("*").eq("user_id", uidUser).maybeSingle(),
+    sb.from("depositi").select("*").eq("user_id", uidUser).maybeSingle(),
+    sb.from("mesi").select("*").eq("user_id", uidUser),
+  ]);
+  for (const r of [p, d, m]) if (r.error) throw r.error;
+  // Non sovrascrivere ciò che l'utente sta modificando in questo momento
+  if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : { ...DEFAULT_PIANO, voci: [] };
+  if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO };
+  const next = {};
+  (m.data || []).forEach((r) => { next[r.mese] = busy("mese:" + r.mese) && state.mesi[r.mese] ? state.mesi[r.mese] : meseFromRow(r); });
+  Object.keys(state.mesi).forEach((id) => { if (!next[id] && busy("mese:" + id)) next[id] = state.mesi[id]; });
+  state.mesi = next;
+  return !p.data && !d.data && !(m.data || []).length;
+}
+
+/* ---------- Salvataggio con attesa: un salvataggio per volta per ogni riga ---------- */
+const jobs = {};
+const busy = (key) => { const j = jobs[key]; return !!(j && (j.timer || j.saving || j.again)); };
+const anyBusy = () => Object.keys(jobs).some(busy);
+
+function schedule(key, write) {
+  const j = jobs[key] || (jobs[key] = {});
+  j.write = write;
+  clearTimeout(j.timer);
+  j.timer = setTimeout(() => { j.timer = null; run(key); }, 700);
+  status("saving", "Modifiche in corso…");
+}
+async function run(key) {
+  const j = jobs[key];
+  if (j.saving) { j.again = true; return; }
+  j.saving = true;
+  try {
+    const { error } = await j.write();
+    if (error) throw error;
+  } catch (e) {
+    j.saving = false;
+    status("error", "Non salvato: " + (e.message || "controlla la connessione"));
+    j.retry = setTimeout(() => run(key), 4000);
+    return;
+  }
+  j.saving = false;
+  if (j.again) { j.again = false; run(key); return; }
+  if (!anyBusy()) status("saved", "Salvato");
+}
+
+const now = () => new Date().toISOString();
+
+export function savePiano() {
+  schedule("piano", () => {
+    const p = state.piano;
+    return sb.from("piani").upsert({
+      user_id: state.user.id,
+      stipendio: N(p.stipendio), risparmio: N(p.risparmio), soglia: N(p.soglia),
+      tredicesima: N(p.tredicesima), quattordicesima: N(p.quattordicesima),
+      extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
+      voci: cleanVoci(p.voci), updated_at: now(),
+    });
+  });
+}
+export function saveDeposito() {
+  schedule("deposito", () => {
+    const d = state.deposito;
+    return sb.from("depositi").upsert({
+      user_id: state.user.id,
+      saldo_iniziale: N(d.saldo_iniziale), tasso_promo: N(d.tasso_promo), tasso_base: N(d.tasso_base),
+      inizio_promo: d.inizio_promo, mesi_promo: N(d.mesi_promo), tasse: N(d.tasse), bollo: N(d.bollo), updated_at: now(),
+    });
+  });
+}
+export function saveMese(id) {
+  schedule("mese:" + id, () => {
+    const m = state.mesi[id];
+    return sb.from("mesi").upsert({
+      user_id: state.user.id, mese: id,
+      stipendio: N(m.stipendio), risparmio: N(m.risparmio), prelievo: N(m.prelievo),
+      extra: m.extra == null ? null : N(m.extra), voci: cleanVoci(m.voci), updated_at: now(),
+    });
+  });
+}
+export async function resetMese(id) {
+  const j = jobs["mese:" + id];
+  if (j) { clearTimeout(j.timer); clearTimeout(j.retry); j.timer = null; j.again = false; }
+  delete state.mesi[id];
+  status("saving", "Ripristino…");
+  const { error } = await sb.from("mesi").delete().eq("user_id", state.user.id).eq("mese", id);
+  status(error ? "error" : "saved", error ? "Non ripristinato: " + error.message : "Salvato");
+}
+
+/* ---------- Backup ---------- */
+export function exportData() {
+  return { app: "conti-del-mese", versione: 1, esportato: now(), piano: state.piano, deposito: state.deposito, mesi: state.mesi };
+}
+export async function importData(json) {
+  if (!json || json.app !== "conti-del-mese") throw new Error("Il file non è un backup di Conti del mese.");
+  state.piano = pianoFromRow(json.piano || {});
+  state.deposito = depositoFromRow(json.deposito || {});
+  state.mesi = {};
+  Object.entries(json.mesi || {}).forEach(([id, r]) => { if (/^\d{4}-\d{2}$/.test(id)) state.mesi[id] = meseFromRow(r); });
+  const u = state.user.id, t = now(), p = state.piano, d = state.deposito;
+  const r1 = await sb.from("piani").upsert({ user_id: u, ...p, voci: cleanVoci(p.voci), updated_at: t });
+  if (r1.error) throw r1.error;
+  const r2 = await sb.from("depositi").upsert({ user_id: u, ...d, updated_at: t });
+  if (r2.error) throw r2.error;
+  const r3 = await sb.from("mesi").delete().eq("user_id", u);
+  if (r3.error) throw r3.error;
+  const rows = Object.entries(state.mesi).map(([id, m]) => ({ user_id: u, mese: id, ...m, voci: cleanVoci(m.voci), updated_at: t }));
+  if (rows.length) { const r4 = await sb.from("mesi").insert(rows); if (r4.error) throw r4.error; }
+  status("saved", "Salvato");
+}
