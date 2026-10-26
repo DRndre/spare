@@ -34,7 +34,8 @@ Online su **https://drndre.github.io/gestione-spese/** (GitHub Pages, branch `ma
   arancio `--ing` solo per tredicesima/quattordicesima.
 - `js/guida.js` — **Configurazione guidata** in 5 passaggi (entrate, mensilità, spese fisse con esempi da spuntare,
   risparmi/deposito, riepilogo): parte al primo accesso ("Inizia la configurazione") e si riapre dal menu ⋯
-  senza cancellare le spese già presenti. Contiene anche la pagina **Come funziona** (menu ⋯).
+  senza cancellare le spese già presenti. Si può saltare ("Salta" nel primo passaggio o "Salta, configuro da solo"
+  nel benvenuto): si va al Modello vuoto. Contiene anche la pagina **Come funziona** (menu ⋯).
 - Tema: menu ⋯ → Automatico / Chiaro / Scuro, salvato **per dispositivo** in `localStorage` ("spare-tema"),
   applicato con `data-theme` sull'html (script in testa a `index.html`, così non lampeggia).
 - `js/logo.js` + `icons/logo.svg` — logo "spare": scritta in **Fraunces 800** trasformata in disegno (niente

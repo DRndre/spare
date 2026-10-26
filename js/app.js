@@ -309,9 +309,11 @@ function ensureMese(id) {
 function renderOnboarding(v) {
   v.innerHTML = `<section class="card pad"><h2>Benvenuto</h2>
     <p>Spare ti dice quanto ti resta in tasca ogni mese e quanto metti da parte. Per iniziare rispondi a qualche domanda: ci vogliono un paio di minuti e puoi cambiare tutto anche dopo.</p>
-    <div class="actions"><button class="btn primary" type="button" id="ob-zero">Inizia la configurazione</button><button class="btn" type="button" id="ob-import">Ho un backup da importare</button></div></section>`;
+    <div class="actions"><button class="btn primary" type="button" id="ob-zero">Inizia la configurazione</button><button class="btn" type="button" id="ob-import">Ho un backup da importare</button></div>
+    <button class="link" type="button" id="ob-salta">Salta, configuro da solo</button></section>`;
   $("ob-import").onclick = () => $("importFile").click();
   $("ob-zero").onclick = () => guida(true);
+  $("ob-salta").onclick = saltaGuida;
 }
 
 function renderMesi(v) {
@@ -613,9 +615,11 @@ $("doExport").onclick = () => {
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   $("menu").hidden = true;
 };
+/** Senza guida: salvo un piano vuoto e apro il Modello, dove si inserisce tutto a mano. */
+function saltaGuida() { empty = false; savePiano(); saveDeposito(); view = "modello"; history.replaceState(null, "", "#modello"); render(); window.scrollTo(0, 0); }
 function guida(primaVolta) {
   apriGuida({
-    state, savePiano, saveDeposito, primaVolta,
+    state, savePiano, saveDeposito, primaVolta, onSkip: saltaGuida,
     onDone: () => { empty = false; view = "mesi"; sel = meseIniziale(months()); history.replaceState(null, "", "#mesi"); render(); window.scrollTo(0, 0); },
   });
 }

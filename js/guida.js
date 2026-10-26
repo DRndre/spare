@@ -53,7 +53,7 @@ const griglia = (...els) => { const d = document.createElement("div"); d.classNa
 const testo = (html, cls = "hint") => { const p = document.createElement("p"); p.className = cls + " flush"; p.innerHTML = html; return p; };
 
 /* ---------- Configurazione guidata ---------- */
-export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, onCancel }) {
+export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, onCancel, onSkip }) {
   const p0 = state.piano, d0 = state.deposito;
   const oggi = meseCorrente();
   // copia di lavoro
@@ -182,8 +182,13 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     }
     // pulsanti
     f.foot.innerHTML = "";
-    const indietro = document.createElement("button"); indietro.type = "button"; indietro.className = "btn"; indietro.textContent = "Indietro";
-    indietro.disabled = passo === 0; indietro.onclick = () => { passo--; disegna(); f.body.scrollTop = 0; };
+    const indietro = document.createElement("button"); indietro.type = "button"; indietro.className = "btn";
+    if (passo === 0 && primaVolta && onSkip) {
+      // al primo accesso, al posto di "Indietro": salto la guida e configuro da solo nel Modello
+      indietro.textContent = "Salta"; indietro.onclick = () => { f.close(); onSkip(); };
+    } else {
+      indietro.textContent = "Indietro"; indietro.disabled = passo === 0; indietro.onclick = () => { passo--; disegna(); f.body.scrollTop = 0; };
+    }
     const avanti = document.createElement("button"); avanti.type = "button"; avanti.className = "btn primary";
     avanti.textContent = passo === PASSI.length - 1 ? "Fine" : "Avanti";
     avanti.onclick = () => { if (passo < PASSI.length - 1) { passo++; disegna(); f.body.scrollTop = 0; } else salva(); };
