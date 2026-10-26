@@ -2,7 +2,7 @@
 // del database (Row Level Security) fanno vedere a ciascuno solo le proprie.
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
-import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, CATS, periodiDaVecchi } from "./calc.js";
+import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, CATS, periodiDaVecchi, meseCorrente } from "./calc.js";
 
 export const configured = !SUPABASE_URL.includes("INSERISCI") && !SUPABASE_ANON_KEY.includes("INSERISCI");
 export const sb = configured
@@ -31,7 +31,14 @@ function pianoFromRow(r) {
   const p = { ...DEFAULT_PIANO };
   for (const k of Object.keys(DEFAULT_PIANO)) if (r[k] != null) p[k] = r[k];
   p.voci = fixVoci(r.voci);
-  ["stipendio", "risparmio", "soglia", "tredicesima", "quattordicesima"].forEach((k) => (p[k] = N(p[k])));
+  ["stipendio", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
+  // Dati della prima versione (senza mensilità): la ricavo dagli importi
+  if (r.mensilita == null) p.mensilita = N(p.quattordicesima) > 0 ? 14 : N(p.tredicesima) > 0 ? 13 : 12;
+  if (![12, 13, 14].includes(p.mensilita)) p.mensilita = 13;
+  if (!(p.mese_13 >= 1 && p.mese_13 <= 12)) p.mese_13 = 12;
+  if (!(p.mese_14 >= 1 && p.mese_14 <= 12)) p.mese_14 = 6;
+  if (r.senza_fine == null) p.senza_fine = false;
+  p.senza_fine = !!p.senza_fine;
   return p;
 }
 function fixPeriodi(v) {
@@ -54,6 +61,12 @@ function meseFromRow(r) {
   return { stipendio: N(r.stipendio), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
 }
 
+/** Piano per chi parte da zero: inizia dal mese corrente e non ha fine. */
+function pianoNuovo() {
+  const oggi = meseCorrente();
+  return { ...DEFAULT_PIANO, voci: [], mese_inizio: oggi, mese_fine: (Number(oggi.slice(0, 4)) + 1) + "-12" };
+}
+
 /** Carica tutto dell'utente collegato. Restituisce true se l'utente non ha ancora dati. */
 export async function loadAll() {
   const uidUser = state.user.id;
@@ -64,7 +77,7 @@ export async function loadAll() {
   ]);
   for (const r of [p, d, m]) if (r.error) throw r.error;
   // Non sovrascrivere ciò che l'utente sta modificando in questo momento
-  if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : { ...DEFAULT_PIANO, voci: [] };
+  if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : pianoNuovo();
   if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO, periodi: [] };
   const next = {};
   (m.data || []).forEach((r) => { next[r.mese] = busy("mese:" + r.mese) && state.mesi[r.mese] ? state.mesi[r.mese] : meseFromRow(r); });
@@ -112,6 +125,7 @@ export function savePiano() {
       user_id: state.user.id,
       stipendio: N(p.stipendio), risparmio: N(p.risparmio), soglia: N(p.soglia),
       tredicesima: N(p.tredicesima), quattordicesima: N(p.quattordicesima),
+      mensilita: N(p.mensilita), mese_13: N(p.mese_13), mese_14: N(p.mese_14), senza_fine: !!p.senza_fine,
       extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
       voci: cleanVoci(p.voci), updated_at: now(),
     });

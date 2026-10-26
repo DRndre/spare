@@ -2,6 +2,7 @@
 import {
   CATS, N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
+  mesiPiano, meseCorrente, MESI_NOMI,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
@@ -15,7 +16,29 @@ let sel = null;
 let needsRender = false;
 let empty = false;
 
-const months = () => monthRange(state.piano.mese_inizio, state.piano.mese_fine);
+const months = () => mesiPiano(state.piano);
+let depAnno = null; // anno mostrato nella tabella del conto deposito
+
+/** Mese da aprire: quello di oggi se c'è, altrimenti il più vicino. */
+function meseIniziale(ms) {
+  const cur = meseCorrente();
+  if (ms.includes(cur)) return cur;
+  return cur < ms[0] ? ms[0] : ms[ms.length - 1];
+}
+/** Pulsanti degli anni (compaiono solo se gli anni sono più di uno). */
+function yearsBar(ms, anno, onPick, id) {
+  const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
+  const bar = document.createElement("div"); bar.className = "years"; bar.setAttribute("role", "group"); bar.setAttribute("aria-label", "Scegli l'anno");
+  if (anni.length < 2) { bar.hidden = true; return bar; }
+  anni.forEach((a) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = a; b.id = id + a; b.setAttribute("aria-pressed", String(a === anno));
+    b.onclick = () => onPick(a);
+    bar.appendChild(b);
+  });
+  return bar;
+}
+/** "13ª e 14ª", "13ª" o "" secondo le mensilità. */
+const extraNomi = () => (N(state.piano.mensilita) >= 14 ? "13ª e 14ª" : N(state.piano.mensilita) >= 13 ? "13ª" : "");
 
 /* ---------- Stato salvataggio ---------- */
 function setStatus(s, t) { const el = $("status"); el.dataset.s = s; $("statusTxt").textContent = t; }
@@ -97,8 +120,7 @@ async function start() {
     return;
   }
   const ms = months();
-  const cur = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
-  if (!sel || !ms.includes(sel)) sel = ms.includes(cur) ? cur : ms[0];
+  if (!sel || !ms.includes(sel)) sel = meseIniziale(ms);
   render();
 }
 
@@ -234,7 +256,11 @@ function renderOnboarding(v) {
 }
 
 function renderMesi(v) {
-  const ms = months();
+  const all = months();
+  if (!all.includes(sel)) sel = meseIniziale(all);
+  const anno = sel.slice(0, 4);
+  const ms = all.filter((id) => id.startsWith(anno));
+  v.appendChild(yearsBar(all, anno, (a) => { const cur = meseCorrente(); sel = cur.startsWith(a) && all.includes(cur) ? cur : all.find((id) => id.startsWith(a)); render(); }, "y-"));
   const chips = document.createElement("div"); chips.className = "chips"; chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "Scegli il mese");
   ms.forEach((id) => {
     const c = calcMonth(monthData(id, state.piano, state.mesi), state.piano);
@@ -266,7 +292,7 @@ function renderMesi(v) {
   vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-");
 
   const card = document.createElement("section"); card.className = "card";
-  card.innerHTML = '<div class="card-head"><h2>Tutti i mesi</h2><span class="hint">Tocca una riga per aprirla</span></div>';
+  card.innerHTML = `<div class="card-head"><h2>Mesi del ${anno}</h2><span class="hint">Tocca una riga per aprirla</span></div>`;
   let t = { e: 0, s: 0, d: 0, r: 0 };
   let html = "<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>Al deposito</th><th>Resto</th></tr></thead><tbody>";
   ms.forEach((id) => {
@@ -274,7 +300,7 @@ function renderMesi(v) {
     t.e += cc.entrate; t.s += cc.spese; t.d += cc.toDep; t.r += cc.resto;
     html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${e2 ? ` <span class="tag">${e2.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.spese)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.resto < 0 ? "neg" : ""}">${fmt.format(cc.resto)}</td></tr>`;
   });
-  html += `</tbody><tfoot><tr><td>Totale</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
+  html += `</tbody><tfoot><tr><td>Totale ${anno}</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
   const w = document.createElement("div"); w.className = "tbl-wrap"; w.innerHTML = html; card.appendChild(w); v.appendChild(card);
   w.querySelectorAll("tr[data-id]").forEach((tr) => { const go = () => { sel = tr.dataset.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }; tr.onclick = go; tr.onkeydown = (e) => { if (e.key === "Enter") go(); }; });
 }
@@ -327,16 +353,24 @@ function renderDeposito(v) {
   fs.appendChild(moneyField("Imposta di bollo annua", N(dep.bollo), (n) => { dep.bollo = n; saveDeposito(); }, { id: "d-bollo", unit: "%", hint: "Di solito 0,2% (alcune banche la pagano loro: metti 0)" }));
   v.appendChild(fs);
 
-  v.insertAdjacentHTML("beforeend", `<section class="card"><div class="card-head"><h2>Mese per mese</h2><span class="hint">Versamenti e prelievi si cambiano nella scheda Mesi</span></div><div class="tbl-wrap" id="dep-table">${depTable(d)}</div></section>`);
+  const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
+  if (!anni.includes(depAnno)) depAnno = anni.includes(meseCorrente().slice(0, 4)) ? meseCorrente().slice(0, 4) : anni[0];
+  const tc = document.createElement("section"); tc.className = "card";
+  tc.innerHTML = `<div class="card-head"><h2>Mese per mese</h2><span class="hint">Versamenti e prelievi si cambiano nella scheda Mesi</span></div>`;
+  const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; render(); }, "dy-"); yb.classList.add("in-card");
+  tc.appendChild(yb);
+  tc.insertAdjacentHTML("beforeend", `<div class="tbl-wrap" id="dep-table">${depTable(d, depAnno)}</div>`);
+  v.appendChild(tc);
 }
 
 function depTiles(d, ms) {
   return `<div class="tile ing"><span class="label">Da parte a ${monthLabel(ms[ms.length - 1])}</span><span class="v">${eur(d.saldo)}</span><span class="hint">Saldo stimato del conto deposito</span></div>
-    <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito ? " + 13ª e 14ª" : ""} meno prelievi</span></div>
+    <div class="tile"><span class="label">Versato in totale</span><span class="v">${eur(d.totVersato)}</span><span class="hint">Risparmi${state.piano.extra_al_deposito && extraNomi() ? " + " + extraNomi() : ""} meno prelievi</span></div>
     <div class="tile"><span class="label">Interessi netti</span><span class="v">${eur(d.totNetto)}</span><span class="hint">Dopo le tasse; bollo stimato ${eur(d.totBollo)}</span></div>`;
 }
-function depTable(d) {
+function depTable(d, anno) {
   const maxS = Math.max(1, ...d.rows.map((r) => r.saldo));
+  d = { ...d, rows: d.rows.filter((r) => !anno || r.id.startsWith(anno)) };
   let html = '<table><thead><tr><th>Mese</th><th>Tasso</th><th>Versato</th><th>Interessi netti</th><th>Bollo</th><th>Saldo</th><th aria-hidden="true"></th></tr></thead><tbody>';
   d.rows.forEach((r) => {
     const vers = r.versato - r.prelievo, e2 = extraInfo(r.id, state.piano);
@@ -355,23 +389,60 @@ function renderModello(v) {
   fs.appendChild(moneyField("Stipendio netto", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
   fs.appendChild(moneyField("Risparmio al conto deposito", N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
   fs.appendChild(moneyField("Soglia resto in tasca (facoltativa)", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "Ti avvisa se il resto scende sotto questa cifra. 0 = nessun avviso" }));
-  fs.appendChild(moneyField("Tredicesima (dicembre)", N(p.tredicesima), (n) => { p.tredicesima = n; savePiano(); }, { id: "t-13", cls: "extra", hint: "Netto stimato: correggilo con la busta" }));
-  fs.appendChild(moneyField("Quattordicesima (giugno)", N(p.quattordicesima), (n) => { p.quattordicesima = n; savePiano(); }, { id: "t-14", cls: "extra", hint: "Metti 0 se il contratto non la prevede" }));
   v.appendChild(fs);
 
+  // Mensilità: 12, 13 o 14, con il mese di 13ª e 14ª
+  const sel12 = (id, label, value, opts, onCh, hint = "") => {
+    const f = document.createElement("label"); f.className = "field"; f.htmlFor = id;
+    f.innerHTML = `<span class="label">${label}</span><select id="${id}">${opts.map(([v2, t]) => `<option value="${v2}"${String(v2) === String(value) ? " selected" : ""}>${t}</option>`).join("")}</select>${hint ? `<span class="hint">${hint}</span>` : ""}`;
+    f.querySelector("select").onchange = (e) => onCh(e.target.value);
+    return f;
+  };
+  const nm = N(p.mensilita) || 13;
+  const fm = document.createElement("div"); fm.className = "fields solo";
+  fm.appendChild(sel12("t-mens", "Mensilità", nm, [[12, "12 mensilità"], [13, "13 (con tredicesima)"], [14, "14 (con 13ª e 14ª)"]], (x) => { p.mensilita = Number(x); savePiano(); render(); }, "Quante buste paga ricevi in un anno"));
+  const mesiOpt = (esclusa) => MESI_NOMI.map((n, i) => [i + 1, n]).filter(([k]) => k !== esclusa);
+  v.appendChild(fm);
+  if (nm >= 13) {
+    const f13 = document.createElement("div"); f13.className = "fields";
+    f13.appendChild(moneyField("Tredicesima", N(p.tredicesima), (n) => { p.tredicesima = n; savePiano(); }, { id: "t-13", cls: "extra", hint: "Netto stimato: correggilo con la busta" }));
+    f13.appendChild(sel12("t-m13", "Mese della tredicesima", p.mese_13, mesiOpt(nm >= 14 ? p.mese_14 : 0), (x) => { p.mese_13 = Number(x); savePiano(); render(); }, "Di solito dicembre"));
+    v.appendChild(f13);
+  }
+  if (nm >= 14) {
+    const f14 = document.createElement("div"); f14.className = "fields";
+    f14.appendChild(moneyField("Quattordicesima", N(p.quattordicesima), (n) => { p.quattordicesima = n; savePiano(); }, { id: "t-14", cls: "extra", hint: "Netto stimato: correggilo con la busta" }));
+    f14.appendChild(sel12("t-m14", "Mese della quattordicesima", p.mese_14, mesiOpt(p.mese_13), (x) => { p.mese_14 = Number(x); savePiano(); render(); }, "Spesso giugno o luglio"));
+    v.appendChild(f14);
+  }
+
+  if (nm >= 13) {
+    const nomiMesi = nm >= 14 ? `${MESI_NOMI[p.mese_13 - 1].toLowerCase()} e ${MESI_NOMI[p.mese_14 - 1].toLowerCase()}` : MESI_NOMI[p.mese_13 - 1].toLowerCase();
+    const ck = document.createElement("label"); ck.className = "check"; ck.htmlFor = "t-extradep";
+    ck.innerHTML = `<input type="checkbox" id="t-extradep"${p.extra_al_deposito ? " checked" : ""}><span><b>Metti ${nm >= 14 ? "tredicesima e quattordicesima" : "la tredicesima"} nel conto deposito</b><br><span class="hint">Se lo togli, ${nm >= 14 ? "restano" : "resta"} nel resto in tasca di ${nomiMesi}.</span></span>`;
+    ck.querySelector("input").onchange = (e) => { p.extra_al_deposito = e.target.checked; savePiano(); render(); };
+    v.appendChild(ck);
+  }
+
   // Periodo coperto
-  const opts = monthRange("2025-01", "2030-12");
+  const oggi = meseCorrente();
+  const opts = monthRange((Number(oggi.slice(0, 4)) - 5) + "-01", (Number(oggi.slice(0, 4)) + 10) + "-12");
+  if (!opts.includes(p.mese_inizio)) opts.unshift(p.mese_inizio);
   const per = document.createElement("div"); per.className = "fields";
-  per.innerHTML = `<label class="field" for="t-da"><span class="label">Dal mese</span><select id="t-da">${opts.map((id) => `<option value="${id}"${id === p.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select></label>
-    <label class="field" for="t-a"><span class="label">Al mese</span><select id="t-a">${opts.map((id) => `<option value="${id}"${id === p.mese_fine ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select></label>`;
-  per.querySelector("#t-da").onchange = (e) => { if (e.target.value <= p.mese_fine) { p.mese_inizio = e.target.value; savePiano(); render(); } else e.target.value = p.mese_inizio; };
-  per.querySelector("#t-a").onchange = (e) => { if (e.target.value >= p.mese_inizio) { p.mese_fine = e.target.value; savePiano(); render(); } else e.target.value = p.mese_fine; };
+  per.innerHTML = `<label class="field" for="t-da"><span class="label">Dal mese</span><select id="t-da">${opts.map((id) => `<option value="${id}"${id === p.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select><span class="hint">Il primo mese dei tuoi conti</span></label>
+    <label class="field" for="t-a"><span class="label">Fino a</span><select id="t-a"><option value="">Senza fine</option>${opts.filter((id) => id >= p.mese_inizio).map((id) => `<option value="${id}"${!p.senza_fine && id === p.mese_fine ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select><span class="hint">${p.senza_fine ? `Si allunga da solo: ora fino a ${monthLabelLong(months().slice(-1)[0])}` : "Ultimo mese dei tuoi conti"}</span></label>`;
+  if (p.senza_fine) per.querySelector("#t-a").value = "";
+  per.querySelector("#t-da").onchange = (e) => {
+    const x = e.target.value;
+    if (p.senza_fine || x <= p.mese_fine) { p.mese_inizio = x; savePiano(); render(); } else e.target.value = p.mese_inizio;
+  };
+  per.querySelector("#t-a").onchange = (e) => {
+    const x = e.target.value;
+    if (!x) p.senza_fine = true; else { p.senza_fine = false; p.mese_fine = x; }
+    savePiano(); render();
+  };
   v.appendChild(per);
 
-  const ck = document.createElement("label"); ck.className = "check"; ck.htmlFor = "t-extradep";
-  ck.innerHTML = `<input type="checkbox" id="t-extradep"${p.extra_al_deposito ? " checked" : ""}><span><b>Metti tredicesima e quattordicesima nel conto deposito</b><br><span class="hint">Se lo togli, restano nel resto in tasca di giugno e dicembre.</span></span>`;
-  ck.querySelector("input").onchange = (e) => { p.extra_al_deposito = e.target.checked; savePiano(); render(); };
-  v.appendChild(ck);
   vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-");
 }
 
@@ -399,7 +470,7 @@ function refresh() {
     // Mentre scrivi aggiorno riquadri e tabella, senza toccare i campi
     const ms = months(), d = simulaDeposito(ms, state.piano, state.mesi, state.deposito);
     if ($("dep-tiles")) $("dep-tiles").innerHTML = depTiles(d, ms);
-    if ($("dep-table")) $("dep-table").innerHTML = depTable(d);
+    if ($("dep-table")) $("dep-table").innerHTML = depTable(d, depAnno);
     return;
   }
   const m = currentMonth(), c = calcMonth(m, state.piano), q = (s) => document.querySelector(`[data-live="${s}"]`);
@@ -446,7 +517,7 @@ $("importFile").onchange = async (e) => {
   try {
     await importData(JSON.parse(await f.text()));
     empty = false;
-    const ms = months(); if (!ms.includes(sel)) sel = ms[0];
+    const ms = months(); if (!ms.includes(sel)) sel = meseIniziale(ms);
     render();
   } catch (err) { setStatus("error", "Importazione non riuscita: " + (err.message || "file non valido")); }
 };

@@ -1,6 +1,6 @@
 # Conti del mese
 
-Web app per gestire le spese mensili: resto in tasca mese per mese, tredicesima e quattordicesima, e simulazione del conto deposito con i tassi che cambiano nel tempo (es. 4% per un anno, poi un altro conto al 2,5%).
+Web app per gestire le spese mensili: resto in tasca mese per mese anno dopo anno, 12/13/14 mensilità con il mese di tredicesima e quattordicesima a scelta, e simulazione del conto deposito con i tassi che cambiano nel tempo (es. 4% per un anno, poi un altro conto al 2,5%).
 
 - **Frontend**: HTML, CSS e JavaScript semplici (moduli ES), senza build. Pubblicata con GitHub Pages.
 - **Dati**: Supabase (Postgres + login con email e password). Ogni utente vede solo i propri dati.

@@ -15,8 +15,16 @@ create table if not exists public.piani (
   mese_inizio text not null default '2026-11' check (mese_inizio ~ '^\d{4}-(0[1-9]|1[0-2])$'),
   mese_fine text not null default '2027-12' check (mese_fine ~ '^\d{4}-(0[1-9]|1[0-2])$'),
   voci jsonb not null default '[]'::jsonb,   -- [{id, nome, importo, cat}]
+  mensilita integer not null default 13 check (mensilita in (12, 13, 14)),
+  mese_13 integer not null default 12 check (mese_13 between 1 and 12),
+  mese_14 integer not null default 6 check (mese_14 between 1 and 12),
+  senza_fine boolean not null default true,   -- true = i mesi si allungano da soli
   updated_at timestamptz not null default now()
 );
+alter table public.piani add column if not exists mensilita integer not null default 13 check (mensilita in (12, 13, 14));
+alter table public.piani add column if not exists mese_13 integer not null default 12 check (mese_13 between 1 and 12);
+alter table public.piani add column if not exists mese_14 integer not null default 6 check (mese_14 between 1 and 12);
+alter table public.piani add column if not exists senza_fine boolean not null default true;
 
 -- 2. Conto deposito (le colonne *_promo/tasso_base sono della prima versione: ora si usa "periodi")
 create table if not exists public.depositi (

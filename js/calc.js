@@ -15,13 +15,32 @@ export const DEFAULT_PIANO = {
   stipendio: 0,
   risparmio: 0,
   soglia: 0, // 0 = nessuna soglia: avviso solo se il resto va sotto zero
-  tredicesima: 1000,
-  quattordicesima: 1000,
+  tredicesima: 0,
+  quattordicesima: 0,
+  mensilita: 13, // 12, 13 o 14
+  mese_13: 12, // mese della tredicesima (1-12)
+  mese_14: 6, // mese della quattordicesima (1-12)
   extra_al_deposito: true,
   mese_inizio: "2026-11",
   mese_fine: "2027-12",
+  senza_fine: true, // true = i mesi si allungano da soli fino a dicembre dell'anno dopo
   voci: [],
 };
+
+/** Mese di oggi in formato "AAAA-MM". */
+export function meseCorrente(d = new Date()) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+/** Ultimo mese mostrato: con "senza fine" è dicembre dell'anno dopo quello di oggi. */
+export function meseFine(piano, oggi = meseCorrente()) {
+  if (!piano.senza_fine) return piano.mese_fine;
+  const f = (Number(oggi.slice(0, 4)) + 1) + "-12";
+  return f < piano.mese_inizio ? (Number(piano.mese_inizio.slice(0, 4)) + 1) + "-12" : f;
+}
+
+/** Mesi coperti dal piano. */
+export const mesiPiano = (piano, oggi) => monthRange(piano.mese_inizio, meseFine(piano, oggi));
 
 // periodi: [{ id, da: "AAAA-MM", tasso: % lordo annuo, nome: "banca/conto" }]
 // Ogni periodo vale dal suo mese fino al periodo successivo.
@@ -51,13 +70,13 @@ export function uid() {
   return "v" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-/** Elenco mesi "AAAA-MM" da inizio a fine compresi (massimo 60). */
+/** Elenco mesi "AAAA-MM" da inizio a fine compresi (massimo 50 anni). */
 export function monthRange(start, end) {
   const out = [];
   let [y, m] = String(start).split("-").map(Number);
   const [ey, em] = String(end).split("-").map(Number);
   if (!y || !m || !ey || !em) return out;
-  while ((y < ey || (y === ey && m <= em)) && out.length < 60) {
+  while ((y < ey || (y === ey && m <= em)) && out.length < 600) {
     out.push(y + "-" + String(m).padStart(2, "0"));
     m++;
     if (m > 12) { m = 1; y++; }
@@ -66,13 +85,15 @@ export function monthRange(start, end) {
 }
 
 export const monthLabel = (id) => { const [y, m] = id.split("-"); return MN[+m - 1] + " " + y; };
+export const MESI_NOMI = MNL;
 export const monthLabelLong = (id) => { const [y, m] = id.split("-"); return MNL[+m - 1] + " " + y; };
 export const addMonths = (id, n) => { let [y, m] = id.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + String(m).padStart(2, "0"); };
 
-/** Mensilità extra del mese: tredicesima a dicembre, quattordicesima a giugno. */
+/** Mensilità extra del mese, secondo mensilità e mesi scelti nel Modello. */
 export function extraInfo(id, piano) {
-  if (id.endsWith("-12")) return { nome: "Tredicesima", corto: "13ª", importo: N(piano.tredicesima) };
-  if (id.endsWith("-06")) return { nome: "Quattordicesima", corto: "14ª", importo: N(piano.quattordicesima) };
+  const m = Number(id.slice(5, 7)), n = N(piano.mensilita) || 13;
+  if (n >= 13 && m === (N(piano.mese_13) || 12)) return { nome: "Tredicesima", corto: "13ª", importo: N(piano.tredicesima) };
+  if (n >= 14 && m === (N(piano.mese_14) || 6)) return { nome: "Quattordicesima", corto: "14ª", importo: N(piano.quattordicesima) };
   return null;
 }
 
@@ -87,7 +108,7 @@ export function monthData(id, piano, mesi) {
       stipendio: N(d.stipendio),
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
-      extra: d.extra == null ? exDefault : N(d.extra),
+      extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
       voci: d.voci || [],
     };
   }

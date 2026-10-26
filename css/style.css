@@ -182,3 +182,12 @@ footer { font-size: .78rem; color: var(--muted); text-align: center; }
 @media (prefers-reduced-motion: no-preference) { .bar span { transition: flex-basis .35s ease; } }
 
 .chip:empty { display: none; }
+
+/* Scelta dell'anno */
+.years { display: flex; gap: 6px; flex-wrap: wrap; }
+.years.in-card { padding: 0 18px 10px; }
+.years button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 14px; cursor: pointer; font-weight: 600; font-family: var(--f-num); color: var(--muted); }
+.years button:hover { border-color: var(--accent); }
+.years button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.field select { width: 100%; }
+.fields.solo { grid-template-columns: minmax(0, 340px); }
