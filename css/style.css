@@ -1,5 +1,10 @@
 /* Layout: una colonna — tre schede, cifra chiave in testa, poi tabelle. Stile ispirato alle app iPhone.
    Tutti i colori sono variabili: tema chiaro qui sotto, tema scuro nel blocco @media. */
+/* Carattere Inter (licenza SIL OFL, vedi fonts/inter-LICENSE.txt): file nel repository, funziona anche offline */
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("../fonts/inter.woff2") format("woff2");
+}
 :root {
   /* Stile iPhone: grigi di sistema Apple, riquadri bianchi senza bordi, blu di sistema */
   --bg: #F2F2F7; --surface: #FFFFFF; --fg: #000000; --muted: #8E8E93; --line: #E5E5EA;
@@ -7,9 +12,9 @@
   --good: #34C759; --good-soft: #E3F7E8; --warn: #FF9500; --warn-soft: #FFF2E0; --bad: #FF3B30; --bad-soft: #FFE5E3;
   --c-casa: #007AFF; --c-auto: #5856D6; --c-abb: #AF52DE; --c-persona: #FF9500; --c-altro: #8E8E93; --c-risp: #34C759; --c-resto: #E5E5EA;
   --seg-bg: #E3E3E8; --seg-on: #FFFFFF; --seg-fg: #000000; --seg-shadow: 0 1px 3px rgba(0, 0, 0, .15);
-  --f-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
-  --f-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
-  --f-num: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --f-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --f-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --f-num: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {

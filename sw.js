@@ -2,12 +2,13 @@
 // I dati arrivano sempre da Supabase (serve internet per salvarli).
 // Quando modifichi un file dell'app, aumenta il numero di versione qui sotto:
 // i file si scaricano comunque dalla rete per primi, ma così la cache offline si rinnova.
-const VERSION = "v9";
+const VERSION = "v10";
 const CACHE = "conti-" + VERSION;
 const FILES = [
   "./",
   "./index.html",
   "./css/style.css",
+  "./fonts/inter.woff2",
   "./js/app.js",
   "./js/calc.js",
   "./js/store.js",
