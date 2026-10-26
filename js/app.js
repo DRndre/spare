@@ -37,6 +37,16 @@ function yearsBar(ms, anno, onPick, id) {
   });
   return bar;
 }
+/** Scritte che cambiano se si usa o no un conto deposito. */
+const usaDep = () => !!state.piano.usa_deposito;
+const T = () => usaDep()
+  ? { risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", prelHint: "Se tiri fuori soldi dal deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
+  : { risp: "Risparmio del mese", prel: "Prelievo dai risparmi", prelHint: "Se usi soldi messi da parte", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
+/** Quanto è stato messo da parte dall'inizio fino al mese indicato (senza interessi). */
+function messoDaParte(fino) {
+  const ms = months().filter((id) => id <= fino);
+  return simulaDeposito(ms, state.piano, state.mesi, { saldo_iniziale: state.deposito.saldo_iniziale, periodi: [], tasse: 0, bollo: 0 }).saldo;
+}
 /** "13ª e 14ª", "13ª" o "" secondo le mensilità. */
 const extraNomi = () => (N(state.piano.mensilita) >= 14 ? "13ª e 14ª" : N(state.piano.mensilita) >= 13 ? "13ª" : "");
 
@@ -215,7 +225,7 @@ function formula(m, c, extraNome) {
   let f = `<b>${eur(m.stipendio)}</b> stipendio`;
   if (N(m.entrate_extra)) f += ` + <b>${eur(m.entrate_extra)}</b> entrate extra`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
-  return f + ` − spese <b>${eur(c.spese)}</b> − al deposito <b>${eur(c.toDep)}</b>`;
+  return f + ` − spese <b>${eur(c.spese)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>`;
 }
 function hero(m, c, extraNome) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
@@ -229,7 +239,7 @@ function hero(m, c, extraNome) {
 }
 function fillBar(bar, leg, m, c) {
   const parts = CATS.map((x) => ({ n: x.n, c: x.c, v: m.voci.filter((v) => v.cat === x.k).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
-  if (c.toDep > 0) parts.push({ n: "Conto Deposito", c: "--c-risp", v: c.toDep });
+  if (c.toDep > 0) parts.push({ n: T().leg, c: "--c-risp", v: c.toDep });
   const base = Math.max(c.entrate, parts.reduce((a, p) => a + p.v, 0)) || 1;
   bar.innerHTML = ""; leg.innerHTML = "";
   parts.forEach((p) => { const s = document.createElement("span"); s.style.flex = `0 0 ${(p.v / base) * 100}%`; s.style.background = `var(${p.c})`; s.title = p.n + ": " + eur(p.v); bar.appendChild(s); });
@@ -286,17 +296,18 @@ function renderMesi(v) {
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
   fs.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Altre entrate di questo mese" }));
-  if (ex) fs.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? "Va nel conto deposito" : "Resta in tasca" }));
-  fs.appendChild(moneyField("Risparmio al conto deposito", m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
-  fs.appendChild(moneyField("Prelievo dal conto deposito", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: "Se tiri fuori soldi dal deposito" }));
+  if (ex) fs.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
+  fs.appendChild(moneyField(T().risp, m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
+  fs.appendChild(moneyField(T().prel, m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
   v.appendChild(fs);
+  if (!usaDep()) v.insertAdjacentHTML("beforeend", `<div class="note">Messo da parte fino a ${monthLabelLong(sel)}: <b data-live="dapartetot">${eur(messoDaParte(sel))}</b></div>`);
 
   vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-");
 
   const card = document.createElement("section"); card.className = "card";
   card.innerHTML = `<div class="card-head"><h2>Mesi del ${anno}</h2><span class="hint">Tocca una riga per aprirla</span></div>`;
   let t = { e: 0, s: 0, d: 0, r: 0 };
-  let html = "<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>Al deposito</th><th>Resto</th></tr></thead><tbody>";
+  let html = `<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>${T().col}</th><th>Resto</th></tr></thead><tbody>`;
   ms.forEach((id) => {
     const cc = calcMonth(monthData(id, state.piano, state.mesi), state.piano), e2 = extraInfo(id, state.piano);
     t.e += cc.entrate; t.s += cc.spese; t.d += cc.toDep; t.r += cc.resto;
@@ -390,9 +401,20 @@ function renderModello(v) {
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio netto", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
   fs.appendChild(moneyField("Entrate extra", N(p.entrate_extra), (n) => { p.entrate_extra = n; savePiano(); }, { id: "t-entr", hint: "Seconde entrate più o meno fisse (0 se non ne hai)" }));
-  fs.appendChild(moneyField("Risparmio al conto deposito", N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
+  fs.appendChild(moneyField(T().risp, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
   fs.appendChild(moneyField("Soglia resto in tasca (facoltativa)", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "Ti avvisa se il resto scende sotto questa cifra. 0 = nessun avviso" }));
   v.appendChild(fs);
+
+  // Conto deposito sì / no
+  const ud = document.createElement("label"); ud.className = "check"; ud.htmlFor = "t-usadep";
+  ud.innerHTML = `<input type="checkbox" id="t-usadep"${usaDep() ? " checked" : ""}><span><b>Uso un conto deposito</b><br><span class="hint">${usaDep() ? "Trovi la scheda Conto Deposito con tassi e interessi. Togli la spunta se non ne hai uno." : "Spunta se tieni i risparmi su un conto deposito: comparirà la scheda con tassi e interessi."}</span></span>`;
+  ud.querySelector("input").onchange = (e) => { p.usa_deposito = e.target.checked; savePiano(); render(); };
+  v.appendChild(ud);
+  if (!usaDep()) {
+    const fg = document.createElement("div"); fg.className = "fields solo";
+    fg.appendChild(moneyField("Già da parte all'inizio", N(state.deposito.saldo_iniziale), (n) => { state.deposito.saldo_iniziale = n; saveDeposito(); }, { id: "t-giadaparte", hint: "Risparmi che avevi già nel primo mese (0 se nessuno)" }));
+    v.appendChild(fg);
+  }
 
   // Mensilità: 12, 13 o 14, con il mese di 13ª e 14ª
   const sel12 = (id, label, value, opts, onCh, hint = "") => {
@@ -422,7 +444,7 @@ function renderModello(v) {
   if (nm >= 13) {
     const nomiMesi = nm >= 14 ? `${MESI_NOMI[p.mese_13 - 1].toLowerCase()} e ${MESI_NOMI[p.mese_14 - 1].toLowerCase()}` : MESI_NOMI[p.mese_13 - 1].toLowerCase();
     const ck = document.createElement("label"); ck.className = "check"; ck.htmlFor = "t-extradep";
-    ck.innerHTML = `<input type="checkbox" id="t-extradep"${p.extra_al_deposito ? " checked" : ""}><span><b>Metti ${nm >= 14 ? "tredicesima e quattordicesima" : "la tredicesima"} nel conto deposito</b><br><span class="hint">Se lo togli, ${nm >= 14 ? "restano" : "resta"} nel resto in tasca di ${nomiMesi}.</span></span>`;
+    ck.innerHTML = `<input type="checkbox" id="t-extradep"${p.extra_al_deposito ? " checked" : ""}><span><b>Metti ${nm >= 14 ? "tredicesima e quattordicesima" : "la tredicesima"} ${T().dove}</b><br><span class="hint">Se lo togli, ${nm >= 14 ? "restano" : "resta"} nel resto in tasca di ${nomiMesi}.</span></span>`;
     ck.querySelector("input").onchange = (e) => { p.extra_al_deposito = e.target.checked; savePiano(); render(); };
     v.appendChild(ck);
   }
@@ -452,10 +474,12 @@ function renderModello(v) {
 /* ---------- Render ---------- */
 function render() {
   needsRender = false;
-  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
   const v = $("view"), y = window.scrollY;
   v.innerHTML = "";
   if (empty) { renderOnboarding(v); return; }
+  if (view === "deposito" && !usaDep()) view = "mesi";
+  document.querySelector('.tabs button[data-v="deposito"]').hidden = !usaDep();
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
   if (view === "mesi") renderMesi(v); else if (view === "deposito") renderDeposito(v); else renderModello(v);
   updateGroupSums();
   window.scrollTo(0, y);
@@ -482,6 +506,7 @@ function refresh() {
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
   if (q("spese")) q("spese").textContent = eur(c.spese);
+  if (q("dapartetot")) q("dapartetot").textContent = eur(messoDaParte(sel));
   updateGroupSums();
   if (view === "mesi") {
     const chip = $("chip-" + sel);

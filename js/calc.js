@@ -22,6 +22,7 @@ export const DEFAULT_PIANO = {
   mese_13: 12, // mese della tredicesima (1-12)
   mese_14: 6, // mese della quattordicesima (1-12)
   extra_al_deposito: true,
+  usa_deposito: false, // false = niente conto deposito: si conta solo quanto metti da parte
   mese_inizio: "2026-11",
   mese_fine: "2027-12",
   senza_fine: true, // true = i mesi si allungano da soli fino a dicembre dell'anno dopo

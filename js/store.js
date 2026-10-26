@@ -38,6 +38,8 @@ function pianoFromRow(r) {
   if (!(p.mese_13 >= 1 && p.mese_13 <= 12)) p.mese_13 = 12;
   if (!(p.mese_14 >= 1 && p.mese_14 <= 12)) p.mese_14 = 6;
   if (r.senza_fine == null) p.senza_fine = false;
+  if (r.usa_deposito == null) p.usa_deposito = true; // dati della prima versione: c'era sempre il deposito
+  p.usa_deposito = !!p.usa_deposito;
   p.senza_fine = !!p.senza_fine;
   return p;
 }
@@ -125,7 +127,7 @@ export function savePiano() {
       user_id: state.user.id,
       stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), soglia: N(p.soglia),
       tredicesima: N(p.tredicesima), quattordicesima: N(p.quattordicesima),
-      mensilita: N(p.mensilita), mese_13: N(p.mese_13), mese_14: N(p.mese_14), senza_fine: !!p.senza_fine,
+      mensilita: N(p.mensilita), mese_13: N(p.mese_13), mese_14: N(p.mese_14), senza_fine: !!p.senza_fine, usa_deposito: !!p.usa_deposito,
       extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
       voci: cleanVoci(p.voci), updated_at: now(),
     });

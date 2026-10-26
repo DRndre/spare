@@ -76,3 +76,6 @@ revoke all on public.piani, public.depositi, public.mesi from anon;
 -- Entrate extra (aggiunte dopo)
 alter table public.piani add column if not exists entrate_extra numeric not null default 0;
 alter table public.mesi add column if not exists entrate_extra numeric;  -- null = come il Modello
+
+-- Conto deposito sì/no (false per i nuovi account)
+alter table public.piani add column if not exists usa_deposito boolean not null default false;
