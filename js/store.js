@@ -161,10 +161,11 @@ export async function resetMese(id) {
 
 /* ---------- Backup ---------- */
 export function exportData() {
+  // "conti-del-mese" è il nome interno dei backup: resta così perché i vecchi file restino leggibili
   return { app: "conti-del-mese", versione: 1, esportato: now(), piano: state.piano, deposito: state.deposito, mesi: state.mesi };
 }
 export async function importData(json) {
-  if (!json || json.app !== "conti-del-mese") throw new Error("Il file non è un backup di Conti del mese.");
+  if (!json || json.app !== "conti-del-mese") throw new Error("Il file non è un backup di Spare.");
   state.piano = pianoFromRow(json.piano || {});
   state.deposito = depositoFromRow(json.deposito || {});
   state.mesi = {};

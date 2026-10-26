@@ -1,4 +1,4 @@
-# Conti del mese — note per Claude
+# Spare (ex "Conti del mese") — note per Claude
 
 App web personale di Andrea per gestire le spese mensili. Pensata per lui, ma multi-utente:
 un amico può crearsi un account e avere il suo piano, separato.

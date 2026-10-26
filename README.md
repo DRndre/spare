@@ -1,4 +1,4 @@
-# Conti del mese
+# Spare
 
 Web app per gestire le spese mensili: resto in tasca mese per mese anno dopo anno, 12/13/14 mensilità con il mese di tredicesima e quattordicesima a scelta, e simulazione del conto deposito con i tassi che cambiano nel tempo (es. 4% per un anno, poi un altro conto al 2,5%).
 

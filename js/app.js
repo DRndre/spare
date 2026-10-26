@@ -106,7 +106,7 @@ function showAuth(mode = "login", msg = "") {
   const titles = { login: "Accedi", signup: "Crea il tuo account", reset: "Recupera la password", newpass: "Scegli una nuova password" };
   a.innerHTML = `
     <form class="auth-card" id="authForm" novalidate>
-      <h1>Conti del mese</h1>
+      <h1>Spare</h1>
       <h2>${titles[mode]}</h2>
       ${mode !== "newpass" ? `<label class="lf" for="au-email"><span class="label">Email</span><input type="email" id="au-email" autocomplete="email" required></label>` : ""}
       ${mode !== "reset" ? `<label class="lf" for="au-pass"><span class="label">Password</span><input type="password" id="au-pass" autocomplete="${mode === "login" ? "current-password" : "new-password"}" minlength="8" required></label>` : ""}
@@ -182,7 +182,7 @@ async function start() {
 async function boot() {
   if (!configured) {
     $("auth").hidden = false;
-    $("auth").innerHTML = '<div class="auth-card"><h1>Conti del mese</h1><p>Manca la configurazione di Supabase: inserisci URL e chiave in <code>js/config.js</code> (vedi README).</p></div>';
+    $("auth").innerHTML = '<div class="auth-card"><h1>Spare</h1><p>Manca la configurazione di Supabase: inserisci URL e chiave in <code>js/config.js</code> (vedi README).</p></div>';
     return;
   }
   sb.auth.onAuthStateChange((event, session) => {
@@ -305,7 +305,7 @@ function ensureMese(id) {
 /* ---------- Viste ---------- */
 function renderOnboarding(v) {
   v.innerHTML = `<section class="card pad"><h2>Benvenuto</h2>
-    <p>Non hai ancora dati. Puoi caricare un backup (il file <code>.json</code> esportato da Conti del mese) oppure partire da zero e inserire stipendio e spese nel Modello.</p>
+    <p>Non hai ancora dati. Puoi caricare un backup (il file <code>.json</code> esportato da Spare) oppure partire da zero e inserire stipendio e spese nel Modello.</p>
     <div class="actions"><button class="btn primary" type="button" id="ob-import">Importa un backup</button><button class="btn" type="button" id="ob-zero">Parto da zero</button></div></section>`;
   $("ob-import").onclick = () => $("importFile").click();
   $("ob-zero").onclick = () => { empty = false; savePiano(); saveDeposito(); view = "modello"; render(); };
@@ -604,7 +604,7 @@ document.addEventListener("click", (e) => { if (!$("menu").hidden && !e.target.c
 $("doExport").onclick = () => {
   const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-  a.download = "conti-del-mese-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.download = "spare-backup-" + new Date().toISOString().slice(0, 10) + ".json";
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   $("menu").hidden = true;
 };
