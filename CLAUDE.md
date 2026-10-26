@@ -28,8 +28,9 @@ Online su **https://drndre.github.io/gestione-spese/** (GitHub Pages, branch `ma
 ## File
 - `js/calc.js` — calcoli puri, senza DOM né database: mesi, resto in tasca, 13ª/14ª, simulazione deposito.
 - `js/store.js` — lettura/scrittura su Supabase (salvataggio con attesa di 700 ms e nuovo tentativo), backup.
-- `js/app.js` — interfaccia: login, schede **Mesi / Conto Deposito / Modello**.
-- `css/style.css` — colori come variabili, tema chiaro e scuro. Verde `--accent` per tutta l'app,
+- `js/app.js` — interfaccia: login, schede **Mesi / Deposito / Modello** (nella barra la scheda si chiama solo "Deposito").
+- `css/style.css` — "stile iPhone": colori di sistema Apple come variabili, tema chiaro e scuro, carattere di sistema
+  (niente Google Fonts). Blu `--accent` per tutta l'app,
   arancio `--ing` solo per tredicesima/quattordicesima.
 - `supabase/schema.sql` — schema completo, rieseguibile (contiene anche gli `alter table` successivi).
 

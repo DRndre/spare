@@ -1,21 +1,24 @@
-/* Layout: libretto dei conti in una colonna — tre schede, cifra chiave in testa, poi tabelle.
+/* Layout: una colonna — tre schede, cifra chiave in testa, poi tabelle. Stile ispirato alle app iPhone.
    Tutti i colori sono variabili: tema chiaro qui sotto, tema scuro nel blocco @media. */
 :root {
-  --bg: #F1F4F1; --surface: #FFFFFF; --fg: #17201B; --muted: #5F6B64; --line: #DCE3DD;
-  --accent: #1E6B57; --accent-soft: #DCEEE7; --ing: #C75A12; --ing-soft: #F8E6D8;
-  --good: #2C7A4B; --good-soft: #DDF0E3; --warn: #9A6212; --warn-soft: #F6EAD3; --bad: #B83A26; --bad-soft: #F7DFD9;
-  --c-casa: #1E6B57; --c-auto: #3C5A99; --c-abb: #8A5A9E; --c-persona: #B0702A; --c-altro: #6F7B74; --c-risp: #2C9C78; --c-resto: #C9D3CC;
-  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --f-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Stile iPhone: grigi di sistema Apple, riquadri bianchi senza bordi, blu di sistema */
+  --bg: #F2F2F7; --surface: #FFFFFF; --fg: #000000; --muted: #8E8E93; --line: #E5E5EA;
+  --accent: #007AFF; --accent-soft: #E5F0FF; --ing: #FF9500; --ing-soft: #FFF2E0;
+  --good: #34C759; --good-soft: #E3F7E8; --warn: #FF9500; --warn-soft: #FFF2E0; --bad: #FF3B30; --bad-soft: #FFE5E3;
+  --c-casa: #007AFF; --c-auto: #5856D6; --c-abb: #AF52DE; --c-persona: #FF9500; --c-altro: #8E8E93; --c-risp: #34C759; --c-resto: #E5E5EA;
+  --seg-bg: #E3E3E8; --seg-on: #FFFFFF; --seg-fg: #000000; --seg-shadow: 0 1px 3px rgba(0, 0, 0, .15);
+  --f-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --f-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --f-num: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0F1512; --surface: #18201C; --fg: #E7EDE9; --muted: #9AA6A0; --line: #2A3530;
-    --accent: #5CC4A2; --accent-soft: #1D3A30; --ing: #F0954F; --ing-soft: #3A2717;
-    --good: #6FD39A; --good-soft: #18352A; --warn: #E4B263; --warn-soft: #3A2E17; --bad: #F08A74; --bad-soft: #3D211B;
-    --c-casa: #4FB592; --c-auto: #7C9BE0; --c-abb: #C08DD6; --c-persona: #E0A15A; --c-altro: #9AA6A0; --c-risp: #4ED1A6; --c-resto: #33403A;
+    --bg: #000000; --surface: #1C1C1E; --fg: #FFFFFF; --muted: #8E8E93; --line: #38383A;
+    --accent: #0A84FF; --accent-soft: #0A2A4D; --ing: #FF9F0A; --ing-soft: #3A2A10;
+    --good: #30D158; --good-soft: #12321C; --warn: #FF9F0A; --warn-soft: #3A2A10; --bad: #FF453A; --bad-soft: #3A1715;
+    --c-casa: #0A84FF; --c-auto: #5E5CE6; --c-abb: #BF5AF2; --c-persona: #FF9F0A; --c-altro: #8E8E93; --c-risp: #30D158; --c-resto: #3A3A3C;
+    --seg-bg: #2C2C2E; --seg-on: #636366; --seg-fg: #FFFFFF; --seg-shadow: none;
     color-scheme: dark;
   }
 }
@@ -191,3 +194,20 @@ footer { font-size: .78rem; color: var(--muted); text-align: center; }
 .years button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .field select { width: 100%; }
 .fields.solo { grid-template-columns: minmax(0, 340px); }
+
+/* ---------- Stile iPhone ---------- */
+body { -webkit-font-smoothing: antialiased; }
+td, .field input[type=text], .imp input, .tot, .gsum, .chip-m .r, .formula b, .eur, .big, .tile .v { font-variant-numeric: tabular-nums; }
+h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; }
+h2 { font-weight: 600; }
+.big { font-weight: 700; letter-spacing: -.03em; }
+.card, .hero, .field, .tile, .chip-m, .check { border: 0 !important; border-radius: 14px; }
+.tile.ing { box-shadow: 0 0 0 2px var(--accent) inset; }
+.chip-m[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent) inset; }
+.tabs { border: 0; background: var(--seg-bg); border-radius: 10px; padding: 2px; gap: 2px; }
+.tabs button { border-radius: 8px; padding: 7px 8px; color: var(--seg-fg); font-weight: 500; }
+.tabs button[aria-selected="true"] { background: var(--seg-on); color: var(--seg-fg); box-shadow: var(--seg-shadow); font-weight: 600; }
+.btn { border-radius: 10px; }
+.btn.primary { color: #FFFFFF; }
+.years button { font-family: var(--f-body); font-variant-numeric: tabular-nums; }
+.years button[aria-pressed="true"] { color: #FFFFFF; }
