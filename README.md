@@ -39,7 +39,7 @@ Dopo un minuto l'app è su `https://TUONOME.github.io/conti-del-mese/`.
 ### 3. Primo accesso
 Apri l'app, **Crea account** con email e password e conferma l'email. Al primo accesso puoi
 **importare un backup** (`.json`) oppure partire da zero. Il backup si esporta in qualsiasi momento
-dal menu ⋯ → *Esporta backup*.
+dal menu ☰ → *Esporta backup*.
 
 > I file di backup contengono i tuoi dati: **non caricarli su GitHub** (il repository è pubblico).
 > Il file `.gitignore` li esclude già se si chiamano `*backup*.json`.

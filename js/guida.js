@@ -220,8 +220,8 @@ const AIUTO = [
   ["Tredicesima e quattordicesima", "Nel Modello scegli quante mensilità hai (12, 13 o 14), quanto valgono e in che mese arrivano. Puoi metterle da parte in automatico oppure lasciarle nel resto in tasca di quel mese."],
   ["Deposito o Risparmi", "Se usi un conto deposito, la scheda <b>Deposito</b> stima gli interessi: in <b>Tasso nel tempo</b> aggiungi una riga ogni volta che cambia il tasso o cambi banca. Se non hai un conto deposito, la scheda si chiama <b>Risparmi</b> e conta solo quanto metti da parte. Lo scegli nel Modello."],
   ["Obiettivo", "Nella scheda Deposito o Risparmi puoi scrivere una cifra da raggiungere (es. la caparra della casa): vedi a che punto sei e in che mese ci arrivi continuando così."],
-  ["Telefono e computer", "Entra con la stessa email e password: i dati sono gli stessi ovunque. Sul telefono puoi aggiungere Spare alla schermata Home (iPhone: Safari → Condividi → Aggiungi alla schermata Home). Il tema chiaro o scuro si sceglie dal menu ⋯."],
-  ["Backup e privacy", "I tuoi dati li vedi solo tu. Dal menu ⋯ puoi esportare un backup (un file) e reimportarlo quando vuoi."],
+  ["Telefono e computer", "Entra con la stessa email e password: i dati sono gli stessi ovunque. Sul telefono puoi aggiungere Spare alla schermata Home (iPhone: Safari → Condividi → Aggiungi alla schermata Home). Il tema chiaro o scuro si sceglie dal menu ☰."],
+  ["Backup e privacy", "I tuoi dati li vedi solo tu. Dal menu ☰ puoi esportare un backup (un file) e reimportarlo quando vuoi."],
 ];
 export function apriAiuto() {
   const f = apriFoglio("Come funziona");
