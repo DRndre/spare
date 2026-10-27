@@ -424,15 +424,26 @@ function tetto(v) { // valore "tondo" per la scala: 100, 200, 500, 1.000, 1.600,
 }
 function yearCardHtml(ms, anno) {
   const d = datiAnno(ms);
-  const inTasca = d.reduce((a, x) => a + x.resto, 0), daParte = d.reduce((a, x) => a + x.parte, 0);
-  const media = d.length ? inTasca / d.length : 0;
+
   return `<div class="yc-top"><span class="yc-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 16V10M10 16V4M16 16V8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span>
     <div><b>Il tuo ${anno}</b><small>Quello che ti resta e quello che metti da parte</small></div></div>
-    <div class="yc-stats" id="yc-stats"><div><small>In tasca</small><b>${eur0(inTasca)}</b></div><div><small>Da parte</small><b class="pos">${eur0(daParte)}</b></div><div><small>Media al mese</small><b>${eur0(media)}</b></div></div>
+    <div class="yc-stats" id="yc-stats">${statsAnno(d, anno)}</div>
     <div class="yc-chart" id="yc-chart">${chartHtml(d, anno)}</div>
     <div class="yc-leg"><span><i class="k-r"></i>Resto in tasca</span><span><i class="k-d"></i>${usaDep() ? "Al deposito" : "Messo da parte"}</span>${d.some((x) => x.ex) ? '<span><i class="k-x"></i>13ª / 14ª</span>' : ""}</div>
+    <button type="button" class="yc-link" id="yc-dep">${usaDep() ? "Vai al Deposito" : "Vai ai Risparmi"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M5 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
+}
+/** I due numeri dell'anno: quanto metti da parte e il mese in cui ti resta meno. */
+function statsAnno(d, anno) {
+  if (!d.length) return "";
+  const daParte = d.reduce((a, x) => a + x.parte, 0);
+  // quali mensilità extra sono finite nei risparmi quest'anno (13ª, 14ª o entrambe)
+  const extra = [...new Set(d.filter((x) => x.ex && x.cc.extraDep > 0).map((x) => x.ex.corto))].sort();
+  const stretto = d.reduce((m, x) => (x.resto < m.resto ? x : m), d[0]);
+  const k = statoResto(stretto.resto, state.piano.soglia);
+  return `<div><small>Da parte nel ${anno}</small><b class="pos">${eur0(daParte)}</b><span>${extra.length ? "con " + extra.join(" e ") : `in ${d.length} ${d.length === 1 ? "mese" : "mesi"}`}</span></div>
+    <button type="button" class="yc-low" data-open="${stretto.id}"><small>Il mese più stretto</small><b class="${k === "good" ? "" : k}">${eur0(stretto.resto)}</b><span>${MESI_NOMI[Number(stretto.id.slice(5)) - 1]} ›</span></button>`;
 }
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(Math.round(v)) + " €";
 function chartHtml(d, anno) {
@@ -476,6 +487,8 @@ function wireYear(ms, anno) {
   card.onclick = (e) => {
     const col = e.target.closest(".yc-col[data-id]");
     if (col) { const id = col.dataset.id; if (chartSel === id) apriMese(id); else { chartSel = id; $("yc-chart").innerHTML = chartHtml(datiAnno(ms), anno); } return; }
+    const low = e.target.closest("[data-open]"); if (low) { apriMese(low.dataset.open); return; }
+    if (e.target.closest("#yc-dep")) { view = "deposito"; history.replaceState(null, "", "#deposito"); render(); window.scrollTo(0, 0); return; }
     if (e.target.closest("#yc-toggle")) { showTable = !showTable; card.innerHTML = yearCardHtml(ms, anno); return; }
     const tr = e.target.closest("tr[data-id]"); if (tr) apriMese(tr.dataset.id);
   };
@@ -707,8 +720,7 @@ function refresh() {
     if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
     const ms = months().filter((id) => id.startsWith(sel.slice(0, 4)));
     if ($("year-card")) { const d = datiAnno(ms); $("yc-chart").innerHTML = chartHtml(d, sel.slice(0, 4)); $("yc-table").innerHTML = tabellaAnno(d, sel.slice(0, 4));
-      const inT = d.reduce((a, x) => a + x.resto, 0), dP = d.reduce((a, x) => a + x.parte, 0);
-      $("yc-stats").innerHTML = `<div><small>In tasca</small><b>${eur0(inT)}</b></div><div><small>Da parte</small><b class="pos">${eur0(dP)}</b></div><div><small>Media al mese</small><b>${eur0(d.length ? inT / d.length : 0)}</b></div>`; }
+      $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); }
   }
 }
 function softRender() {
