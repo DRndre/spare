@@ -19,8 +19,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 
 ## Tecnologia
 - HTML, CSS e JavaScript semplici (moduli ES), **nessuna build**, niente framework. Scelta voluta.
-- Dati su **Supabase** (Postgres + login email/password) tramite `@supabase/supabase-js` da jsDelivr
-  (versione fissata in `js/store.js`).
+- Dati su **Supabase** (Postgres + login email/password) tramite `@supabase/supabase-js` **inclusa nell'app**:
+  `js/vendor/supabase.js` (2.117.3, un file unico fatto con esbuild; istruzioni per aggiornarla in `js/vendor/LEGGIMI.txt`).
+  L'unico sito esterno che l'app contatta è Supabase.
 - `js/config.js` contiene URL del progetto e chiave **publishable/anon**: può stare nel codice pubblico.
   **Mai** la chiave `service_role`. Il repository è **pubblico**: niente dati personali né backup
   (`.gitignore` esclude `*backup*.json`).

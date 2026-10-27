@@ -1,6 +1,6 @@
 // Archivio dati su Supabase. Ogni riga appartiene a un utente (user_id) e le regole
 // del database (Row Level Security) fanno vedere a ciascuno solo le proprie.
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm";
+import { createClient } from "./vendor/supabase.js"; // libreria Supabase inclusa nell'app (vedi vendor/LEGGIMI.txt)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, periodiDaVecchi, meseCorrente } from "./calc.js";
 
