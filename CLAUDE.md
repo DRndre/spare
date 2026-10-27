@@ -51,6 +51,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Senza deposito (*Risparmi*) stessa struttura: *Messo da parte*, *Obiettivo*, *Impostazioni*, *Il tuo anno* (Messo da parte / Prelievi).
 - **Da fare (chiesto da Andrea):** applicare le stesse regole (titoli sopra i gruppi, etichette corte, sezioni separate)
   anche al **Modello**.
+- **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
+  (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
+  negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").
 - `js/categorie.js` — 17 categorie di base (Casa, Auto e trasporti, Abbonamenti, Cura personale, Spesa, Salute,
   Svago e uscite, Animali, Viaggi, Rate e prestiti, Regali, Figli, Sport, Abbigliamento, Formazione, Tasse, Altro)
   con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria
