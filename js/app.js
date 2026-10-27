@@ -410,6 +410,7 @@ function renderMesi(v) {
 /* ---------- Grafico dell'anno ---------- */
 let chartSel = null;   // mese con il fumetto aperto
 let showTable = false; // tabella completa aperta
+let tutteCat = false;  // elenco completo delle categorie dell'anno
 function datiAnno(ms) {
   return ms.map((id) => {
     const md = monthData(id, state.piano, state.mesi), cc = calcMonth(md, state.piano);
@@ -454,15 +455,16 @@ function chartHtml(d) {
   const spese = Object.values(perCat).reduce((a, v) => a + v, 0);
   const righe = categorie(state.piano).filter((c) => perCat[c.k] > 0).map((c) => ({ n: c.n, c: c.c, i: c.i, v: perCat[c.k] })).sort((a, b) => b.v - a.v);
   const base = Math.max(entrate, spese + parte + Math.max(0, resto)) || 1;
-  const pct = (v) => Math.round((v / base) * 100);
+  const pct = (v) => { const x = (v / base) * 100; return x > 0 && x < 1 ? "<1" : Math.round(x); };
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
   return `<div class="ya-head"><div><small>Entrate</small><b>${eur0(entrate)}</b></div><div><small>Spese</small><b>${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
-    <div class="ya-list">${righe.map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
+    <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
+      ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more">${tutteCat ? "Mostra meno" : `+ altre ${righe.length - 5} ${righe.length - 5 === 1 ? "categoria" : "categorie"}`}</button>` : ""}
       ${parte > 0 ? riga(icona("piggy-bank", "var(--c-risp)", 15), "var(--c-risp)", usaDep() ? "Al deposito" : "Messo da parte", parte, " sep") : ""}
-      ${riga(icona("wallet", "var(--muted)", 15), "var(--muted)", "Resto in tasca", resto, parte > 0 ? "" : " sep")}</div>`;
+      ${riga(icona("wallet", "var(--muted)", 15), "var(--muted)", "Rimasto in tasca", resto, parte > 0 ? "" : " sep")}</div>`;
 }
 function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };
@@ -478,6 +480,7 @@ function wireYear(ms, anno) {
   const card = $("year-card"); if (!card) return;
   card.onclick = (e) => {
     const low = e.target.closest("[data-open]"); if (low) { apriMese(low.dataset.open); return; }
+    if (e.target.closest("#ya-more")) { tutteCat = !tutteCat; $("yc-chart").innerHTML = chartHtml(datiAnno(ms), anno); return; }
     if (e.target.closest("#yc-toggle")) { showTable = !showTable; card.innerHTML = yearCardHtml(ms, anno); return; }
     const tr = e.target.closest("tr[data-id]"); if (tr) apriMese(tr.dataset.id);
   };

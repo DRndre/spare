@@ -405,3 +405,4 @@ form.add .err { order: 4; }
 .yc-low.best small { color: var(--good); } .yc-low.worst small { color: var(--warn); }
 .yc-same { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 10px 12px; font-size: .88rem; color: var(--muted); }
 .yc-same b { color: var(--fg); }
+.ya-more { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; font-size: .88rem; text-align: left; padding: 8px 0 2px 36px; cursor: pointer; }
