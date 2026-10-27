@@ -439,11 +439,11 @@ function statsAnno(d) {
   const meno = d.reduce((m, x) => (x.resto < m.resto ? x : m), d[0]);
   const piu = d.reduce((m, x) => (x.resto > m.resto ? x : m), d[0]);
   const p = entrate > 0 ? Math.round((resto / entrate) * 100) : 0;
-  const box = (x, tit) => `<button type="button" class="yc-low" data-open="${x.id}"><small>${tit}</small><b class="${x.resto < 0 ? "bad" : ""}">${eur(x.resto)}</b><span>${MESI_NOMI[Number(x.id.slice(5)) - 1]} ›</span></button>`;
+  const box = (x, tit, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b class="${x.resto < 0 ? "bad" : ""}">${eur(x.resto)}</b><span>${MESI_NOMI[Number(x.id.slice(5)) - 1]} ›</span></button>`;
   const head = `<div class="yr-head"><span class="ya-ic" style="--cc:var(--muted)">${icona("wallet", "var(--muted)", 15)}</span><span class="ya-n">Rimasto in tasca</span><span class="ya-v${resto < 0 ? " neg" : ""}">${eur0(resto)}</span><span class="ya-p">${p}%</span></div>`;
   if (Math.abs(piu.resto - meno.resto) < 0.005)
     return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ti restano <b>${eur(piu.resto)}</b> al mese.</span></div>`;
-  return head + box(piu, "Mese con più") + box(meno, "Mese con meno");
+  return head + box(piu, "Mese migliore", "trending-up", "best") + box(meno, "Mese peggiore", "trending-down", "worst");
 }
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
@@ -461,10 +461,10 @@ function chartHtml(d) {
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
   return `<div class="ya-head"><div><small>Entrate</small><b>${eur0(entrate)}</b></div><div><small>Spese</small><b>${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
-    <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
-      ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
-      ${parte > 0 ? riga(icona("piggy-bank", "var(--c-risp)", 15), "var(--c-risp)", usaDep() ? "Al deposito" : "Messo da parte", parte, " sep") : ""}
-</div>`;
+    <div class="ya-list"><div class="ya-sub"><span>Spese</span><span>${eur0(spese)}</span><span>${pct(spese)}%</span></div>${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
+      ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
+</div>
+    ${parte > 0 ? `<div class="ya-dep">${riga(icona("piggy-bank", "var(--c-risp)", 15), "var(--c-risp)", usaDep() ? "Al deposito" : "Messo da parte", parte)}</div>` : ""}`;
 }
 function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };

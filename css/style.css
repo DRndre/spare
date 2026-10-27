@@ -416,3 +416,10 @@ form.add .err { order: 4; }
 .yc-low small { color: var(--muted) !important; }
 .yc-stats .yr-head span { font-size: 1rem; color: var(--fg); }
 .yc-stats .yr-head .ya-p { font-size: .8rem; color: var(--muted); }
+.ya-more { display: inline-flex; align-items: center; gap: 6px; }
+.yc-low.best small { color: var(--good) !important; } .yc-low.worst small { color: var(--warn) !important; }
+.ya-sub { display: grid; grid-template-columns: minmax(0, 1fr) auto 42px; gap: 8px; padding: 2px 0 4px; font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.ya-sub span:last-child { text-align: right; text-transform: none; }
+.ya-dep { background: color-mix(in srgb, var(--c-risp) 10%, var(--surface)); border-radius: 14px; padding: 2px 12px; margin-top: 4px; }
+.ya-dep .ya-row { border: 0; }
+.ya-dep .ya-n, .ya-dep .ya-v { font-weight: 600; }
