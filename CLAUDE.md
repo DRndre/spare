@@ -39,8 +39,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   sezioni con titolo piccolo grigio e totale a destra (`secHead`): *Resto in tasca*, *Entrate* (Stipendio, Entrate extra,
   13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
-  delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ altre N categorie"),
-  Al deposito e "Rimasto in tasca", riquadri Mese migliore / Mese peggiore (aprono il mese; se tutti uguali una riga sola),
+  delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
+  poi blocchi separati: *Al deposito* (verde) e *Rimasto in tasca* (grigio) con Mese migliore / Mese peggiore
+  (frecce verde/arancio, numeri neri; aprono il mese; se tutti uguali una riga sola). Niente percentuali in più.
   "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").
 - **Da fare (chiesto da Andrea):** applicare le stesse regole (titoli sopra i gruppi, etichette corte, sezioni separate)
   anche a **Deposito** e **Modello**, una scheda alla volta.

@@ -461,7 +461,7 @@ function chartHtml(d) {
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
   return `<div class="ya-head"><div><small>Entrate</small><b>${eur0(entrate)}</b></div><div><small>Spese</small><b>${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
-    <div class="ya-list"><div class="ya-sub"><span>Spese</span><span>${eur0(spese)}</span><span>${pct(spese)}%</span></div>${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
+    <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
 </div>
     ${parte > 0 ? `<div class="ya-dep">${riga(icona("piggy-bank", "var(--c-risp)", 15), "var(--c-risp)", usaDep() ? "Al deposito" : "Messo da parte", parte)}</div>` : ""}`;
