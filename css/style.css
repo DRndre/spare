@@ -100,7 +100,10 @@ input, select, button { font: inherit; color: inherit; }
 .chip-m .r { font-family: var(--f-num); font-size: .75rem; color: var(--muted); }
 .chip-m[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .pin { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
-.pin[data-k="good"] { background: var(--good); } .pin[data-k="warn"] { background: var(--warn); } .pin[data-k="bad"] { background: var(--bad); }
+/* Pallino solo nei mesi in negativo (rosso); negli altri mesi niente */
+.pin { display: none; }
+.pin[data-k="bad"] { display: inline-block; background: var(--bad); }
+.chip-m:has(.pin[data-k="bad"]) .m, tr:has(.pin[data-k="bad"]) td:first-child { color: var(--bad); }
 .tag { font-size: .7rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--ing-soft); color: var(--ing); margin-left: 6px; vertical-align: 1px; font-family: var(--f-body); }
 .tag.custom { background: var(--accent-soft); color: var(--accent); }
 .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
