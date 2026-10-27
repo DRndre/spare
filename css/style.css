@@ -406,3 +406,13 @@ form.add .err { order: 4; }
 .yc-same { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 10px 12px; font-size: .88rem; color: var(--muted); }
 .yc-same b { color: var(--fg); }
 .ya-more { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; font-size: .88rem; text-align: left; padding: 8px 0 2px 36px; cursor: pointer; }
+/* Rimasto in tasca + mesi con più/meno in tasca, in un blocco unico */
+.yc-stats { background: var(--bg); border-radius: 14px; padding: 4px 10px 10px; }
+.yc-stats > .yr-head { grid-column: 1 / -1; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 42px; align-items: center; gap: 8px; padding: 8px 2px 6px; background: none; }
+.yc-stats > .yc-low, .yc-stats > .yc-same { background: var(--surface); }
+.yr-head .ya-n { font-weight: 600; }
+.yr-head .ya-v { font-weight: 700; }
+.ya-v.neg { color: var(--bad); }
+.yc-low small { color: var(--muted) !important; }
+.yc-stats .yr-head span { font-size: 1rem; color: var(--fg); }
+.yc-stats .yr-head .ya-p { font-size: .8rem; color: var(--muted); }
