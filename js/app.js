@@ -575,14 +575,15 @@ let depChartSel = null; // mese con il fumetto aperto nel grafico del deposito
 function disegnaDepAnno(tc, ms, d) {
   const righe = d.rows.filter((r) => r.id.startsWith(depAnno));
   const vers = righe.reduce((a, r) => a + r.versato - r.prelievo, 0), net = righe.reduce((a, r) => a + r.netto - r.bollo, 0);
+  const prel = righe.reduce((a, r) => a + r.prelievo, 0), dep = usaDep();
   tc.innerHTML = `<div class="yc-top"><span class="yc-ic" aria-hidden="true">${icona("piggy-bank", "currentColor", 20)}</span>
-      <div><b>Il conto nel ${depAnno}</b><small>Come cresce il saldo, mese per mese</small></div></div>`;
+      <div><b>${dep ? "Il conto" : "I risparmi"} nel ${depAnno}</b><small>Come ${dep ? "cresce il saldo" : "crescono"}, mese per mese</small></div></div>`;
   const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; depChartSel = null; render(); }, "dy-");
   tc.appendChild(yb);
-  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>Versato nel ${depAnno}</small><b>${eur0(vers)}</b></div><div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div></div>
+  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>${dep ? "Versato" : "Messo da parte"} nel ${depAnno}</small><b>${eur0(vers)}</b></div>${dep ? `<div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div>` : `<div><small>Prelievi</small><b>${eur0(prel)}</b></div>`}</div>
     <div class="yc-chart dep-chart" id="dep-chart">${depChartHtml(righe)}</div>
     <button type="button" class="yc-link" id="dep-toggle" aria-expanded="${showDepTable}">${showDepTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showDepTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <div class="tbl-wrap" id="dep-table"${showDepTable ? "" : " hidden"}>${depTable(d, depAnno)}</div>`);
+    <div class="tbl-wrap" id="dep-table"${showDepTable ? "" : " hidden"}>${dep ? depTable(d, depAnno) : risTable(d, depAnno)}</div>`);
   tc.onclick = (e) => {
     const col = e.target.closest(".yc-col[data-id]");
     if (col) { depChartSel = depChartSel === col.dataset.id ? null : col.dataset.id; $("dep-chart").innerHTML = depChartHtml(righe); return; }
@@ -600,7 +601,7 @@ function depChartHtml(righe) {
     const r = by[id];
     if (!r) return `<div class="yc-col off" aria-hidden="true"></div>`;
     const h = (r.saldo / top) * 100, e2 = extraInfo(id, state.piano);
-    const tip = id === depChartSel ? `<div class="yc-tip ${i < 6 ? "l" : "r"}"><b>${monthLabelLong(id)}</b><span>Saldo ${eur(r.saldo)}</span><span>${r.versato - r.prelievo >= 0 ? "+" : ""}${eur(r.versato - r.prelievo)} versati${r.extra && e2 ? " (con " + e2.corto + ")" : ""}</span><span>+${eur(r.netto)} di interessi</span></div>` : "";
+    const tip = id === depChartSel ? `<div class="yc-tip ${i < 6 ? "l" : "r"}"><b>${monthLabelLong(id)}</b><span>${usaDep() ? "Saldo" : "Da parte"} ${eur(r.saldo)}</span><span>${r.versato - r.prelievo >= 0 ? "+" : ""}${eur(r.versato - r.prelievo)} ${usaDep() ? "versati" : "messi da parte"}${r.extra && e2 ? " (con " + e2.corto + ")" : ""}</span>${usaDep() ? `<span>+${eur(r.netto)} di interessi</span>` : ""}</div>` : "";
     return `<button type="button" class="yc-col${id === depChartSel ? " on" : ""}" data-id="${id}" aria-label="${monthLabelLong(id)}: saldo ${eur(r.saldo)}"><span class="b-d${r.cambio ? " cambio" : ""}" style="bottom:0;height:${h}%"></span>${tip}</button>`;
   }).join("");
   const lab = tutti.map((id, i) => `<span class="${id === oggi ? "now" : ""}${by[id] && extraInfo(id, state.piano) && by[id].extra ? " x" : ""}">${"GFMAMGLASOND"[i]}</span>`).join("");
@@ -609,29 +610,32 @@ function depChartHtml(righe) {
     <p class="hint dep-tap">${depChartSel ? "" : "Tocca un mese per vedere il saldo"}</p>`;
 }
 function depHero(d, ms) {
-  const fine = ms[ms.length - 1], oggi = meseCorrente();
-  const oraSaldo = saldoAl(d, oggi);
+  const fine = ms[ms.length - 1], oggi = meseCorrente(), dep = usaDep();
   const base = N(state.deposito.saldo_iniziale);
-  return `<div class="dh-label">A ${monthLabelLong(fine).toLowerCase()}</div><div class="big">${eur(d.saldo)}</div>
-    <div class="formula">${base ? `<b>${eur(base)}</b> di partenza + ` : ""}<b>${eur(d.totVersato)}</b> versati + <b>${eur(d.totNetto)}</b> di interessi − <b>${eur(d.totBollo)}</b> di bollo</div>
-    <div class="dh-oggi">${icona("calendar", "currentColor", 14)} Oggi sul conto <b>${eur(oraSaldo)}</b></div>`;
+  const dettaglio = dep
+    ? `${base ? `<b>${eur0(base)}</b> di partenza + ` : ""}<b>${eur0(d.totVersato)}</b> versati + <b>${eur0(d.totNetto)}</b> di interessi − <b>${eur0(d.totBollo)}</b> di bollo`
+    : `${base ? `<b>${eur0(base)}</b> già da parte + ` : ""}<b>${eur0(d.totVersato)}</b> messi da parte`;
+  return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big">${eur(saldoAl(d, oggi))}</div>
+    <div class="hint dh-stima">Stima dai tuoi conti, fino a ${monthLabelLong(oggi < ms[0] ? ms[0] : oggi > fine ? fine : oggi).toLowerCase()}${oggi < ms[0] ? " (i tuoi conti partono da " + monthLabelLong(ms[0]).toLowerCase() + ")" : ""}</div>
+    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b>${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
 }
 
 function renderRisparmi(v) {
   const ms = months(), dep = state.deposito, d = simula(ms);
-  v.insertAdjacentHTML("beforeend", `<div class="tiles" id="dep-tiles">${risTiles(d, ms)}</div>`);
-  const fs = document.createElement("div"); fs.className = "fields solo";
-  fs.appendChild(moneyField("Già da parte all'inizio", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "r-saldo", hint: `Risparmi che avevi già a ${monthLabelLong(ms[0])} (0 se nessuno)` }));
-  v.appendChild(fs);
+  v.appendChild(secHead("Messo da parte"));
+  v.insertAdjacentHTML("beforeend", `<section class="hero dep-hero" id="dep-tiles">${depHero(d, ms)}</section>`);
+  v.appendChild(secHead("Obiettivo"));
   goalCard(v, ms);
+  v.appendChild(secHead("Impostazioni"));
+  const fs = document.createElement("div"); fs.className = "fields solo";
+  fs.appendChild(moneyField("Già da parte all'inizio", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "r-saldo", hint: `Risparmi che avevi a ${monthLabelLong(ms[0]).toLowerCase()}` }));
+  v.appendChild(fs);
   const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
   if (!anni.includes(depAnno)) depAnno = anni.includes(meseCorrente().slice(0, 4)) ? meseCorrente().slice(0, 4) : anni[0];
-  const tc = document.createElement("section"); tc.className = "card";
-  tc.innerHTML = `<div class="card-head"><h2>Mese per mese</h2><span class="hint">Risparmi e prelievi si cambiano nella scheda Mesi</span></div>`;
-  const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; render(); }, "dy-"); yb.classList.add("in-card");
-  tc.appendChild(yb);
-  tc.insertAdjacentHTML("beforeend", `<div class="tbl-wrap" id="dep-table">${risTable(d, depAnno)}</div>`);
+  v.appendChild(secHead("Il tuo anno"));
+  const tc = document.createElement("section"); tc.className = "card pad year"; tc.id = "dep-year";
   v.appendChild(tc);
+  disegnaDepAnno(tc, ms, d);
 }
 function risTiles(d, ms) {
   const oggi = meseCorrente(), fine = ms[ms.length - 1];
@@ -764,8 +768,8 @@ function refresh() {
   if (view === "deposito") {
     // Mentre scrivi aggiorno riquadri e tabella, senza toccare i campi
     const ms = months(), d = simula(ms);
-    if ($("dep-tiles")) $("dep-tiles").innerHTML = usaDep() ? depHero(d, ms) : risTiles(d, ms);
-    if (usaDep() && $("dep-chart")) $("dep-chart").innerHTML = depChartHtml(d.rows.filter((r) => r.id.startsWith(depAnno)));
+    if ($("dep-tiles")) $("dep-tiles").innerHTML = depHero(d, ms);
+    if ($("dep-chart")) $("dep-chart").innerHTML = depChartHtml(d.rows.filter((r) => r.id.startsWith(depAnno)));
     if ($("dep-table")) $("dep-table").innerHTML = usaDep() ? depTable(d, depAnno) : risTable(d, depAnno);
     if ($("goal-status")) $("goal-status").innerHTML = goalStatus(ms);
     return;
