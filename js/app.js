@@ -424,53 +424,45 @@ function tetto(v) { // valore "tondo" per la scala: 100, 200, 500, 1.000, 1.600,
 }
 function yearCardHtml(ms, anno) {
   const d = datiAnno(ms);
-
-  return `<div class="yc-top"><span class="yc-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 16V10M10 16V4M16 16V8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span>
-    <div><b>Il tuo ${anno}</b><small>Quello che ti resta e quello che metti da parte</small></div></div>
+  return `<div class="yc-top"><span class="yc-ic" aria-hidden="true">${icona("calendar", "currentColor", 20)}</span>
+    <div><b>Il tuo ${anno}</b><small>Dove vanno le entrate dell'anno${d.length < 12 ? ` (${d.length} ${d.length === 1 ? "mese" : "mesi"})` : ""}</small></div></div>
+    <div id="yc-chart">${chartHtml(d, anno)}</div>
     <div class="yc-stats" id="yc-stats">${statsAnno(d, anno)}</div>
-    <div class="yc-chart" id="yc-chart">${chartHtml(d, anno)}</div>
-    <div class="yc-leg"><span><i class="k-r"></i>Resto in tasca</span><span><i class="k-d"></i>${usaDep() ? "Al deposito" : "Messo da parte"}</span>${d.some((x) => x.ex) ? '<span><i class="k-x"></i>13ª / 14ª</span>' : ""}</div>
-    <button type="button" class="yc-link" id="yc-dep">${usaDep() ? "Vai al Deposito" : "Vai ai Risparmi"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M5 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
 }
-/** I due numeri dell'anno: quanto metti da parte e il mese in cui ti resta meno. */
-function statsAnno(d, anno) {
+/** Mese migliore e mese peggiore dell'anno (per resto in tasca). */
+function statsAnno(d) {
   if (!d.length) return "";
-  const daParte = d.reduce((a, x) => a + x.parte, 0);
-  // quali mensilità extra sono finite nei risparmi quest'anno (13ª, 14ª o entrambe)
-  const extra = [...new Set(d.filter((x) => x.ex && x.cc.extraDep > 0).map((x) => x.ex.corto))].sort();
-  const stretto = d.reduce((m, x) => (x.resto < m.resto ? x : m), d[0]);
-  const k = statoResto(stretto.resto, state.piano.soglia);
-  return `<div><small>Da parte nel ${anno}</small><b class="pos">${eur0(daParte)}</b><span>${extra.length ? "con " + extra.join(" e ") : `in ${d.length} ${d.length === 1 ? "mese" : "mesi"}`}</span></div>
-    <button type="button" class="yc-low" data-open="${stretto.id}"><small>Il mese più stretto</small><b class="${k === "good" ? "" : k}">${eur0(stretto.resto)}</b><span>${MESI_NOMI[Number(stretto.id.slice(5)) - 1]} ›</span></button>`;
+  const peggio = d.reduce((m, x) => (x.resto < m.resto ? x : m), d[0]);
+  const meglio = d.reduce((m, x) => (x.resto > m.resto ? x : m), d[0]);
+  const box = (x, tit, ic, cls) => {
+    const k = statoResto(x.resto, state.piano.soglia);
+    return `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b class="${k === "good" ? "" : k}">${eur(x.resto)}</b><span>${MESI_NOMI[Number(x.id.slice(5)) - 1]} ›</span></button>`;
+  };
+  if (Math.abs(meglio.resto - peggio.resto) < 0.005)
+    return `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ti restano <b>${eur(meglio.resto)}</b> al mese.</span></div>`;
+  return box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
 }
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(Math.round(v)) + " €";
-function chartHtml(d, anno) {
-  // tutti i 12 mesi dell'anno: quelli fuori dal periodo restano vuoti
-  const tutti = Array.from({ length: 12 }, (_, i) => anno + "-" + String(i + 1).padStart(2, "0"));
-  const by = Object.fromEntries(d.map((x) => [x.id, x]));
-  const top = tetto(Math.max(0, ...d.map((x) => Math.max(0, x.resto) + x.parte)));
-  const neg = Math.min(0, ...d.map((x) => x.resto));
-  const bot = neg < 0 ? tetto(-neg) : 0;
-  const range = top + bot, z = (bot / range) * 100; // posizione dello zero in %
-  if (!chartSel || !by[chartSel]) chartSel = by[sel] ? sel : (by[meseCorrente()] ? meseCorrente() : null);
-  const oggi = meseCorrente(), soglia = N(state.piano.soglia);
-  const cols = tutti.map((id, i) => {
-    const x = by[id];
-    if (!x) return `<div class="yc-col off" aria-hidden="true"></div>`;
-    const r = Math.max(0, x.resto), hR = (r / range) * 100, hD = (x.parte / range) * 100, hN = (Math.max(0, -x.resto) / range) * 100;
-    const k = x.resto < 0 ? "bad" : soglia > 0 && x.resto < soglia ? "warn" : "ok";
-    const tip = id === chartSel ? `<div class="yc-tip ${i < 6 ? "l" : "r"}"><b>${monthLabelLong(id)}</b><span><i class="k-r"></i>${eur(x.resto)} in tasca</span><span><i class="k-d"></i>${eur(x.parte)} da parte</span><em>Tocca di nuovo per aprirlo</em></div>` : "";
-    return `<button type="button" class="yc-col${id === chartSel ? " on" : ""}${id === sel ? " sel" : ""}" data-id="${id}" aria-label="${monthLabelLong(id)}: ${eur(x.resto)} in tasca, ${eur(x.parte)} da parte">
-      ${hN ? `<span class="b-n" style="top:${100 - z}%;height:${hN}%"></span>` : ""}
-      <span class="b-r ${k}" style="bottom:${z}%;height:${hR}%"></span>
-      ${hD ? `<span class="b-d" style="bottom:calc(${z + hR}% + 2px);height:${hD}%"></span>` : ""}${tip}</button>`;
-  }).join("");
-  const lab = tutti.map((id, i) => `<span class="${id === oggi ? "now" : ""}${by[id]?.ex ? " x" : ""}">${"GFMAMGLASOND"[i]}</span>`).join("");
-  const fmt0 = (v) => new Intl.NumberFormat("it-IT").format(v);
-  return `<div class="yc-plot"><span class="yc-grid" style="bottom:${z}%"></span><span class="yc-grid dash" style="bottom:${z + (top / 2 / range) * 100}%"></span><span class="yc-grid dash" style="bottom:100%"><em>${fmt0(top)}</em></span>
-    ${bot ? `<span class="yc-grid dash" style="bottom:0"><em>−${fmt0(bot)}</em></span>` : ""}<div class="yc-cols">${cols}</div></div><div class="yc-x">${lab}</div>`;
+function chartHtml(d) {
+  // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
+  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0);
+  const perCat = {};
+  d.forEach((x) => monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo); }));
+  const parte = d.reduce((a, x) => a + x.parte, 0), resto = d.reduce((a, x) => a + x.resto, 0);
+  const spese = Object.values(perCat).reduce((a, v) => a + v, 0);
+  const righe = categorie(state.piano).filter((c) => perCat[c.k] > 0).map((c) => ({ n: c.n, c: c.c, i: c.i, v: perCat[c.k] })).sort((a, b) => b.v - a.v);
+  const base = Math.max(entrate, spese + parte + Math.max(0, resto)) || 1;
+  const pct = (v) => Math.round((v / base) * 100);
+  const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
+  const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
+  const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
+  return `<div class="ya-head"><div><small>Entrate</small><b>${eur0(entrate)}</b></div><div><small>Spese</small><b>${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos">${eur0(parte)}</b></div></div>
+    <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
+    <div class="ya-list">${righe.map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
+      ${parte > 0 ? riga(icona("piggy-bank", "var(--c-risp)", 15), "var(--c-risp)", usaDep() ? "Al deposito" : "Messo da parte", parte, " sep") : ""}
+      ${riga(icona("wallet", "var(--muted)", 15), "var(--muted)", "Resto in tasca", resto, parte > 0 ? "" : " sep")}</div>`;
 }
 function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };
@@ -485,10 +477,7 @@ function apriMese(id) { sel = id; chartSel = id; render(); window.scrollTo({ top
 function wireYear(ms, anno) {
   const card = $("year-card"); if (!card) return;
   card.onclick = (e) => {
-    const col = e.target.closest(".yc-col[data-id]");
-    if (col) { const id = col.dataset.id; if (chartSel === id) apriMese(id); else { chartSel = id; $("yc-chart").innerHTML = chartHtml(datiAnno(ms), anno); } return; }
     const low = e.target.closest("[data-open]"); if (low) { apriMese(low.dataset.open); return; }
-    if (e.target.closest("#yc-dep")) { view = "deposito"; history.replaceState(null, "", "#deposito"); render(); window.scrollTo(0, 0); return; }
     if (e.target.closest("#yc-toggle")) { showTable = !showTable; card.innerHTML = yearCardHtml(ms, anno); return; }
     const tr = e.target.closest("tr[data-id]"); if (tr) apriMese(tr.dataset.id);
   };

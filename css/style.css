@@ -385,3 +385,23 @@ form.add .err { order: 4; }
 .btn.danger-soft { color: var(--bad); border-color: var(--bad-soft); background: var(--bad-soft); }
 .cat-conf { flex: 1; align-self: center; }
 @media (max-width: 400px) { .cat-pal, .cat-icons { grid-template-columns: repeat(6, 1fr); } }
+
+/* ---------- Il tuo anno: barra delle entrate dell'anno ---------- */
+.ya-head { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ya-head small { display: block; color: var(--muted); font-size: .72rem; font-weight: 600; }
+.ya-head b { font-size: 1.1rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ya-head b.pos { color: var(--good); }
+.ya-bar { height: 16px; margin: 14px 0 6px; }
+.ya-list { display: flex; flex-direction: column; }
+.ya-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 42px; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.ya-row:last-child { border-bottom: 0; }
+.ya-row.sep { margin-top: 10px; border-top: 1px solid var(--line); }
+.ya-row:has(+ .ya-row.sep) { border-bottom: 0; }
+.ya-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: color-mix(in srgb, var(--cc) 16%, transparent); }
+.ya-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ya-v { font-variant-numeric: tabular-nums; font-weight: 500; }
+.ya-p { text-align: right; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.yc-low small { display: flex; align-items: center; gap: 5px; }
+.yc-low.best small { color: var(--good); } .yc-low.worst small { color: var(--warn); }
+.yc-same { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 10px 12px; font-size: .88rem; color: var(--muted); }
+.yc-same b { color: var(--fg); }
