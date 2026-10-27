@@ -431,7 +431,7 @@ function yearCardHtml(ms, anno) {
     <div class="yc-stats" id="yc-stats"><div><small>In tasca</small><b>${eur0(inTasca)}</b></div><div><small>Da parte</small><b class="pos">${eur0(daParte)}</b></div><div><small>Media al mese</small><b>${eur0(media)}</b></div></div>
     <div class="yc-chart" id="yc-chart">${chartHtml(d, anno)}</div>
     <div class="yc-leg"><span><i class="k-r"></i>Resto in tasca</span><span><i class="k-d"></i>${usaDep() ? "Al deposito" : "Messo da parte"}</span>${d.some((x) => x.ex) ? '<span><i class="k-x"></i>13ª / 14ª</span>' : ""}</div>
-    <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M5 3l4 4-4 4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
 }
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(Math.round(v)) + " €";
