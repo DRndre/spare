@@ -445,7 +445,7 @@ function statsAnno(d) {
     return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ti restano <b>${eur(piu.resto)}</b> al mese.</span></div>`;
   return head + box(piu, "Mese migliore", "trending-up", "best") + box(meno, "Mese peggiore", "trending-down", "worst");
 }
-const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
+const eur0 = (v) => eur(round(v)); // riepilogo dell'anno con i centesimi
 function chartHtml(d) {
   // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
   const entrate = d.reduce((a, x) => a + x.cc.entrate, 0);
