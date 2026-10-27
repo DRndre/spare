@@ -82,19 +82,38 @@ function goalStatus(ms) {
     <div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct}%"></span></div>
     <div class="hint">${quando}</div>`;
 }
+let goalEdit = false; // modulo dell'obiettivo aperto
 function goalCard(v, ms) {
-  const dep = state.deposito;
+  const dep = state.deposito, g = N(dep.obiettivo);
   const card = document.createElement("section"); card.className = "card pad goal";
-  card.innerHTML = `<div class="card-head flush"><h2>Obiettivo</h2><span class="hint">Facoltativo: lascia 0 se non ti serve</span></div>`;
-  const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Cifra da raggiungere", N(dep.obiettivo), (n) => { dep.obiettivo = n; saveDeposito(); }, { id: "g-imp" }));
-  const nf = document.createElement("label"); nf.className = "field"; nf.htmlFor = "g-nome";
-  nf.innerHTML = `<span class="label">Per cosa</span><input type="text" id="g-nome" placeholder="es. Caparra casa" autocomplete="off"><span class="hint">Facoltativo</span>`;
-  const ni = nf.querySelector("input"); ni.value = dep.obiettivo_nome || "";
-  ni.addEventListener("input", () => { dep.obiettivo_nome = ni.value; saveDeposito(); refresh(); });
-  fs.appendChild(nf);
-  card.appendChild(fs);
+  if (!goalEdit && !(g > 0)) {
+    card.innerHTML = `<p class="hint flush">Hai un traguardo? Per esempio la caparra della casa: vedi a che punto sei e quando ci arrivi.</p>`;
+    const b = document.createElement("button"); b.type = "button"; b.className = "add-open flush-x"; b.innerHTML = `${icona("plus", "currentColor", 16)} Imposta un obiettivo`;
+    b.onclick = () => { goalEdit = true; render(); $("g-imp")?.focus(); };
+    card.appendChild(b); v.appendChild(card); return;
+  }
+  if (goalEdit) {
+    const fs = document.createElement("div"); fs.className = "fields";
+    fs.appendChild(moneyField("Cifra da raggiungere", g, (n) => { dep.obiettivo = n; saveDeposito(); }, { id: "g-imp" }));
+    const nf = document.createElement("label"); nf.className = "field"; nf.htmlFor = "g-nome";
+    nf.innerHTML = `<span class="label">Per cosa</span><input type="text" id="g-nome" placeholder="es. Caparra casa" autocomplete="off"><span class="hint">Facoltativo</span>`;
+    const ni = nf.querySelector("input"); ni.value = dep.obiettivo_nome || "";
+    ni.addEventListener("input", () => { dep.obiettivo_nome = ni.value; saveDeposito(); refresh(); });
+    fs.appendChild(nf);
+    card.appendChild(fs);
+  }
   card.insertAdjacentHTML("beforeend", `<div class="goal-status" id="goal-status">${goalStatus(ms)}</div>`);
+  const act = document.createElement("div"); act.className = "goal-act";
+  const mb = document.createElement("button"); mb.type = "button"; mb.className = "link";
+  mb.textContent = goalEdit ? "Fatto" : "Modifica";
+  mb.onclick = () => { goalEdit = !goalEdit; render(); };
+  act.appendChild(mb);
+  if (goalEdit && g > 0) {
+    const rm = document.createElement("button"); rm.type = "button"; rm.className = "link danger-link"; rm.textContent = "Togli l'obiettivo";
+    rm.onclick = () => { dep.obiettivo = 0; dep.obiettivo_nome = ""; saveDeposito(); goalEdit = false; render(); };
+    act.prepend(rm);
+  }
+  card.appendChild(act);
   v.appendChild(card);
 }
 /** Chiave della categoria di una spesa (una categoria sconosciuta o eliminata conta come "Altro"). */
@@ -491,13 +510,21 @@ function renderDeposito(v) {
   const ms = months(), dep = state.deposito;
   const d = simulaDeposito(ms, state.piano, state.mesi, dep);
   const periodi = ordinaPeriodi(dep.periodi);
-  v.insertAdjacentHTML("beforeend", `<div class="tiles" id="dep-tiles">${depTiles(d, ms)}</div>
-    ${periodi.length ? "" : `<div class="note">Aggiungi qui sotto il tasso del tuo conto deposito: finché non c'è, gli interessi restano a zero.</div>`}`);
 
-  // Tassi nel tempo
+  // Sul conto: saldo a fine periodo, com'è fatto, e saldo di oggi
+  v.appendChild(secHead("Sul conto"));
+  v.insertAdjacentHTML("beforeend", `<section class="hero dep-hero" id="dep-tiles">${depHero(d, ms)}</section>`);
+  if (!periodi.length) v.insertAdjacentHTML("beforeend", `<div class="note">Aggiungi qui sotto il tasso del tuo conto deposito: finché non c'è, gli interessi restano a zero.</div>`);
+
+  // Obiettivo
+  v.appendChild(secHead("Obiettivo"));
+  goalCard(v, ms);
+
+  // Tasso nel tempo
+  v.appendChild(secHead("Tasso nel tempo"));
   const opts = monthRange("2025-01", "2030-12");
-  const card = document.createElement("section"); card.className = "card";
-  card.innerHTML = `<div class="card-head"><h2>Tasso nel tempo</h2><span class="hint">Ogni tasso vale dal suo mese fino al successivo</span></div>`;
+  const card = document.createElement("section"); card.className = "card tassi";
+  card.innerHTML = `<p class="hint card-hint">Ogni tasso vale dal suo mese fino al successivo.</p>`;
   if (!periodi.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessun tasso: aggiungi il primo qui sotto.</div>');
   periodi.forEach((p) => {
     const r = document.createElement("div"); r.className = "row periodo";
@@ -517,33 +544,77 @@ function renderDeposito(v) {
     del.onclick = () => confirmInline(r, `Eliminare il tasso da ${monthLabel(p.da)}?`, "Elimina", () => { dep.periodi = dep.periodi.filter((x) => x.id !== p.id); saveDeposito(); render(); });
     r.append(da, wi, nome, del); card.appendChild(r);
   });
-  const add = document.createElement("div"); add.className = "add solo";
-  const ab = document.createElement("button"); ab.type = "button"; ab.className = "btn primary"; ab.id = "p-add";
-  ab.textContent = periodi.length ? "Aggiungi un cambio di tasso" : "Aggiungi il tasso";
+  const ab = document.createElement("button"); ab.type = "button"; ab.className = "add-open"; ab.id = "p-add";
+  ab.innerHTML = `${icona("plus", "currentColor", 16)} ${periodi.length ? "Aggiungi un cambio di tasso" : "Aggiungi il tasso"}`;
   ab.onclick = () => {
     const last = periodi[periodi.length - 1];
     const da = last ? addMonths(last.da, 12) : ms[0];
     dep.periodi = [...(dep.periodi || []), { id: uid(), da: opts.includes(da) ? da : opts[opts.length - 1], tasso: last ? N(last.tasso) : 0, nome: "" }];
     saveDeposito(); render(); document.querySelector(".row.periodo:last-of-type input")?.focus();
   };
-  add.appendChild(ab); card.appendChild(add);
+  card.appendChild(ab);
   v.appendChild(card);
 
-  const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Saldo di partenza", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "d-saldo", hint: "Già sul conto all'inizio del periodo" }));
-  fs.appendChild(moneyField("Tasse sugli interessi", N(dep.tasse), (n) => { dep.tasse = n; saveDeposito(); }, { id: "d-tasse", unit: "%", hint: "In Italia 26%" }));
-  fs.appendChild(moneyField("Imposta di bollo annua", N(dep.bollo), (n) => { dep.bollo = n; saveDeposito(); }, { id: "d-bollo", unit: "%", hint: "Di solito 0,2% (alcune banche la pagano loro: metti 0)" }));
+  // Impostazioni del conto
+  v.appendChild(secHead("Impostazioni del conto"));
+  const fs = document.createElement("div"); fs.className = "fields three";
+  fs.appendChild(moneyField("Saldo di partenza", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "d-saldo", hint: `Già sul conto a ${monthLabelLong(ms[0]).toLowerCase()}` }));
+  fs.appendChild(moneyField("Tasse", N(dep.tasse), (n) => { dep.tasse = n; saveDeposito(); }, { id: "d-tasse", unit: "%", hint: "In Italia 26%" }));
+  fs.appendChild(moneyField("Bollo annuo", N(dep.bollo), (n) => { dep.bollo = n; saveDeposito(); }, { id: "d-bollo", unit: "%", hint: "Di solito 0,2%" }));
   v.appendChild(fs);
 
-  goalCard(v, ms);
+  // Il tuo anno: saldo che cresce mese per mese
   const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
   if (!anni.includes(depAnno)) depAnno = anni.includes(meseCorrente().slice(0, 4)) ? meseCorrente().slice(0, 4) : anni[0];
-  const tc = document.createElement("section"); tc.className = "card";
-  tc.innerHTML = `<div class="card-head"><h2>Mese per mese</h2><span class="hint">Versamenti e prelievi si cambiano nella scheda Mesi</span></div>`;
-  const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; render(); }, "dy-"); yb.classList.add("in-card");
-  tc.appendChild(yb);
-  tc.insertAdjacentHTML("beforeend", `<div class="tbl-wrap" id="dep-table">${depTable(d, depAnno)}</div>`);
+  v.appendChild(secHead("Il tuo anno"));
+  const tc = document.createElement("section"); tc.className = "card pad year"; tc.id = "dep-year";
   v.appendChild(tc);
+  disegnaDepAnno(tc, ms, d);
+}
+let depChartSel = null; // mese con il fumetto aperto nel grafico del deposito
+function disegnaDepAnno(tc, ms, d) {
+  const righe = d.rows.filter((r) => r.id.startsWith(depAnno));
+  const vers = righe.reduce((a, r) => a + r.versato - r.prelievo, 0), net = righe.reduce((a, r) => a + r.netto - r.bollo, 0);
+  tc.innerHTML = `<div class="yc-top"><span class="yc-ic" aria-hidden="true">${icona("piggy-bank", "currentColor", 20)}</span>
+      <div><b>Il conto nel ${depAnno}</b><small>Come cresce il saldo, mese per mese</small></div></div>`;
+  const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; depChartSel = null; render(); }, "dy-");
+  tc.appendChild(yb);
+  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>Versato nel ${depAnno}</small><b>${eur0(vers)}</b></div><div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div></div>
+    <div class="yc-chart dep-chart" id="dep-chart">${depChartHtml(righe)}</div>
+    <button type="button" class="yc-link" id="dep-toggle" aria-expanded="${showDepTable}">${showDepTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showDepTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="tbl-wrap" id="dep-table"${showDepTable ? "" : " hidden"}>${depTable(d, depAnno)}</div>`);
+  tc.onclick = (e) => {
+    const col = e.target.closest(".yc-col[data-id]");
+    if (col) { depChartSel = depChartSel === col.dataset.id ? null : col.dataset.id; $("dep-chart").innerHTML = depChartHtml(righe); return; }
+    if (e.target.closest("#dep-toggle")) { showDepTable = !showDepTable; disegnaDepAnno(tc, ms, d); }
+  };
+}
+let showDepTable = false;
+function depChartHtml(righe) {
+  const tutti = Array.from({ length: 12 }, (_, i) => depAnno + "-" + String(i + 1).padStart(2, "0"));
+  const by = Object.fromEntries(righe.map((r) => [r.id, r]));
+  const top = tetto(Math.max(0, ...righe.map((r) => r.saldo)));
+  if (depChartSel && !by[depChartSel]) depChartSel = null;
+  const oggi = meseCorrente();
+  const cols = tutti.map((id, i) => {
+    const r = by[id];
+    if (!r) return `<div class="yc-col off" aria-hidden="true"></div>`;
+    const h = (r.saldo / top) * 100, e2 = extraInfo(id, state.piano);
+    const tip = id === depChartSel ? `<div class="yc-tip ${i < 6 ? "l" : "r"}"><b>${monthLabelLong(id)}</b><span>Saldo ${eur(r.saldo)}</span><span>${r.versato - r.prelievo >= 0 ? "+" : ""}${eur(r.versato - r.prelievo)} versati${r.extra && e2 ? " (con " + e2.corto + ")" : ""}</span><span>+${eur(r.netto)} di interessi</span></div>` : "";
+    return `<button type="button" class="yc-col${id === depChartSel ? " on" : ""}" data-id="${id}" aria-label="${monthLabelLong(id)}: saldo ${eur(r.saldo)}"><span class="b-d${r.cambio ? " cambio" : ""}" style="bottom:0;height:${h}%"></span>${tip}</button>`;
+  }).join("");
+  const lab = tutti.map((id, i) => `<span class="${id === oggi ? "now" : ""}${by[id] && extraInfo(id, state.piano) && by[id].extra ? " x" : ""}">${"GFMAMGLASOND"[i]}</span>`).join("");
+  const f0 = (v) => new Intl.NumberFormat("it-IT", { useGrouping: "always" }).format(v);
+  return `<div class="yc-plot"><span class="yc-grid" style="bottom:0"></span><span class="yc-grid dash" style="bottom:50%"></span><span class="yc-grid dash" style="bottom:100%"><em>${f0(top)}</em></span><div class="yc-cols">${cols}</div></div><div class="yc-x">${lab}</div>
+    <p class="hint dep-tap">${depChartSel ? "" : "Tocca un mese per vedere il saldo"}</p>`;
+}
+function depHero(d, ms) {
+  const fine = ms[ms.length - 1], oggi = meseCorrente();
+  const oraSaldo = saldoAl(d, oggi);
+  const base = N(state.deposito.saldo_iniziale);
+  return `<div class="dh-label">A ${monthLabelLong(fine).toLowerCase()}</div><div class="big">${eur(d.saldo)}</div>
+    <div class="formula">${base ? `<b>${eur(base)}</b> di partenza + ` : ""}<b>${eur(d.totVersato)}</b> versati + <b>${eur(d.totNetto)}</b> di interessi − <b>${eur(d.totBollo)}</b> di bollo</div>
+    <div class="dh-oggi">${icona("calendar", "currentColor", 14)} Oggi sul conto <b>${eur(oraSaldo)}</b></div>`;
 }
 
 function renderRisparmi(v) {
@@ -693,7 +764,8 @@ function refresh() {
   if (view === "deposito") {
     // Mentre scrivi aggiorno riquadri e tabella, senza toccare i campi
     const ms = months(), d = simula(ms);
-    if ($("dep-tiles")) $("dep-tiles").innerHTML = usaDep() ? depTiles(d, ms) : risTiles(d, ms);
+    if ($("dep-tiles")) $("dep-tiles").innerHTML = usaDep() ? depHero(d, ms) : risTiles(d, ms);
+    if (usaDep() && $("dep-chart")) $("dep-chart").innerHTML = depChartHtml(d.rows.filter((r) => r.id.startsWith(depAnno)));
     if ($("dep-table")) $("dep-table").innerHTML = usaDep() ? depTable(d, depAnno) : risTable(d, depAnno);
     if ($("goal-status")) $("goal-status").innerHTML = goalStatus(ms);
     return;
