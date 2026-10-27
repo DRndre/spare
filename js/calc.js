@@ -52,7 +52,8 @@ export const DEFAULT_DEPOSITO = {
 
 export const N = (v) => Number(v) || 0;
 export const round = (v) => Math.round(v * 100) / 100;
-export const fmt = new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// useGrouping "always": il punto delle migliaia anche sui numeri di 4 cifre (1.200 e non 1200), come in Chrome
+export const fmt = new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: "always" });
 export const eur = (v) => fmt.format(v) + " €";
 
 /** Accetta "1.234,56", "57,84", "12.5", "€ 30". Restituisce NaN se vuoto o non valido. */

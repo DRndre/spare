@@ -438,14 +438,13 @@ function statsAnno(d) {
   const peggio = d.reduce((m, x) => (x.resto < m.resto ? x : m), d[0]);
   const meglio = d.reduce((m, x) => (x.resto > m.resto ? x : m), d[0]);
   const box = (x, tit, ic, cls) => {
-    const k = statoResto(x.resto, state.piano.soglia);
-    return `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b class="${k === "good" ? "" : k}">${eur(x.resto)}</b><span>${MESI_NOMI[Number(x.id.slice(5)) - 1]} ›</span></button>`;
+    return `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b class="${x.resto < 0 ? "bad" : ""}">${eur(x.resto)}</b><span>${MESI_NOMI[Number(x.id.slice(5)) - 1]} ›</span></button>`;
   };
   if (Math.abs(meglio.resto - peggio.resto) < 0.005)
     return `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ti restano <b>${eur(meglio.resto)}</b> al mese.</span></div>`;
   return box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
 }
-const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(Math.round(v)) + " €";
+const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
   // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
   const entrate = d.reduce((a, x) => a + x.cc.entrate, 0);
