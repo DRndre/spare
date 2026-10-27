@@ -363,7 +363,7 @@ function renderMesi(v) {
   ms.forEach((id) => {
     const c = calcMonth(monthData(id, state.piano, state.mesi), state.piano);
     const b = document.createElement("button"); b.type = "button"; b.className = "chip-m"; b.id = "chip-" + id; b.setAttribute("aria-pressed", String(id === sel));
-    b.innerHTML = `<span class="m"><span class="pin" data-k="${statoResto(c.resto, state.piano.soglia)}"></span>${monthLabel(id)}</span><span class="r">${eur(c.resto)}</span>`;
+    b.innerHTML = `<span class="m"><span class="pin" data-k="${statoResto(c.resto, state.piano.soglia)}"></span>${monthLabel(id)}</span>`;
     b.onclick = () => { sel = id; render(); $("chip-" + id)?.scrollIntoView({ inline: "center", block: "nearest" }); };
     chips.appendChild(b);
   });
@@ -707,7 +707,7 @@ function refresh() {
   updateGroupSums();
   if (view === "mesi") {
     const chip = $("chip-" + sel);
-    if (chip) { chip.querySelector(".r").textContent = eur(c.resto); chip.querySelector(".pin").dataset.k = statoResto(c.resto, state.piano.soglia); }
+    if (chip) { chip.querySelector(".pin").dataset.k = statoResto(c.resto, state.piano.soglia); }
     if (q("entrate")) q("entrate").textContent = eur(c.entrate);
     if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
     const ms = months().filter((id) => id.startsWith(sel.slice(0, 4)));
