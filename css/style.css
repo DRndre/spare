@@ -340,3 +340,43 @@ body.no-scroll { overflow: hidden; }
 .yc-link { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-top: 1px solid var(--line); background: none; padding: 12px 0 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
 .year .tbl-wrap { margin: 0 -18px -18px; }
 @media (prefers-reduced-motion: reduce) { .yc-col > span { transition: none; } }
+
+/* ---------- Categorie con icona ---------- */
+.cat-badge { display: inline-grid; place-items: center; border-radius: 8px; background: color-mix(in srgb, var(--cc) 16%, transparent); flex: 0 0 auto; }
+.cat-svg { display: block; flex: 0 0 auto; }
+.gname { gap: 9px; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend span i { margin-right: 2px; }
+/* Modulo "nuova spesa": nome e importo, poi la categoria, poi Aggiungi */
+form.add { grid-template-columns: minmax(0, 1fr) 130px; }
+form.add .cat-pick, form.add .err { grid-column: 1 / -1; }
+form.add .cat-pick { order: 2; }
+form.add > button[type=submit] { order: 3; grid-column: 1 / -1; }
+form.add .err { order: 4; }
+.cat-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.add .cat-pick .cat-chip { grid-column: auto; }
+.cat-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 5px 11px 5px 8px; font: inherit; font-size: .85rem; cursor: pointer; }
+.cat-chip[aria-checked="true"] { background: var(--cc); border-color: var(--cc); color: #fff; font-weight: 600; }
+.cat-chip.nuova { color: var(--accent); border-style: dashed; }
+@media (max-width: 560px) { form.add { grid-template-columns: minmax(0, 1fr) 110px; } form.add .n { grid-column: auto; } }
+/* Gestione categorie */
+.cat-list { padding: 4px 0 8px; }
+.cat-sec { font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 10px 16px 6px; }
+.cat-sec.flush { padding: 4px 2px 0; }
+.cat-row { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; padding: 8px 16px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cat-row.ro { cursor: default; }
+.cat-row:not(.ro):hover { background: var(--bg); }
+.cat-n { flex: 1; font-weight: 500; display: flex; flex-direction: column; }
+.cat-n small { color: var(--muted); font-weight: 400; font-size: .78rem; }
+.cat-go { color: var(--muted); font-size: 1.3rem; }
+.cat-prev { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 14px; padding: 12px 14px; }
+.cat-prev b { font-size: 1.05rem; }
+.cat-pal { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.cat-pal button { aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .06); }
+.cat-pal button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg); }
+.cat-icons { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; background: var(--surface); border-radius: 14px; padding: 10px; }
+.cat-icons button { aspect-ratio: 1; border: 0; border-radius: 10px; background: color-mix(in srgb, var(--cc) 12%, transparent); display: grid; place-items: center; cursor: pointer; }
+.cat-icons button[aria-checked="true"] { background: var(--cc); }
+.btn.danger-soft { color: var(--bad); border-color: var(--bad-soft); background: var(--bad-soft); }
+.cat-conf { flex: 1; align-self: center; }
+@media (max-width: 400px) { .cat-pal, .cat-icons { grid-template-columns: repeat(6, 1fr); } }

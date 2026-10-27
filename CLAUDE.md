@@ -43,6 +43,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").
 - **Da fare (chiesto da Andrea):** applicare le stesse regole (titoli sopra i gruppi, etichette corte, sezioni separate)
   anche a **Deposito** e **Modello**, una scheda alla volta.
+- `js/categorie.js` — 17 categorie di base (Casa, Auto e trasporti, Abbonamenti, Cura personale, Spesa, Salute,
+  Svago e uscite, Animali, Viaggi, Rate e prestiti, Regali, Figli, Sport, Abbigliamento, Formazione, Tasse, Altro)
+  con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria
+  sconosciuta o eliminata conta come "Altro". `js/categorie-ui.js`: menu ☰ → Categorie (crea, modifica, elimina:
+  le spese di una categoria eliminata passano in Altro); "Nuova categoria" anche da "+ Aggiungi una spesa".
 - `js/guida.js` — **Configurazione guidata** in 5 passaggi (entrate, mensilità, spese fisse con esempi da spuntare,
   risparmi/deposito, riepilogo): parte al primo accesso ("Inizia la configurazione") e si riapre dal menu ☰
   senza cancellare le spese già presenti. Si può saltare ("Salta" nel primo passaggio o "Salta, configuro da solo"
@@ -61,7 +66,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 ## Modello dei dati
 - **piani** (una riga per utente, il "Modello" = mese tipo): stipendio, entrate_extra, risparmio,
   soglia (0 = nessun avviso), mensilita (12/13/14), tredicesima, quattordicesima, mese_13, mese_14 (1-12),
-  extra_al_deposito, usa_deposito, mese_inizio, mese_fine, senza_fine, voci (jsonb `[{id, nome, importo, cat}]`).
+  extra_al_deposito, usa_deposito, mese_inizio, mese_fine, senza_fine, voci (jsonb `[{id, nome, importo, cat}]`),
+  categorie (jsonb `[{k, n, c, i}]`: categorie create dall'utente; chiave `c…`, colore esadecimale, nome icona).
 - **depositi** (una riga per utente): saldo_iniziale, obiettivo (0 = nessuno), obiettivo_nome, tasse (26), bollo (0,2), periodi
   (jsonb `[{id, da: "AAAA-MM", tasso, nome}]`: ogni tasso vale dal suo mese fino al successivo).
   Le colonne `tasso_promo`, `tasso_base`, `inizio_promo`, `mesi_promo` sono della prima versione e non si usano più.
@@ -86,6 +92,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 4. `piani.entrate_extra`, `mesi.entrate_extra`.
 5. `piani.usa_deposito`.
 6. `depositi.obiettivo`, `depositi.obiettivo_nome`.
+7. `piani.categorie`; spostate "Fondo conigli" → animali e "Klarna Multa" → rate (Modello e mesi).
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.

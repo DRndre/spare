@@ -1,12 +1,6 @@
 // Calcoli puri: nessun accesso al DOM o al database. Facili da testare e modificare.
 
-export const CATS = [
-  { k: "casa", n: "Casa", c: "--c-casa" },
-  { k: "auto", n: "Auto", c: "--c-auto" },
-  { k: "abbonamenti", n: "Abbonamenti", c: "--c-abb" },
-  { k: "persona", n: "Persona", c: "--c-persona" },
-  { k: "altro", n: "Altro", c: "--c-altro" },
-];
+// Le categorie delle spese sono in categorie.js
 
 const MN = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 const MNL = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
@@ -27,6 +21,7 @@ export const DEFAULT_PIANO = {
   mese_fine: "2027-12",
   senza_fine: true, // true = i mesi si allungano da soli fino a dicembre dell'anno dopo
   voci: [],
+  categorie: [], // categorie create dall'utente: [{k, n, c, i}]
 };
 
 /** Mese di oggi in formato "AAAA-MM". */

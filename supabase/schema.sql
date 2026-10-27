@@ -83,3 +83,6 @@ alter table public.piani add column if not exists usa_deposito boolean not null 
 -- Obiettivo di risparmio (0 = nessuno)
 alter table public.depositi add column if not exists obiettivo numeric not null default 0;
 alter table public.depositi add column if not exists obiettivo_nome text not null default '';
+
+-- Categorie create dall'utente: [{k, n, c (colore), i (icona)}]
+alter table public.piani add column if not exists categorie jsonb not null default '[]'::jsonb;

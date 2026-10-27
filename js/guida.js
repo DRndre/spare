@@ -1,6 +1,7 @@
 // Configurazione guidata (5 passaggi) e pagina "Come funziona".
 // La guida lavora su una copia dei dati: salva solo quando si preme "Fine".
-import { N, round, fmt, eur, parseNum, uid, calcMonth, meseCorrente, monthRange, monthLabelLong, MESI_NOMI, CATS } from "./calc.js";
+import { N, round, fmt, eur, parseNum, uid, calcMonth, meseCorrente, monthRange, monthLabelLong, MESI_NOMI } from "./calc.js";
+import { categorie } from "./categorie.js";
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
@@ -8,12 +9,13 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "
 const ESEMPI = [
   { g: "Casa", voci: [["Affitto o mutuo", "casa"], ["Bollette (luce e gas)", "casa"], ["Condominio", "casa"], ["Internet casa", "casa"]] },
   { g: "Auto e trasporti", voci: [["Rata auto", "auto"], ["Assicurazione auto", "auto"], ["Bollo auto", "auto"], ["Carburante", "auto"], ["Abbonamento mezzi", "auto"]] },
-  { g: "Telefono e abbonamenti", voci: [["Telefono", "abbonamenti"], ["Streaming (Netflix, Spotify…)", "abbonamenti"], ["Palestra", "abbonamenti"]] },
-  { g: "Persona", voci: [["Spesa alimentare", "persona"], ["Barbiere o parrucchiere", "persona"]] },
+  { g: "Telefono e abbonamenti", voci: [["Telefono", "abbonamenti"], ["Streaming (Netflix, Spotify…)", "abbonamenti"], ["Palestra", "sport"]] },
+  { g: "Persona e salute", voci: [["Spesa alimentare", "spesa"], ["Barbiere o parrucchiere", "persona"], ["Farmacia e visite", "salute"]] },
+  { g: "Altro", voci: [["Animali (cibo, veterinario)", "animali"], ["Rate (Klarna, finanziamenti)", "rate"], ["Svago e uscite", "svago"]] },
 ];
 
 /* ---------- Finestra sopra l'app ---------- */
-function apriFoglio(titolo, onClose) {
+export function apriFoglio(titolo, onClose) {
   const ov = document.createElement("div"); ov.className = "sheet-bg";
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(titolo)}">
     <div class="sheet-head"><h2>${esc(titolo)}</h2><button type="button" class="icon-btn sheet-x" aria-label="Chiudi">
@@ -137,7 +139,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
       box.innerHTML = `<div class="group-head"><span class="gname">Altre spese</span></div>`;
       w.altre.forEach((x, i) => {
         const r = document.createElement("div"); r.className = "row wiz-altra";
-        r.innerHTML = `<input type="text" placeholder="Nome (es. Assicurazione casa)" aria-label="Nome della spesa"><span class="imp"><input type="text" inputmode="decimal" placeholder="0,00" aria-label="Importo"><span class="eur">€</span></span><select aria-label="Categoria">${CATS.map((c) => `<option value="${c.k}"${c.k === x.cat ? " selected" : ""}>${c.n}</option>`).join("")}</select>`;
+        r.innerHTML = `<input type="text" placeholder="Nome (es. Assicurazione casa)" aria-label="Nome della spesa"><span class="imp"><input type="text" inputmode="decimal" placeholder="0,00" aria-label="Importo"><span class="eur">€</span></span><select aria-label="Categoria">${categorie(state.piano).map((c) => `<option value="${c.k}"${c.k === x.cat ? " selected" : ""}>${esc(c.n)}</option>`).join("")}</select>`;
         const [n, im] = r.querySelectorAll("input"); n.value = x.nome; im.value = x.importo ? fmt.format(x.importo) : "";
         n.addEventListener("input", () => (x.nome = n.value));
         im.addEventListener("input", () => { const v = parseNum(im.value); x.importo = isNaN(v) || v < 0 ? 0 : round(v); });

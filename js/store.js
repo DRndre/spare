@@ -2,7 +2,7 @@
 // del database (Row Level Security) fanno vedere a ciascuno solo le proprie.
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
-import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, CATS, periodiDaVecchi, meseCorrente } from "./calc.js";
+import { DEFAULT_PIANO, DEFAULT_DEPOSITO, N, uid, periodiDaVecchi, meseCorrente } from "./calc.js";
 
 export const configured = !SUPABASE_URL.includes("INSERISCI") && !SUPABASE_ANON_KEY.includes("INSERISCI");
 export const sb = configured
@@ -22,15 +22,21 @@ const status = (s, t) => listeners.forEach((fn) => fn(s, t));
 
 function fixVoci(v) {
   return Array.isArray(v)
-    ? v.map((x) => ({ id: String(x.id || uid()), nome: String(x.nome || ""), importo: N(x.importo), cat: CATS.some((c) => c.k === x.cat) ? x.cat : "altro" }))
+    ? v.map((x) => ({ id: String(x.id || uid()), nome: String(x.nome || ""), importo: N(x.importo), cat: x.cat ? String(x.cat) : "altro" }))
     : [];
 }
 const cleanVoci = (v) => fixVoci(v);
+function fixCategorie(v) {
+  return Array.isArray(v)
+    ? v.filter((c) => c && c.k && String(c.n || "").trim()).map((c) => ({ k: String(c.k), n: String(c.n).trim().slice(0, 40), c: /^#[0-9a-f]{6}$/i.test(c.c) ? c.c : "#8E8E93", i: String(c.i || "tag") }))
+    : [];
+}
 
 function pianoFromRow(r) {
   const p = { ...DEFAULT_PIANO };
   for (const k of Object.keys(DEFAULT_PIANO)) if (r[k] != null) p[k] = r[k];
   p.voci = fixVoci(r.voci);
+  p.categorie = fixCategorie(r.categorie);
   ["stipendio", "entrate_extra", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
   // Dati della prima versione (senza mensilità): la ricavo dagli importi
   if (r.mensilita == null) p.mensilita = N(p.quattordicesima) > 0 ? 14 : N(p.tredicesima) > 0 ? 13 : 12;
@@ -130,7 +136,7 @@ export function savePiano() {
       tredicesima: N(p.tredicesima), quattordicesima: N(p.quattordicesima),
       mensilita: N(p.mensilita), mese_13: N(p.mese_13), mese_14: N(p.mese_14), senza_fine: !!p.senza_fine, usa_deposito: !!p.usa_deposito,
       extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
-      voci: cleanVoci(p.voci), updated_at: now(),
+      voci: cleanVoci(p.voci), categorie: fixCategorie(p.categorie), updated_at: now(),
     });
   });
 }

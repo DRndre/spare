@@ -1,6 +1,6 @@
 // Interfaccia: login, schede Mesi / Conto Deposito / Modello.
 import {
-  CATS, N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
+  N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
   mesiPiano, meseCorrente, MESI_NOMI,
 } from "./calc.js";
@@ -8,6 +8,8 @@ import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
 } from "./store.js";
 import { LOGO } from "./logo.js";
+import { categorie, catInfo, badge, icona } from "./categorie.js";
+import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
 
@@ -95,6 +97,9 @@ function goalCard(v, ms) {
   card.insertAdjacentHTML("beforeend", `<div class="goal-status" id="goal-status">${goalStatus(ms)}</div>`);
   v.appendChild(card);
 }
+/** Chiave della categoria di una spesa (una categoria sconosciuta o eliminata conta come "Altro"). */
+const ck = (k) => catInfo(state.piano, k).k;
+const colore = (c) => (c.startsWith("--") ? `var(${c})` : c);
 /** "13ª e 14ª", "13ª" o "" secondo le mensilità. */
 const extraNomi = () => (N(state.piano.mensilita) >= 14 ? "13ª e 14ª" : N(state.piano.mensilita) >= 13 ? "13ª" : "");
 
@@ -233,11 +238,11 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   const card = document.createElement("section"); card.className = "card spese";
   card.innerHTML = titoloFuori ? "" : `<div class="card-head"><h2>Spese</h2><span class="tot" data-live="spese">${tot}</span></div>`;
   if (!voci.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessuna spesa: aggiungi la prima qui sotto.</div>');
-  CATS.forEach((c) => {
-    const vs = voci.filter((v) => v.cat === c.k);
+  categorie(state.piano).forEach((c) => {
+    const vs = voci.filter((v) => ck(v.cat) === c.k);
     if (!vs.length) return;
     const g = document.createElement("div"); g.className = "group";
-    g.innerHTML = `<div class="group-head"><span class="gname"><i style="background:var(${c.c})"></i>${c.n}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
+    g.innerHTML = `<div class="group-head"><span class="gname">${badge(c, 24)}${esc(c.n)}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
     vs.forEach((v) => {
       const r = document.createElement("div"); r.className = "row";
       const nome = document.createElement("input"); nome.type = "text"; nome.value = v.nome; nome.id = prefix + "n-" + v.id; nome.setAttribute("aria-label", "Nome voce");
@@ -255,7 +260,20 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     card.appendChild(g);
   });
   const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off";
-  form.innerHTML = `<input class="n" type="text" id="${prefix}a-nome" placeholder="Nuova voce (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><select id="${prefix}a-cat" aria-label="Categoria">${CATS.map((c) => `<option value="${c.k}">${c.n}</option>`).join("")}</select><button class="btn primary" type="submit">Aggiungi</button><div class="err" hidden></div>`;
+  form.innerHTML = `<input class="n" type="text" id="${prefix}a-nome" placeholder="Nuova voce (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><button class="btn primary" type="submit">Aggiungi</button><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
+  const pick = form.querySelector(".cat-pick");
+  let catScelta = addCat;
+  const disegnaPick = () => {
+    if (!categorie(state.piano).some((c) => c.k === catScelta)) catScelta = "casa";
+    pick.innerHTML = categorie(state.piano).map((c) => `<button type="button" role="radio" class="cat-chip" data-k="${c.k}" aria-checked="${c.k === catScelta}" style="--cc:${c.c}">${icona(c.i, c.k === catScelta ? "#fff" : c.c, 15)}${esc(c.n)}</button>`).join("")
+      + `<button type="button" class="cat-chip nuova" data-new="1">${icona("tag", "currentColor", 15)}Nuova categoria</button>`;
+  };
+  disegnaPick();
+  pick.onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.new) { apriCategorie({ state, savePiano, saveMese, nuova: true, onCreata: (k) => { addCat = k; }, onChange: () => { addAperto = prefix; render(); } }); return; }
+    catScelta = addCat = b.dataset.k; disegnaPick();
+  };
   form.onsubmit = (ev) => {
     ev.preventDefault();
     const nome = form.querySelector(".n").value.trim();
@@ -263,7 +281,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     const err = form.querySelector(".err");
     if (!nome) { err.textContent = "Scrivi il nome della voce."; err.hidden = false; return; }
     if (isNaN(imp) || imp < 0) { err.textContent = "Scrivi un importo valido, ad esempio 25,50."; err.hidden = false; return; }
-    const cat = form.querySelector("select").value;
+    const cat = catScelta;
     change((list) => list.push({ id: uid(), nome, importo: round(imp), cat }));
     render();
     $(prefix + "a-nome")?.focus();
@@ -278,6 +296,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   container.appendChild(card);
 }
 let addAperto = null; // modulo "nuova spesa" aperto (resta aperto dopo un'aggiunta)
+let addCat = "casa";  // ultima categoria scelta per una nuova spesa
 /** Titolo di sezione piccolo e grigio, con il totale a destra. */
 function secHead(titolo, totale = "", live = "") {
   const h = document.createElement("div"); h.className = "sec-head";
@@ -302,13 +321,15 @@ function hero(m, c, extraNome, { conTitolo = false } = {}) {
   return s;
 }
 function fillBar(bar, leg, m, c) {
-  const parts = CATS.map((x) => ({ n: x.n, c: x.c, v: m.voci.filter((v) => v.cat === x.k).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
+  const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
   if (c.toDep > 0) parts.push({ n: T().leg, c: "--c-risp", v: c.toDep });
   const base = Math.max(c.entrate, parts.reduce((a, p) => a + p.v, 0)) || 1;
   bar.innerHTML = ""; leg.innerHTML = "";
-  parts.forEach((p) => { const s = document.createElement("span"); s.style.flex = `0 0 ${(p.v / base) * 100}%`; s.style.background = `var(${p.c})`; s.title = p.n + ": " + eur(p.v); bar.appendChild(s); });
+  parts.forEach((p) => { const s = document.createElement("span"); s.style.flex = `0 0 ${(p.v / base) * 100}%`; s.style.background = colore(p.c); s.title = p.n + ": " + eur(p.v); bar.appendChild(s); });
   parts.concat(c.resto > 0 ? [{ n: "Resto", c: "--c-resto", v: c.resto }] : []).forEach((p) => {
-    const d = document.createElement("span"); d.innerHTML = `<i style="background:var(${p.c})"></i>`; d.appendChild(document.createTextNode(`${p.n} ${Math.round((p.v / base) * 100)}%`)); leg.appendChild(d);
+    const d = document.createElement("span");
+    d.innerHTML = p.i ? icona(p.i, p.c, 13) : `<i style="background:${colore(p.c)}"></i>`;
+    d.appendChild(document.createTextNode(`${p.n} ${Math.round((p.v / base) * 100)}%`)); leg.appendChild(d);
   });
 }
 
@@ -660,7 +681,7 @@ const currentMonth = () => (view === "modello"
   : monthData(sel, state.piano, state.mesi));
 function updateGroupSums() {
   const voci = currentMonth().voci;
-  document.querySelectorAll("[data-gsum]").forEach((el) => { el.textContent = eur(voci.filter((x) => x.cat === el.dataset.gsum).reduce((a, x) => a + N(x.importo), 0)); });
+  document.querySelectorAll("[data-gsum]").forEach((el) => { el.textContent = eur(voci.filter((x) => ck(x.cat) === el.dataset.gsum).reduce((a, x) => a + N(x.importo), 0)); });
 }
 // Aggiornamento leggero mentre scrivi: cambia solo i numeri, non gli input.
 function refresh() {
@@ -730,6 +751,7 @@ function guida(primaVolta) {
   });
 }
 $("doGuida").onclick = () => { chiudiMenu(); guida(empty); };
+$("doCategorie").onclick = () => { chiudiMenu(); apriCategorie({ state, savePiano, saveMese, onChange: () => render() }); };
 $("doAiuto").onclick = () => { chiudiMenu(); apriAiuto(); };
 $("doImport").onclick = () => { chiudiMenu(); $("importFile").click(); };
 $("importFile").onchange = async (e) => {
