@@ -42,7 +42,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
   poi blocchi separati: *Al deposito* (verde) e *Rimasto in tasca* (grigio) con Mese migliore / Mese peggiore
-  (frecce verde/arancio, numeri neri; aprono il mese; se tutti uguali una riga sola). Niente percentuali in più.
+  (frecce verde/arancio, numeri neri; aprono il mese; se tutti uguali una riga sola). Niente percentuali in più. Nel riepilogo dell'anno **cifre all'euro** (`eur0`), compresi i mesi; centesimi sempre nella scheda del mese.
   "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").
 - **Da fare (chiesto da Andrea):** applicare le stesse regole (titoli sopra i gruppi, etichette corte, sezioni separate)
   anche a **Deposito** e **Modello**, una scheda alla volta.
