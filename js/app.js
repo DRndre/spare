@@ -43,8 +43,8 @@ function yearsBar(ms, anno, onPick, id) {
 /** Scritte che cambiano se si usa o no un conto deposito. */
 const usaDep = () => !!state.piano.usa_deposito;
 const T = () => usaDep()
-  ? { tab: "Deposito", risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", prelHint: "Se tiri fuori soldi dal deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
-  : { tab: "Risparmi", risp: "Risparmio del mese", prel: "Prelievo dai risparmi", prelHint: "Se usi soldi messi da parte", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
+  ? { tab: "Deposito", rispBreve: "Al conto deposito", prelHint: "Ripresi dal deposito", risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
+  : { tab: "Risparmi", rispBreve: "Messo da parte", prelHint: "Ripresi dai risparmi", risp: "Risparmio del mese", prel: "Prelievo dai risparmi", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
 /** Simulazione dei risparmi: con il conto deposito ci sono gli interessi, senza no. */
 function simula(ms) {
   const dep = state.deposito;
@@ -226,10 +226,12 @@ function confirmInline(host, text, okLabel, onOk) {
   cf.append(no, si); host.appendChild(cf); si.focus();
 }
 
-function vociEditor(container, getVoci, change, prefix) {
+function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } = {}) {
   const voci = getVoci();
-  const card = document.createElement("section"); card.className = "card";
-  card.innerHTML = `<div class="card-head"><h2>Spese</h2><span class="tot" data-live="spese">${eur(round(voci.reduce((a, v) => a + N(v.importo), 0)))}</span></div>`;
+  const tot = eur(round(voci.reduce((a, v) => a + N(v.importo), 0)));
+  if (titoloFuori) container.appendChild(secHead("Spese", tot, "spese"));
+  const card = document.createElement("section"); card.className = "card spese";
+  card.innerHTML = titoloFuori ? "" : `<div class="card-head"><h2>Spese</h2><span class="tot" data-live="spese">${tot}</span></div>`;
   if (!voci.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessuna spesa: aggiungi la prima qui sotto.</div>');
   CATS.forEach((c) => {
     const vs = voci.filter((v) => v.cat === c.k);
@@ -266,8 +268,21 @@ function vociEditor(container, getVoci, change, prefix) {
     render();
     $(prefix + "a-nome")?.focus();
   };
-  card.appendChild(form);
+  // il modulo si apre solo quando serve
+  const apri = document.createElement("button"); apri.type = "button"; apri.className = "add-open"; apri.id = prefix + "a-open";
+  apri.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Aggiungi una spesa';
+  const aperto = addAperto === prefix || !voci.length;
+  form.hidden = !aperto; apri.hidden = aperto;
+  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; $(prefix + "a-nome")?.focus(); };
+  card.append(apri, form);
   container.appendChild(card);
+}
+let addAperto = null; // modulo "nuova spesa" aperto (resta aperto dopo un'aggiunta)
+/** Titolo di sezione piccolo e grigio, con il totale a destra. */
+function secHead(titolo, totale = "", live = "") {
+  const h = document.createElement("div"); h.className = "sec-head";
+  h.innerHTML = `<h3>${esc(titolo)}</h3>${totale !== "" ? `<span${live ? ` data-live="${live}"` : ""}>${totale}</span>` : ""}`;
+  return h;
 }
 
 function formula(m, c, extraNome) {
@@ -276,9 +291,9 @@ function formula(m, c, extraNome) {
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
   return f + ` − spese <b>${eur(c.spese)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>`;
 }
-function hero(m, c, extraNome) {
+function hero(m, c, extraNome, { conTitolo = false } = {}) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
-  s.innerHTML = `<div class="label">Resto in tasca</div>
+  s.innerHTML = `${conTitolo ? "" : '<div class="label">Resto in tasca</div>'}
     <div class="hero-row"><div class="big${c.resto < 0 ? " neg" : ""}" data-live="resto">${eur(c.resto)}</div>
     <div class="chip" data-k="${statoResto(c.resto, state.piano.soglia)}" data-live="chip">${testoResto(c.resto, state.piano.soglia)}</div></div>
     <div class="formula" data-live="formula">${formula(m, c, extraNome)}</div>
@@ -334,38 +349,116 @@ function renderMesi(v) {
   v.appendChild(chips);
 
   const m = monthData(sel, state.piano, state.mesi), c = calcMonth(m, state.piano), ex = extraInfo(sel, state.piano);
-  const tb = document.createElement("div"); tb.className = "toolbar";
-  tb.innerHTML = `<h2>${monthLabelLong(sel)}${ex ? `<span class="tag">+ ${ex.nome}</span>` : ""}${m.custom ? '<span class="tag custom">personalizzato</span>' : ""}</h2>`;
+  const tb = document.createElement("div"); tb.className = "toolbar month-head";
+  tb.innerHTML = `<h2>${monthLabelLong(sel)}${ex ? `<span class="tag">+ ${ex.nome}</span>` : ""}</h2>`;
   if (m.custom) {
-    const rb = document.createElement("button"); rb.type = "button"; rb.className = "btn"; rb.textContent = "Ripristina dal modello";
+    const box = document.createElement("div"); box.className = "mh-right";
+    box.innerHTML = '<span class="tag custom">personalizzato</span>';
+    const rb = document.createElement("button"); rb.type = "button"; rb.className = "link"; rb.textContent = "Ripristina";
     rb.onclick = () => confirmInline(tb, `Le modifiche di ${monthLabelLong(sel)} andranno perse.`, "Ripristina", async () => { await resetMese(sel); render(); });
-    tb.appendChild(rb);
-  } else tb.insertAdjacentHTML("beforeend", '<span class="hint">Segue il Modello: modifica qui per personalizzare solo questo mese.</span>');
+    box.appendChild(rb); tb.appendChild(box);
+  } else tb.insertAdjacentHTML("beforeend", '<span class="mh-right hint">Segue il Modello</span>');
   v.appendChild(tb);
-  v.appendChild(hero(m, c, ex?.nome));
 
-  const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Stipendio netto", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
-  fs.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Altre entrate di questo mese" }));
-  if (ex) fs.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
-  fs.appendChild(moneyField(T().risp, m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel }));
-  fs.appendChild(moneyField(T().prel, m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
-  v.appendChild(fs);
+  v.appendChild(secHead("Resto in tasca"));
+  v.appendChild(hero(m, c, ex?.nome, { conTitolo: true }));
 
-  vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-");
+  v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
+  const fe = document.createElement("div"); fe.className = "fields";
+  fe.appendChild(moneyField("Stipendio", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
+  fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel }));
+  if (ex) fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
+  v.appendChild(fe);
 
-  const card = document.createElement("section"); card.className = "card";
-  card.innerHTML = `<div class="card-head"><h2>Mesi del ${anno}</h2><span class="hint">Tocca una riga per aprirla</span></div>`;
+  v.appendChild(secHead("Risparmio", eur(round(c.toDep - N(m.prelievo))), "risparmio"));
+  const fr = document.createElement("div"); fr.className = "fields";
+  fr.appendChild(moneyField(T().rispBreve, m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel, hint: c.extraDep ? `+ ${eur(c.extraDep)} di ${ex?.corto || "extra"}` : "" }));
+  fr.appendChild(moneyField("Prelievo", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
+  v.appendChild(fr);
+
+  vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-", { titoloFuori: true });
+
+  // Il tuo anno: grafico a barre + tabella completa a richiesta
+  v.appendChild(secHead("Il tuo anno"));
+  const yc = document.createElement("section"); yc.className = "card pad year"; yc.id = "year-card";
+  yc.innerHTML = yearCardHtml(ms, anno);
+  v.appendChild(yc);
+  wireYear(ms, anno);
+}
+
+/* ---------- Grafico dell'anno ---------- */
+let chartSel = null;   // mese con il fumetto aperto
+let showTable = false; // tabella completa aperta
+function datiAnno(ms) {
+  return ms.map((id) => {
+    const md = monthData(id, state.piano, state.mesi), cc = calcMonth(md, state.piano);
+    return { id, resto: cc.resto, parte: Math.max(0, round(cc.toDep - N(md.prelievo))), cc, ex: extraInfo(id, state.piano) };
+  });
+}
+function tetto(v) { // valore "tondo" per la scala: 100, 200, 500, 1.000, 1.600, 2.000…
+  if (v <= 0) return 100;
+  const passi = [1, 1.2, 1.5, 1.6, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const e = Math.pow(10, Math.floor(Math.log10(v)));
+  return passi.map((p) => p * e).find((x) => x >= v);
+}
+function yearCardHtml(ms, anno) {
+  const d = datiAnno(ms);
+  const inTasca = d.reduce((a, x) => a + x.resto, 0), daParte = d.reduce((a, x) => a + x.parte, 0);
+  const media = d.length ? inTasca / d.length : 0;
+  return `<div class="yc-top"><span class="yc-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 16V10M10 16V4M16 16V8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span>
+    <div><b>Il tuo ${anno}</b><small>Quello che ti resta e quello che metti da parte</small></div></div>
+    <div class="yc-stats" id="yc-stats"><div><small>In tasca</small><b>${eur0(inTasca)}</b></div><div><small>Da parte</small><b class="pos">${eur0(daParte)}</b></div><div><small>Media al mese</small><b>${eur0(media)}</b></div></div>
+    <div class="yc-chart" id="yc-chart">${chartHtml(d, anno)}</div>
+    <div class="yc-leg"><span><i class="k-r"></i>Resto in tasca</span><span><i class="k-d"></i>${usaDep() ? "Al deposito" : "Messo da parte"}</span>${d.some((x) => x.ex) ? '<span><i class="k-x"></i>13ª / 14ª</span>' : ""}</div>
+    <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M5 3l4 4-4 4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
+}
+const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(Math.round(v)) + " €";
+function chartHtml(d, anno) {
+  // tutti i 12 mesi dell'anno: quelli fuori dal periodo restano vuoti
+  const tutti = Array.from({ length: 12 }, (_, i) => anno + "-" + String(i + 1).padStart(2, "0"));
+  const by = Object.fromEntries(d.map((x) => [x.id, x]));
+  const top = tetto(Math.max(0, ...d.map((x) => Math.max(0, x.resto) + x.parte)));
+  const neg = Math.min(0, ...d.map((x) => x.resto));
+  const bot = neg < 0 ? tetto(-neg) : 0;
+  const range = top + bot, z = (bot / range) * 100; // posizione dello zero in %
+  if (!chartSel || !by[chartSel]) chartSel = by[sel] ? sel : (by[meseCorrente()] ? meseCorrente() : null);
+  const oggi = meseCorrente(), soglia = N(state.piano.soglia);
+  const cols = tutti.map((id, i) => {
+    const x = by[id];
+    if (!x) return `<div class="yc-col off" aria-hidden="true"></div>`;
+    const r = Math.max(0, x.resto), hR = (r / range) * 100, hD = (x.parte / range) * 100, hN = (Math.max(0, -x.resto) / range) * 100;
+    const k = x.resto < 0 ? "bad" : soglia > 0 && x.resto < soglia ? "warn" : "ok";
+    const tip = id === chartSel ? `<div class="yc-tip ${i < 6 ? "l" : "r"}"><b>${monthLabelLong(id)}</b><span><i class="k-r"></i>${eur(x.resto)} in tasca</span><span><i class="k-d"></i>${eur(x.parte)} da parte</span><em>Tocca di nuovo per aprirlo</em></div>` : "";
+    return `<button type="button" class="yc-col${id === chartSel ? " on" : ""}${id === sel ? " sel" : ""}" data-id="${id}" aria-label="${monthLabelLong(id)}: ${eur(x.resto)} in tasca, ${eur(x.parte)} da parte">
+      ${hN ? `<span class="b-n" style="top:${100 - z}%;height:${hN}%"></span>` : ""}
+      <span class="b-r ${k}" style="bottom:${z}%;height:${hR}%"></span>
+      ${hD ? `<span class="b-d" style="bottom:calc(${z + hR}% + 2px);height:${hD}%"></span>` : ""}${tip}</button>`;
+  }).join("");
+  const lab = tutti.map((id, i) => `<span class="${id === oggi ? "now" : ""}${by[id]?.ex ? " x" : ""}">${"GFMAMGLASOND"[i]}</span>`).join("");
+  const fmt0 = (v) => new Intl.NumberFormat("it-IT").format(v);
+  return `<div class="yc-plot"><span class="yc-grid" style="bottom:${z}%"></span><span class="yc-grid dash" style="bottom:${z + (top / 2 / range) * 100}%"></span><span class="yc-grid dash" style="bottom:100%"><em>${fmt0(top)}</em></span>
+    ${bot ? `<span class="yc-grid dash" style="bottom:0"><em>−${fmt0(bot)}</em></span>` : ""}<div class="yc-cols">${cols}</div></div><div class="yc-x">${lab}</div>`;
+}
+function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };
   let html = `<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>${T().col}</th><th>Resto</th></tr></thead><tbody>`;
-  ms.forEach((id) => {
-    const cc = calcMonth(monthData(id, state.piano, state.mesi), state.piano), e2 = extraInfo(id, state.piano);
+  d.forEach(({ id, cc, ex }) => {
     t.e += cc.entrate; t.s += cc.spese; t.d += cc.toDep; t.r += cc.resto;
-    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${e2 ? ` <span class="tag">${e2.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.spese)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.resto < 0 ? "neg" : ""}">${fmt.format(cc.resto)}</td></tr>`;
+    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.spese)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.resto < 0 ? "neg" : ""}">${fmt.format(cc.resto)}</td></tr>`;
   });
-  html += `</tbody><tfoot><tr><td>Totale ${anno}</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
-  const w = document.createElement("div"); w.className = "tbl-wrap"; w.innerHTML = html; card.appendChild(w); v.appendChild(card);
-  w.querySelectorAll("tr[data-id]").forEach((tr) => { const go = () => { sel = tr.dataset.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }; tr.onclick = go; tr.onkeydown = (e) => { if (e.key === "Enter") go(); }; });
+  return html + `</tbody><tfoot><tr><td>Totale ${anno}</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
+}
+function apriMese(id) { sel = id; chartSel = id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+function wireYear(ms, anno) {
+  const card = $("year-card"); if (!card) return;
+  card.onclick = (e) => {
+    const col = e.target.closest(".yc-col[data-id]");
+    if (col) { const id = col.dataset.id; if (chartSel === id) apriMese(id); else { chartSel = id; $("yc-chart").innerHTML = chartHtml(datiAnno(ms), anno); } return; }
+    if (e.target.closest("#yc-toggle")) { showTable = !showTable; card.innerHTML = yearCardHtml(ms, anno); return; }
+    const tr = e.target.closest("tr[data-id]"); if (tr) apriMese(tr.dataset.id);
+  };
+  card.onkeydown = (e) => { const tr = e.target.closest("tr[data-id]"); if (tr && e.key === "Enter") apriMese(tr.dataset.id); };
 }
 
 function renderDeposito(v) {
@@ -483,7 +576,7 @@ function renderModello(v) {
   const m = { stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), voci: p.voci, prelievo: 0, extra: 0 };
   v.appendChild(hero(m, calcMonth(m, p), ""));
   const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Stipendio netto", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
+  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
   fs.appendChild(moneyField("Entrate extra", N(p.entrate_extra), (n) => { p.entrate_extra = n; savePiano(); }, { id: "t-entr", hint: "Seconde entrate più o meno fisse (0 se non ne hai)" }));
   fs.appendChild(moneyField(T().risp, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp" }));
   fs.appendChild(moneyField("Soglia resto in tasca (facoltativa)", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", hint: "Ti avvisa se il resto scende sotto questa cifra. 0 = nessun avviso" }));
@@ -589,8 +682,12 @@ function refresh() {
   if (view === "mesi") {
     const chip = $("chip-" + sel);
     if (chip) { chip.querySelector(".r").textContent = eur(c.resto); chip.querySelector(".pin").dataset.k = statoResto(c.resto, state.piano.soglia); }
-    const tr = document.querySelector(`tr[data-id="${sel}"]`);
-    if (tr) { const td = tr.children; td[1].textContent = fmt.format(c.entrate); td[2].textContent = fmt.format(c.spese); td[3].textContent = fmt.format(c.toDep); td[4].textContent = fmt.format(c.resto); td[4].className = c.resto < 0 ? "neg" : ""; }
+    if (q("entrate")) q("entrate").textContent = eur(c.entrate);
+    if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
+    const ms = months().filter((id) => id.startsWith(sel.slice(0, 4)));
+    if ($("year-card")) { const d = datiAnno(ms); $("yc-chart").innerHTML = chartHtml(d, sel.slice(0, 4)); $("yc-table").innerHTML = tabellaAnno(d, sel.slice(0, 4));
+      const inT = d.reduce((a, x) => a + x.resto, 0), dP = d.reduce((a, x) => a + x.parte, 0);
+      $("yc-stats").innerHTML = `<div><small>In tasca</small><b>${eur0(inT)}</b></div><div><small>Da parte</small><b class="pos">${eur0(dP)}</b></div><div><small>Media al mese</small><b>${eur0(d.length ? inT / d.length : 0)}</b></div>`; }
   }
 }
 function softRender() {

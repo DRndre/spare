@@ -35,6 +35,14 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - `css/style.css` — "stile iPhone": colori di sistema Apple come variabili, tema chiaro e scuro, carattere **Inter**
   ovunque, file in `fonts/inter.woff2` (niente Google Fonts). Blu `--accent` per tutta l'app,
   arancio `--ing` solo per tredicesima/quattordicesima.
+- **Scheda Mesi** (ordine): anni + mesi, nome del mese ("Segue il Modello" / "personalizzato · Ripristina"),
+  sezioni con titolo piccolo grigio e totale a destra (`secHead`): *Resto in tasca*, *Entrate* (Stipendio, Entrate extra,
+  13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
+  aperto con "+ Aggiungi una spesa"), *Il tuo anno*: grafico a barre a due colori (blu resto in tasca, verde messo da
+  parte; arancio sotto soglia, rosso sotto zero), fumetto al tocco e secondo tocco apre il mese, 3 numeri dell'anno,
+  "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").
+- **Da fare (chiesto da Andrea):** applicare le stesse regole (titoli sopra i gruppi, etichette corte, sezioni separate)
+  anche a **Deposito** e **Modello**, una scheda alla volta.
 - `js/guida.js` — **Configurazione guidata** in 5 passaggi (entrate, mensilità, spese fisse con esempi da spuntare,
   risparmi/deposito, riepilogo): parte al primo accesso ("Inizia la configurazione") e si riapre dal menu ☰
   senza cancellare le spese già presenti. Si può saltare ("Salta" nel primo passaggio o "Salta, configuro da solo"

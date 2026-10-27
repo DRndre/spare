@@ -93,7 +93,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
       b.appendChild(testo("Partiamo da quanto entra ogni mese. Puoi cambiare tutto anche dopo, nella scheda <b>Modello</b>."));
       const opts = monthRange((Number(oggi.slice(0, 4)) - 2) + "-01", (Number(oggi.slice(0, 4)) + 2) + "-12").map((id) => [id, monthLabelLong(id)]);
       b.appendChild(griglia(
-        campo("Stipendio netto mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
+        campo("Stipendio mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
         campo("Entrate extra", w.entrate_extra, (n) => (w.entrate_extra = n), { id: "w-entr", hint: "Seconde entrate più o meno fisse (vuoto se non ne hai)" }),
       ));
       b.appendChild(griglia(scelta("Da che mese partiamo?", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Di solito il mese in corso" })));

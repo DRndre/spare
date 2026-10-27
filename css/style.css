@@ -284,3 +284,59 @@ body.no-scroll { overflow: hidden; }
 .menu { transform-origin: top right; animation: menuIn .18s ease-out; }
 @keyframes menuIn { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .hamb path, .menu { transition: none; animation: none; } }
+
+/* ---------- Sezioni con titolo (scheda Mesi) ---------- */
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 4px -10px; }
+.sec-head h3 { margin: 0; font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.sec-head span { font-weight: 600; font-variant-numeric: tabular-nums; }
+.month-head { margin-top: 2px; }
+.month-head h2 { font-size: 1.35rem; font-weight: 700; }
+.mh-right { display: flex; align-items: center; gap: 10px; }
+.month-head .confirm { flex-basis: 100%; }
+
+/* Pulsante "Aggiungi una spesa" */
+.add-open { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px 16px 14px; padding: 11px; border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; width: calc(100% - 32px); }
+.add-open:hover { filter: brightness(.97); }
+
+/* ---------- Il tuo anno: grafico a barre ---------- */
+.year { gap: 14px; }
+.yc-top { display: flex; align-items: center; gap: 10px; }
+.yc-top b { font-size: 1.05rem; display: block; }
+.yc-top small { color: var(--muted); font-size: .8rem; }
+.yc-ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--good-soft); color: var(--c-risp); flex: 0 0 auto; }
+.yc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.yc-stats > div { background: var(--bg); border-radius: 12px; padding: 8px 10px; min-width: 0; }
+.yc-stats small { display: block; color: var(--muted); font-size: .72rem; font-weight: 600; }
+.yc-stats b { font-size: .98rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.yc-stats b.pos { color: var(--good); }
+.yc-chart { margin-top: 92px; }
+.yc-plot { position: relative; height: 190px; }
+.yc-grid { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); pointer-events: none; }
+.yc-grid.dash { border-top-style: dashed; }
+.yc-grid em { position: absolute; right: 0; top: -15px; font-style: normal; font-size: .65rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.yc-cols { position: absolute; inset: 0; display: flex; gap: 5px; }
+.yc-col { flex: 1; position: relative; border: 0; background: transparent; padding: 0; cursor: pointer; min-width: 0; -webkit-tap-highlight-color: transparent; }
+.yc-col.off { cursor: default; }
+.yc-col > span { position: absolute; left: 0; right: 0; border-radius: 4px; transition: filter .15s, height .25s ease, bottom .25s ease; }
+.b-r { background: var(--accent); }
+.b-r.warn { background: var(--warn); }
+.b-r.bad, .b-n { background: var(--bad); }
+.b-d { background: var(--c-risp); border-radius: 6px 6px 4px 4px; }
+.yc-col.on > span:not(.yc-tip) { filter: brightness(.82); }
+.yc-col:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.yc-tip { position: absolute; bottom: calc(100% + 10px); z-index: 2; background: var(--fg); color: var(--surface); border-radius: 10px; padding: 7px 10px; font-size: .75rem; line-height: 1.45; white-space: nowrap; text-align: left; box-shadow: 0 6px 16px rgba(0, 0, 0, .22); display: flex; flex-direction: column; pointer-events: none; }
+.yc-tip.l { left: 0; } .yc-tip.r { right: 0; }
+.yc-tip b { font-size: .8rem; }
+.yc-tip em { font-style: normal; opacity: .65; font-size: .68rem; margin-top: 2px; }
+.yc-tip i, .yc-leg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.yc-tip:after { content: ""; position: absolute; top: 100%; border: 5px solid transparent; border-top-color: var(--fg); }
+.yc-tip.l:after { left: 8px; } .yc-tip.r:after { right: 8px; }
+.k-r { background: var(--accent); } .k-d { background: var(--c-risp); } .k-x { background: var(--ing); border-radius: 50% !important; }
+.yc-x { display: flex; gap: 5px; margin-top: 6px; }
+.yc-x span { flex: 1; text-align: center; font-size: .7rem; font-weight: 600; color: var(--muted); position: relative; padding-bottom: 9px; }
+.yc-x span.now { color: var(--accent); }
+.yc-x span.x:after { content: ""; position: absolute; left: 50%; bottom: 0; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--ing); }
+.yc-leg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .75rem; color: var(--muted); }
+.yc-link { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-top: 1px solid var(--line); background: none; padding: 12px 0 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+.year .tbl-wrap { margin: 0 -18px -18px; }
+@media (prefers-reduced-motion: reduce) { .yc-col > span { transition: none; } }
