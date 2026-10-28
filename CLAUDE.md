@@ -65,6 +65,13 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   che crescono, barra dell'obiettivo; moduli Nuova spesa / Nuovo tasso / Obiettivo che scendono e risalgono (focus con
   `preventScroll`, se no il titolo resta nascosto); riga appena aggiunta (spesa, tasso, categoria) con lampo azzurro.
   Per far provare modifiche delicate dal telefono: copia dell'app in `anteprima/` su main (senza service worker), poi toglierla.
+- **Sicurezza** (`js/sicurezza.js`, menu ☰ → Sicurezza): ultimo accesso (`last_sign_in_at`), verifica in due passaggi
+  **facoltativa** con app di autenticazione (TOTP di Supabase, gratis; niente SMS), più app collegabili ("+ Aggiungi un'altra
+  app", consigliato come riserva perché Supabase non dà codici di riserva), "Rimuovi", "Esci da tutti i dispositivi"
+  (`signOut({scope:"global"})`). All'accesso `start()` chiede il codice se `nextLevel` è aal2. Nel database la policy
+  restrittiva "codice se attivo" (query 8) pretende aal2 solo da chi ha la verifica. Se un utente perde tutte le app:
+  Supabase → Authentication → Users → utente → togliere il fattore. Il proprietario del progetto vede i dati di tutti
+  in Table Editor (le RLS valgono tra utenti, non per lui): Andrea lo sa.
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
@@ -123,6 +130,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 5. `piani.usa_deposito`.
 6. `depositi.obiettivo`, `depositi.obiettivo_nome`.
 7. `piani.categorie`; spostate "Fondo conigli" → animali e "Klarna Multa" → rate (Modello e mesi).
+8. Policy "codice se attivo" (verifica in due passaggi) su `piani`, `depositi`, `mesi` — *da confermare che Andrea l'abbia eseguita*.
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.

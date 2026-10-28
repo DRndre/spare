@@ -86,3 +86,19 @@ alter table public.depositi add column if not exists obiettivo_nome text not nul
 
 -- Categorie create dall'utente: [{k, n, c (colore), i (icona)}]
 alter table public.piani add column if not exists categorie jsonb not null default '[]'::jsonb;
+
+-- Verifica in due passaggi: chi l'ha attivata vede i suoi dati solo se è entrato anche con il codice (aal2).
+-- Chi non l'ha attivata non nota differenze. Si può rieseguire.
+drop policy if exists "codice se attivo" on public.piani;
+drop policy if exists "codice se attivo" on public.depositi;
+drop policy if exists "codice se attivo" on public.mesi;
+
+create policy "codice se attivo" on public.piani as restrictive for all to authenticated
+  using (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'))
+  with check (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'));
+create policy "codice se attivo" on public.depositi as restrictive for all to authenticated
+  using (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'))
+  with check (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'));
+create policy "codice se attivo" on public.mesi as restrictive for all to authenticated
+  using (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'))
+  with check (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'));
