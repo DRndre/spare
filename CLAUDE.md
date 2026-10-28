@@ -59,6 +59,12 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   scelte da un elenco = spunta. Un campo da solo = riga a tutta larghezza (`moneyField` con `cls: "riga"`).
   Moduli per aggiungere (spesa, tasso) = riquadro grigio arrotondato dentro la scheda, con titolo ("Nuova spesa", "Nuovo tasso"),
   pulsanti Annulla / Aggiungi, campi obbligatori con messaggio rosso; Esc chiude. Obiettivo: Annulla, "Elimina obiettivo".
+- **Animazioni** (`js/anim.js`, sobrie stile iPhone, nulla con "Riduci movimento", mai mentre scrivi): pillola che scivola
+  in schede / 12-13-14 / tema; contenuto che entra cambiando scheda o mese; numeri con `data-k`/`data-n`/`data-f` che contano
+  (da 0 quando entri in una scheda, dal valore prima quando cambi mese o modifichi); barre che si riempiono, barre del Deposito
+  che crescono, barra dell'obiettivo; moduli Nuova spesa / Nuovo tasso / Obiettivo che scendono e risalgono (focus con
+  `preventScroll`, se no il titolo resta nascosto); riga appena aggiunta (spesa, tasso, categoria) con lampo azzurro.
+  Per far provare modifiche delicate dal telefono: copia dell'app in `anteprima/` su main (senza service worker), poi toglierla.
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
