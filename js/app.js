@@ -627,9 +627,7 @@ function renderRisparmi(v) {
   v.appendChild(secHead("Obiettivo"));
   goalCard(v, ms);
   v.appendChild(secHead("Impostazioni"));
-  const fs = document.createElement("div"); fs.className = "fields solo";
-  fs.appendChild(moneyField("Già da parte all'inizio", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "r-saldo", hint: `Risparmi che avevi a ${monthLabelLong(ms[0]).toLowerCase()}` }));
-  v.appendChild(fs);
+  v.appendChild(moneyField("Saldo di partenza", N(dep.saldo_iniziale), (n) => { dep.saldo_iniziale = n; saveDeposito(); }, { id: "r-saldo", cls: "riga", hint: `I risparmi da cui parti, a ${monthLabelLong(ms[0]).toLowerCase()}` }));
   const anni = [...new Set(ms.map((x) => x.slice(0, 4)))];
   if (!anni.includes(depAnno)) depAnno = anni.includes(meseCorrente().slice(0, 4)) ? meseCorrente().slice(0, 4) : anni[0];
   v.appendChild(secHead("Il tuo anno"));
