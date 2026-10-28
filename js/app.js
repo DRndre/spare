@@ -12,7 +12,7 @@ import { categorie, catInfo, badge, icona } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
-import { pillola, entra, riempi, allunga, cresci, contaNumeri, fermaNumero, ricorda } from "./anim.js";
+import { pillola, entra, riempi, allunga, cresci, contaNumeri, fermaNumero, ricorda, apri as aprire, chiudi, evidenzia } from "./anim.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -87,6 +87,7 @@ function goalStatus(ms) {
 }
 let tassoAperto = false; // modulo "nuovo tasso" aperto
 let avvisoAperto = false; // interruttore "Avviso resto basso" acceso ma senza cifra
+let goalAnima = false; // il modulo dell'obiettivo si è appena aperto
 let goalEdit = false; // modulo dell'obiettivo aperto
 let goalPrima = null;  // valori prima di aprire il modulo (per "Annulla")
 function goalCard(v, ms) {
@@ -95,7 +96,7 @@ function goalCard(v, ms) {
   if (!goalEdit && !(g > 0)) {
     card.innerHTML = `<p class="hint flush">Hai un traguardo? Per esempio la caparra della casa: vedi a che punto sei e quando ci arrivi.</p>`;
     const b = document.createElement("button"); b.type = "button"; b.className = "add-open flush-x"; b.innerHTML = `${icona("plus", "currentColor", 16)} Imposta un obiettivo`;
-    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; render(); $("g-imp")?.focus(); };
+    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; goalAnima = true; render(); $("g-imp")?.focus(); };
     card.appendChild(b); v.appendChild(card); return;
   }
   if (goalEdit) {
@@ -113,7 +114,7 @@ function goalCard(v, ms) {
   const mb = document.createElement("button"); mb.type = "button"; mb.className = "link";
   mb.textContent = goalEdit ? "Fatto" : "Modifica";
   mb.onclick = () => {
-    if (!goalEdit) goalPrima = { obiettivo: g, nome: dep.obiettivo_nome || "" };
+    if (!goalEdit) { goalPrima = { obiettivo: g, nome: dep.obiettivo_nome || "" }; goalAnima = true; }
     goalEdit = !goalEdit; render();
   };
   act.appendChild(mb);
@@ -134,6 +135,7 @@ function goalCard(v, ms) {
   }
   card.appendChild(act);
   v.appendChild(card);
+  if (goalEdit && goalAnima) { goalAnima = false; aprire(card.querySelector(".fields")); }
 }
 /** Chiave della categoria di una spesa (una categoria sconosciuta o eliminata conta come "Altro"). */
 const ck = (k) => catInfo(state.piano, k).k;
@@ -282,7 +284,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     const g = document.createElement("div"); g.className = "group";
     g.innerHTML = `<div class="group-head"><span class="gname">${badge(c, 24)}${esc(c.n)}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
     vs.forEach((v) => {
-      const r = document.createElement("div"); r.className = "row";
+      const r = document.createElement("div"); r.className = "row"; r.dataset.riga = v.id;
       const nome = document.createElement("input"); nome.type = "text"; nome.value = v.nome; nome.id = prefix + "n-" + v.id; nome.setAttribute("aria-label", "Nome voce");
       nome.addEventListener("input", () => change((list) => { const x = list.find((z) => z.id === v.id); if (x) x.nome = nome.value; }));
       const wi = document.createElement("span"); wi.className = "imp";
@@ -320,8 +322,9 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     if (!nome) { err.textContent = "Scrivi il nome della voce."; err.hidden = false; return; }
     if (isNaN(imp) || imp < 0) { err.textContent = "Scrivi un importo valido, ad esempio 25,50."; err.hidden = false; return; }
     const cat = catScelta;
-    change((list) => list.push({ id: uid(), nome, importo: round(imp), cat }));
-    render();
+    const nid = uid();
+    change((list) => list.push({ id: nid, nome, importo: round(imp), cat }));
+    nuovaRiga = nid; render();
     $(prefix + "a-nome")?.focus();
   };
   // il modulo si apre solo quando serve
@@ -329,11 +332,11 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   apri.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Aggiungi una spesa';
   const aperto = addAperto === prefix || !voci.length;
   form.hidden = !aperto; apri.hidden = aperto;
-  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; $(prefix + "a-nome")?.focus(); };
+  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; aprire(form); $(prefix + "a-nome")?.focus(); };
   // Annulla (o Esc): svuota e chiude il modulo senza aggiungere niente
   const chiudiForm = () => {
-    form.reset(); form.querySelector(".err").hidden = true;
-    addAperto = null; form.hidden = true; apri.hidden = false; apri.focus();
+    form.reset(); form.querySelector(".err").hidden = true; addAperto = null;
+    chiudi(form, () => { form.hidden = true; apri.hidden = false; apri.focus(); });
   };
   form.querySelector("[data-annulla]").onclick = chiudiForm;
   form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiForm(); } });
@@ -569,7 +572,7 @@ function renderDeposito(v) {
   card.innerHTML = `<p class="hint card-hint">Ogni tasso vale dal suo mese fino al successivo.</p>`;
   if (!periodi.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessun tasso: aggiungi il primo qui sotto.</div>');
   periodi.forEach((p) => {
-    const r = document.createElement("div"); r.className = "row periodo";
+    const r = document.createElement("div"); r.className = "row periodo"; r.dataset.riga = p.id;
     const da = document.createElement("select"); da.id = "p-da-" + p.id; da.setAttribute("aria-label", "Dal mese");
     da.innerHTML = opts.map((id) => `<option value="${id}"${id === p.da ? " selected" : ""}>da ${monthLabel(id)}</option>`).join("");
     da.onchange = () => { p.da = da.value; saveDeposito(); render(); };
@@ -605,15 +608,16 @@ function renderDeposito(v) {
     if (!txt || isNaN(n)) { errT.textContent = "Scrivi il tasso, ad esempio 2,50."; errT.hidden = false; $("pa-t").focus(); return; }
     if (n < 0 || n >= 100) { errT.textContent = "Il tasso deve essere tra 0 e 100."; errT.hidden = false; $("pa-t").focus(); return; }
     if ((dep.periodi || []).some((x) => x.da === da)) { errT.textContent = `C'è già un tasso da ${monthLabel(da)}: cambialo nella sua riga qui sopra.`; errT.hidden = false; return; }
-    dep.periodi = [...(dep.periodi || []), { id: uid(), da, tasso: round(n), nome: $("pa-n").value.trim() }];
-    tassoAperto = false; saveDeposito(); render();
+    const nid = uid();
+    dep.periodi = [...(dep.periodi || []), { id: nid, da, tasso: round(n), nome: $("pa-n").value.trim() }];
+    tassoAperto = false; saveDeposito(); nuovaRiga = nid; render();
   };
-  const chiudiTasso = () => { tassoAperto = false; form.reset(); errT.hidden = true; form.hidden = true; ab.hidden = false; ab.focus(); };
+  const chiudiTasso = () => { tassoAperto = false; form.reset(); errT.hidden = true; chiudi(form, () => { form.hidden = true; ab.hidden = false; ab.focus(); }); };
   form.querySelector("[data-annulla]").onclick = chiudiTasso;
   form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiTasso(); } });
   form.querySelector("#pa-t").addEventListener("input", () => { errT.hidden = true; });
   form.hidden = !tassoAperto; ab.hidden = tassoAperto;
-  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; $("pa-t").focus(); };
+  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; aprire(form); $("pa-t").focus(); };
   card.append(ab, form);
   v.appendChild(card);
 
@@ -860,13 +864,15 @@ function render() {
 }
 /* ---------- Animazioni: solo quando cambi scheda, mese o anno (non mentre modifichi) ---------- */
 let visto = { view: null, sel: null, depAnno: null };
+let nuovaRiga = null; // id della spesa o del tasso appena aggiunti, da evidenziare
 function anima(v) {
   const cambioVista = view !== visto.view, cambioMese = !cambioVista && view === "mesi" && sel !== visto.sel;
   const cambioAnnoDep = !cambioVista && view === "deposito" && depAnno !== visto.depAnno;
   visto = { view, sel, depAnno };
   pillola(document.querySelector(".tabs"), "tabs");
   pillola(v.querySelector(".seg.mens"), "mens");
-  contaNumeri(v, { eur, eur0 });
+  contaNumeri(v, { eur, eur0 }, { daZero: cambioVista });
+  if (nuovaRiga) { evidenzia(document.querySelector(`[data-riga="${nuovaRiga}"]`)); nuovaRiga = null; }
   if (cambioVista) {
     entra([...v.children]);
     riempi([...v.querySelectorAll(".bar")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d")]);

@@ -48,9 +48,9 @@ export function cresci(barre) {
 /* ---------- Numeri che "contano" fino al nuovo valore ---------- */
 // Ogni numero da animare ha data-k (chiave), data-n (valore) e data-f ("eur" o "eur0").
 const ultimi = new Map();
-export function contaNumeri(radice, formati) {
+export function contaNumeri(radice, formati, { daZero = false } = {}) {
   radice.querySelectorAll("[data-k][data-n]").forEach((el) => {
-    const k = el.dataset.k, a = Number(el.dataset.n), da = ultimi.get(k), fmt = formati[el.dataset.f] || formati.eur;
+    const k = el.dataset.k, a = Number(el.dataset.n), da = daZero ? 0 : ultimi.get(k), fmt = formati[el.dataset.f] || formati.eur;
     ultimi.set(k, a);
     if (da == null || da === a || ridotto() || !isFinite(a)) return;
     const t0 = performance.now(), D = 450;
@@ -72,4 +72,27 @@ export function fermaNumero(el, valore) {
 /** Ricorda i valori attuali senza animarli (dopo un aggiornamento mentre scrivi). */
 export function ricorda(radice) {
   radice.querySelectorAll("[data-k][data-n]").forEach((el) => ultimi.set(el.dataset.k, Number(el.dataset.n)));
+}
+
+/* ---------- Moduli che si aprono e si chiudono scorrendo ---------- */
+const PROP = ["height", "paddingTop", "paddingBottom", "marginTop", "marginBottom"];
+function misure(el) { const cs = getComputedStyle(el); return Object.fromEntries(PROP.map((k) => [k, k === "height" ? el.offsetHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) + "px" : cs[k]])); }
+const chiuso = Object.fromEntries(PROP.map((k) => [k, "0px"]));
+/** Mostra l'elemento (già senza hidden) facendolo scendere. */
+export function apri(el) {
+  if (!el || ridotto()) return;
+  const m = misure(el);
+  el.animate([{ ...chiuso, opacity: 0, overflow: "hidden" }, { ...m, opacity: 1, overflow: "hidden" }], { duration: 260, easing: EASE });
+}
+/** Chiude l'elemento facendolo risalire, poi chiama fatto() (che lo nasconde). */
+export function chiudi(el, fatto) {
+  if (!el || ridotto()) { fatto(); return; }
+  const m = misure(el);
+  const a = el.animate([{ ...m, opacity: 1, overflow: "hidden" }, { ...chiuso, opacity: 0, overflow: "hidden" }], { duration: 200, easing: EASE });
+  a.onfinish = fatto;
+}
+/** Una riga appena aggiunta: lampo azzurro che sfuma. */
+export function evidenzia(el) {
+  if (!el) return;
+  if (!ridotto()) el.animate([{ backgroundColor: "var(--accent-soft)" }, { backgroundColor: "var(--accent-soft)", offset: .3 }, { backgroundColor: "transparent" }], { duration: 1400, easing: "ease-out" });
 }
