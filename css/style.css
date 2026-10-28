@@ -433,7 +433,7 @@ form.add .err { order: 4; }
 .dep-hero .big { margin-top: -6px; }
 
 
-.card.tassi { padding-bottom: 2px; }
+.card.tassi { padding-bottom: 0; }
 .card-hint { margin: 12px 16px 2px; }
 .fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 560px) { .fields.three { grid-template-columns: 1fr 1fr; } .fields.three > :first-child { grid-column: 1 / -1; } }
@@ -462,3 +462,7 @@ form.add.tasso { grid-template-columns: 150px 120px minmax(0, 1fr); }
 form.add.tasso .imp input { width: 100%; background: var(--surface); }
 form.add.tasso > .add-act { order: 3; }
 @media (max-width: 560px) { form.add.tasso { grid-template-columns: 1fr 1fr; } form.add.tasso > #pa-n { grid-column: 1 / -1; } }
+/* Moduli "nuova spesa" e "nuovo tasso": riquadro grigio arrotondato dentro la scheda */
+form.add { background: var(--bg); border-top: 0; margin: 6px 16px 16px; border-radius: 12px; padding: 14px; }
+form.add > .add-tit { grid-column: 1 / -1; order: -1; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+@media (max-width: 560px) { form.add { margin: 6px 12px 12px; padding: 12px; } }

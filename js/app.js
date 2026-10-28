@@ -294,7 +294,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     card.appendChild(g);
   });
   const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off";
-  form.innerHTML = `<input class="n" type="text" id="${prefix}a-nome" placeholder="Nuova voce (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
+  form.innerHTML = `<div class="add-tit">Nuova spesa</div><input class="n" type="text" id="${prefix}a-nome" placeholder="Nome (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
   const pick = form.querySelector(".cat-pick");
   let catScelta = addCat;
   const disegnaPick = () => {
@@ -574,7 +574,7 @@ function renderDeposito(v) {
   if (periodi.some((x) => x.da >= daProposto)) daProposto = addMonths(periodi[periodi.length - 1].da, 1);
   if (!opts.includes(daProposto)) daProposto = opts[opts.length - 1];
   const form = document.createElement("form"); form.className = "add tasso"; form.autocomplete = "off";
-  form.innerHTML = `<select id="pa-da" aria-label="Dal mese">${opts.map((id) => `<option value="${id}"${id === daProposto ? " selected" : ""}>da ${monthLabel(id)}</option>`).join("")}</select>`
+  form.innerHTML = `<div class="add-tit">Nuovo tasso</div><select id="pa-da" aria-label="Dal mese">${opts.map((id) => `<option value="${id}"${id === daProposto ? " selected" : ""}>da ${monthLabel(id)}</option>`).join("")}</select>`
     + `<span class="imp"><input type="text" inputmode="decimal" id="pa-t" placeholder="es. 2,50" aria-label="Tasso lordo annuo"><span class="eur">%</span></span>`
     + `<input type="text" id="pa-n" placeholder="Banca o conto (facoltativo)" aria-label="Nome del conto">`
     + `<div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="err" hidden></div>`;
