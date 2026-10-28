@@ -12,6 +12,7 @@ import { categorie, catInfo, badge, icona } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
+import { pillola, entra, riempi, allunga, cresci, contaNumeri, fermaNumero, ricorda } from "./anim.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -357,7 +358,7 @@ function formula(m, c, extraNome) {
 function hero(m, c, extraNome, { conTitolo = false } = {}) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
   s.innerHTML = `${conTitolo ? "" : '<div class="label">Resto in tasca</div>'}
-    <div class="hero-row"><div class="big${c.resto < 0 ? " neg" : ""}" data-live="resto">${eur(c.resto)}</div>
+    <div class="hero-row"><div class="big${c.resto < 0 ? " neg" : ""}" data-live="resto" data-k="resto-mesi" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</div>
     <div class="chip" data-k="${statoResto(c.resto, state.piano.soglia)}" data-live="chip">${testoResto(c.resto, state.piano.soglia)}</div></div>
     <div class="formula" data-live="formula">${formula(m, c, extraNome)}</div>
     <div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div class="legend" data-live="legend"></div>`;
@@ -519,7 +520,7 @@ function chartHtml(d) {
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
-  return `<div class="ya-head"><div><small>Entrate</small><b>${eur0(entrate)}</b></div><div><small>Spese</small><b>${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos">${eur0(parte)}</b></div></div>
+  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b></div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
@@ -641,7 +642,7 @@ function disegnaDepAnno(tc, ms, d) {
       <div><b>${dep ? "Il conto" : "I risparmi"} nel ${depAnno}</b><small>Come ${dep ? "cresce il saldo" : "crescono"}, mese per mese</small></div></div>`;
   const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; depChartSel = null; render(); }, "dy-");
   tc.appendChild(yb);
-  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>${dep ? "Versato" : "Messo da parte"} nel ${depAnno}</small><b>${eur0(vers)}</b></div>${dep ? `<div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div>` : `<div><small>Prelievi</small><b>${eur0(prel)}</b></div>`}</div>
+  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>${dep ? "Versato" : "Messo da parte"} nel ${depAnno}</small><b data-k="dy-vers" data-n="${vers}" data-f="eur0">${eur0(vers)}</b></div>${dep ? `<div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div>` : `<div><small>Prelievi</small><b>${eur0(prel)}</b></div>`}</div>
     <div class="yc-chart dep-chart" id="dep-chart">${depChartHtml(righe)}</div>
     <button type="button" class="yc-link" id="dep-toggle" aria-expanded="${showDepTable}">${showDepTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showDepTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="dep-table"${showDepTable ? "" : " hidden"}>${dep ? depTable(d, depAnno) : risTable(d, depAnno)}</div>`);
@@ -676,9 +677,9 @@ function depHero(d, ms) {
   const dettaglio = dep
     ? `${base ? `<b>${eur0(base)}</b> di partenza + ` : ""}<b>${eur0(d.totVersato)}</b> versati + <b>${eur0(d.totNetto)}</b> di interessi − <b>${eur0(d.totBollo)}</b> di bollo`
     : `${base ? `<b>${eur0(base)}</b> già da parte + ` : ""}<b>${eur0(d.totVersato)}</b> messi da parte`;
-  return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big">${eur(saldoAl(d, oggi))}</div>
+  return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big" data-k="dep-oggi" data-n="${saldoAl(d, oggi)}" data-f="eur">${eur(saldoAl(d, oggi))}</div>
     <div class="hint dh-stima">${modelloVuoto() ? "Stima solo sui mesi che hai compilato" : "Stima dai tuoi conti"}, fino a ${monthLabelLong(oggi < ms[0] ? ms[0] : oggi > fine ? fine : oggi).toLowerCase()}${oggi < ms[0] ? " (i tuoi conti partono da " + monthLabelLong(ms[0]).toLowerCase() + ")" : ""}</div>
-    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b>${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
+    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b data-k="dep-fine" data-n="${d.saldo}" data-f="eur0">${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
 }
 
 function renderRisparmi(v) {
@@ -750,7 +751,7 @@ function renderModello(v) {
   const c = calcMonth(m, p);
   // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
   const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
-  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto">${eur(c.resto)}</b> al mese</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
+  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> al mese</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
   fillBar(rs.querySelector('[data-live="bar"]'), rs.querySelector('[data-live="legend"]'), m, c);
   v.appendChild(rs);
 
@@ -855,7 +856,27 @@ function render() {
   if (view === "mesi") renderMesi(v); else if (view === "deposito") (usaDep() ? renderDeposito : renderRisparmi)(v); else renderModello(v);
   updateGroupSums();
   window.scrollTo(0, y);
+  anima(v);
 }
+/* ---------- Animazioni: solo quando cambi scheda, mese o anno (non mentre modifichi) ---------- */
+let visto = { view: null, sel: null, depAnno: null };
+function anima(v) {
+  const cambioVista = view !== visto.view, cambioMese = !cambioVista && view === "mesi" && sel !== visto.sel;
+  const cambioAnnoDep = !cambioVista && view === "deposito" && depAnno !== visto.depAnno;
+  visto = { view, sel, depAnno };
+  pillola(document.querySelector(".tabs"), "tabs");
+  pillola(v.querySelector(".seg.mens"), "mens");
+  contaNumeri(v, { eur, eur0 });
+  if (cambioVista) {
+    entra([...v.children]);
+    riempi([...v.querySelectorAll(".bar")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d")]);
+  } else if (cambioMese) {
+    const kids = [...v.children], i = kids.findIndex((el) => el.classList.contains("month-head"));
+    entra(kids.slice(Math.max(0, i)));
+    riempi([...v.querySelectorAll(".bar")]);
+  } else if (cambioAnnoDep) cresci([...v.querySelectorAll(".dep-chart .b-d")]);
+}
+window.addEventListener("resize", () => pillola(document.querySelector(".tabs"), "tabs"));
 const currentMonth = () => (view === "modello"
   ? { stipendio: N(state.piano.stipendio), entrate_extra: N(state.piano.entrate_extra), risparmio: N(state.piano.risparmio), voci: state.piano.voci, prelievo: 0, extra: 0 }
   : monthData(sel, state.piano, state.mesi));
@@ -872,10 +893,11 @@ function refresh() {
     if ($("dep-chart")) $("dep-chart").innerHTML = depChartHtml(d.rows.filter((r) => r.id.startsWith(depAnno)));
     if ($("dep-table")) $("dep-table").innerHTML = usaDep() ? depTable(d, depAnno) : risTable(d, depAnno);
     if ($("goal-status")) $("goal-status").innerHTML = goalStatus(ms);
+    ricorda($("view"));
     return;
   }
   const m = currentMonth(), c = calcMonth(m, state.piano), q = (s) => document.querySelector(`[data-live="${s}"]`);
-  if (q("resto")) { q("resto").textContent = eur(c.resto); q("resto").classList.toggle("neg", c.resto < 0); }
+  if (q("resto")) { fermaNumero(q("resto"), c.resto); q("resto").textContent = eur(c.resto); q("resto").classList.toggle("neg", c.resto < 0); }
   if (q("chip")) { q("chip").dataset.k = statoResto(c.resto, state.piano.soglia); q("chip").textContent = testoResto(c.resto, state.piano.soglia); }
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
@@ -890,6 +912,7 @@ function refresh() {
     if ($("year-card")) { const d = datiAnno(ms); $("yc-chart").innerHTML = chartHtml(d, sel.slice(0, 4)); $("yc-table").innerHTML = tabellaAnno(d, sel.slice(0, 4));
       $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); }
   }
+  ricorda($("view"));
 }
 function softRender() {
   const a = document.activeElement;
@@ -908,6 +931,7 @@ $("brand").innerHTML = LOGO;
 /** Apre o chiude il menu: il pulsante passa da hamburger a X (animazione in CSS). */
 function setMenu(aperto) {
   $("menu").hidden = !aperto;
+  if (aperto) pillola($("temaSeg"), "tema");
   $("menuBtn").setAttribute("aria-expanded", String(aperto));
   $("menuBtn").setAttribute("aria-label", aperto ? "Chiudi menu" : "Apri menu");
 }
@@ -955,6 +979,7 @@ function applicaTema(t) {
   const scuro = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => { m.content = scuro ? "#000000" : "#F2F2F7"; if (t !== "auto") m.removeAttribute("media"); });
   document.querySelectorAll("#temaSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.t === t)));
+  pillola($("temaSeg"), "tema");
 }
 document.querySelectorAll("#temaSeg button").forEach((b) => (b.onclick = () => applicaTema(b.dataset.t)));
 applicaTema(temaAttuale());
