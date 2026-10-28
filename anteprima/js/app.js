@@ -96,7 +96,7 @@ function goalCard(v, ms) {
   if (!goalEdit && !(g > 0)) {
     card.innerHTML = `<p class="hint flush">Hai un traguardo? Per esempio la caparra della casa: vedi a che punto sei e quando ci arrivi.</p>`;
     const b = document.createElement("button"); b.type = "button"; b.className = "add-open flush-x"; b.innerHTML = `${icona("plus", "currentColor", 16)} Imposta un obiettivo`;
-    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; goalAnima = true; render(); $("g-imp")?.focus(); };
+    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; goalAnima = true; render(); $("g-imp")?.focus({ preventScroll: true }); };
     card.appendChild(b); v.appendChild(card); return;
   }
   if (goalEdit) {
@@ -332,7 +332,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   apri.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Aggiungi una spesa';
   const aperto = addAperto === prefix || !voci.length;
   form.hidden = !aperto; apri.hidden = aperto;
-  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; aprire(form); $(prefix + "a-nome")?.focus(); };
+  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; aprire(form); $(prefix + "a-nome")?.focus({ preventScroll: true }); };
   // Annulla (o Esc): svuota e chiude il modulo senza aggiungere niente
   const chiudiForm = () => {
     form.reset(); form.querySelector(".err").hidden = true; addAperto = null;
@@ -617,7 +617,7 @@ function renderDeposito(v) {
   form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiTasso(); } });
   form.querySelector("#pa-t").addEventListener("input", () => { errT.hidden = true; });
   form.hidden = !tassoAperto; ab.hidden = tassoAperto;
-  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; aprire(form); $("pa-t").focus(); };
+  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; aprire(form); $("pa-t").focus({ preventScroll: true }); };
   card.append(ab, form);
   v.appendChild(card);
 
