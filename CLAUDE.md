@@ -72,6 +72,13 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   restrittiva "codice se attivo" (query 8) pretende aal2 solo da chi ha la verifica. Se un utente perde tutte le app:
   Supabase → Authentication → Users → utente → togliere il fattore. Il proprietario del progetto vede i dati di tutti
   in Table Editor (le RLS valgono tra utenti, non per lui): Andrea lo sa.
+- **Spese a tempo / a rate** (solo nel Modello): voce con `da: "AAAA-MM"` e `rate: n` facoltativi (in `voci` jsonb, nessuna
+  colonna nuova; `fixVoci` li conserva). `attivaNel(v, id)` / `fineSpesa(v)` in calc.js: `monthData` conta solo le spese
+  attive nel mese. Nel modulo "Nuova spesa" del Modello interruttore "Solo per un periodo" → Dal mese + Numero di rate
+  (obbligatorio, "Ultima rata: …"); se il periodo tocca mesi personalizzati chiede "Solo nel Modello" / "Anche in quei mesi".
+  Ogni riga del Modello ha l'icona calendario per impostare/cambiare/togliere il periodo; etichetta azzurra
+  "nov 2026 → ott 2027 · ancora N rate", grigia e riga sbiadita se finita o non iniziata. "Ti restano" e il totale
+  Spese del Modello contano le spese attive nel mese di oggi (`meseRif()`), con "a <mese>" se ci sono spese a tempo.
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore

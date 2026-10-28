@@ -22,7 +22,12 @@ const status = (s, t) => listeners.forEach((fn) => fn(s, t));
 
 function fixVoci(v) {
   return Array.isArray(v)
-    ? v.map((x) => ({ id: String(x.id || uid()), nome: String(x.nome || ""), importo: N(x.importo), cat: x.cat ? String(x.cat) : "altro" }))
+    ? v.map((x) => {
+      const o = { id: String(x.id || uid()), nome: String(x.nome || ""), importo: N(x.importo), cat: x.cat ? String(x.cat) : "altro" };
+      // spesa a tempo (facoltativo): dal mese "AAAA-MM" per n rate
+      if (/^\d{4}-\d{2}$/.test(String(x.da || "")) && N(x.rate) >= 1) { o.da = String(x.da); o.rate = Math.round(N(x.rate)); }
+      return o;
+    })
     : [];
 }
 const cleanVoci = (v) => fixVoci(v);

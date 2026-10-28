@@ -97,6 +97,11 @@ export function extraInfo(id, piano) {
   return null;
 }
 
+/** Spese a tempo (es. a rate): { da: "AAAA-MM", rate: n }. Ultimo mese, o null se la spesa non ha fine. */
+export const fineSpesa = (v) => (v && v.da && N(v.rate) >= 1 ? addMonths(v.da, N(v.rate) - 1) : null);
+/** La spesa conta nel mese id? (senza periodo: sempre) */
+export const attivaNel = (v, id) => !v || !v.da || (id >= v.da && (!fineSpesa(v) || id <= fineSpesa(v)));
+
 /** Dati effettivi di un mese: quelli personalizzati se esistono, altrimenti il Modello. */
 export function monthData(id, piano, mesi) {
   const d = mesi[id];
@@ -110,10 +115,10 @@ export function monthData(id, piano, mesi) {
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
-      voci: d.voci || [],
+      voci: (d.voci || []).filter((v) => attivaNel(v, id)),
     };
   }
-  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: N(piano.entrate_extra), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: piano.voci || [] };
+  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: N(piano.entrate_extra), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
 }
 
 export function calcMonth(m, piano) {

@@ -515,3 +515,24 @@ form.add > .add-tit { grid-column: 1 / -1; order: -1; font-size: .72rem; letter-
 .sic-key code { font-family: var(--f-num); font-size: .95rem; letter-spacing: .04em; background: var(--seg-bg); padding: 6px 10px; border-radius: 8px; word-break: break-all; }
 input.codice { font-family: var(--f-num); font-size: 1.5rem; letter-spacing: .35em; text-align: center; font-variant-numeric: tabular-nums; }
 .btn.wide { width: 100%; }
+/* Spese a tempo (Modello) */
+.row.con-per { grid-template-columns: minmax(0, 1fr) 120px 32px 36px; }
+@media (max-width: 560px) { .row.con-per { grid-template-columns: minmax(0, 1fr) 104px 30px 32px; } }
+.row.con-per .per-btn.on { color: var(--accent); }
+.row.con-per .per-btn:hover { background: var(--accent-soft); color: var(--accent); }
+.per-tag { grid-column: 1 / -1; justify-self: start; margin: -6px 0 6px 10px; border: 0; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; cursor: pointer; }
+.row.spenta > input, .row.spenta > .imp { opacity: .45; }
+.row.spenta .per-tag { background: var(--seg-bg); color: var(--muted); }
+.per-edit { grid-column: 1 / -1; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 2px 0 8px; display: flex; flex-direction: column; gap: 8px; }
+.per-campi { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 8px; align-items: end; }
+.per-campi .per-fine { grid-column: 1 / -1; }
+.per-f { display: flex; flex-direction: column; gap: 3px; }
+.per-f select, .per-f input { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; width: 100%; font: inherit; color: inherit; }
+.per-f input { font-family: var(--f-num); text-align: right; }
+.per-act { display: flex; justify-content: flex-end; gap: 16px; }
+form.add .per-sw, form.add .per-in-form, form.add .per-conf { grid-column: 1 / -1; order: 2; }
+form.add .per-sw { background: var(--surface); }
+form.add .per-conf { order: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+form.add .per-conf > span { flex-basis: 100%; }
+form.add input.sw { width: 51px; height: 31px; padding: 0; border: 0; border-radius: 999px; background: var(--seg-bg); }
+form.add input.sw:checked { background: var(--accent); }

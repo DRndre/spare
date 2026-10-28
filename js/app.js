@@ -2,7 +2,7 @@
 import {
   N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
-  mesiPiano, meseCorrente, MESI_NOMI,
+  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
@@ -138,6 +138,41 @@ function goalCard(v, ms) {
   v.appendChild(card);
   if (goalEdit && goalAnima) { goalAnima = false; aprire(card.querySelector(".fields")); }
 }
+/** Mese di riferimento del Modello: oggi, dentro il periodo dei conti. */
+function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ? ms[0] : o > ms[ms.length - 1] ? ms[ms.length - 1] : o; }
+/** Spese del Modello attive nel mese di riferimento (quelle a tempo finite o non iniziate non contano). */
+const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
+const meseCorto = (id) => monthLabel(id).toLowerCase();
+/** Testo dell'etichetta di una spesa a tempo. */
+function testoPeriodo(v) {
+  const f = fineSpesa(v), r = meseRif(), n = Number(v.rate);
+  if (r < v.da) return { spenta: true, t: `Prima rata: ${meseCorto(v.da)} · ${n} ${n === 1 ? "rata" : "rate"}` };
+  if (r > f) return { spenta: true, t: `Finita · ultima rata ${meseCorto(f)}` };
+  const [y1, m1] = r.split("-").map(Number), [y2, m2] = f.split("-").map(Number), resto = (y2 - y1) * 12 + (m2 - m1) + 1;
+  return { spenta: false, t: `${meseCorto(v.da)} → ${meseCorto(f)} · ${resto === 1 ? "ultima rata" : `ancora ${resto} rate`}` };
+}
+/** Campi "Dal mese" + "Numero di rate" con l'ultima rata calcolata. w = { da, rate } viene aggiornato. */
+function campiPeriodo(w, idp, onCambio) {
+  const o = meseCorrente(), opts = monthRange(addMonths(o, -48), addMonths(o, 60));
+  if (!opts.includes(w.da)) opts.unshift(w.da);
+  const box = document.createElement("div"); box.className = "per-campi";
+  box.innerHTML = `<label class="per-f" for="${idp}-da"><span class="label">Dal mese</span><select id="${idp}-da">${opts.map((id) => `<option value="${id}"${id === w.da ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select></label>
+    <label class="per-f" for="${idp}-n"><span class="label">Numero di rate</span><input type="text" inputmode="numeric" id="${idp}-n" placeholder="es. 12" autocomplete="off"></label>
+    <span class="hint per-fine"></span>`;
+  const sd = box.querySelector("select"), ni = box.querySelector("input"), fine = box.querySelector(".per-fine");
+  if (w.rate) ni.value = w.rate;
+  const agg = () => {
+    const n = Math.round(parseNum(ni.value));
+    w.da = sd.value; w.rate = n >= 1 && n <= 600 ? n : 0;
+    fine.textContent = w.rate ? `Ultima rata: ${monthLabelLong(fineSpesa(w)).toLowerCase()}` : "Se è già iniziata, scegli il mese della prima rata.";
+    onCambio && onCambio();
+  };
+  sd.onchange = agg; ni.addEventListener("input", () => { ni.value = ni.value.replace(/\D/g, "").slice(0, 3); agg(); });
+  agg();
+  return box;
+}
+/** Mesi personalizzati che cadono nel periodo di una spesa a tempo. */
+const mesiPersNelPeriodo = (w) => months().filter((id) => state.mesi[id] && id >= w.da && id <= fineSpesa(w));
 /** Chiave della categoria di una spesa (una categoria sconosciuta o eliminata conta come "Altro"). */
 const ck = (k) => catInfo(state.piano, k).k;
 const colore = (c) => (c.startsWith("--") ? `var(${c})` : c);
@@ -278,9 +313,10 @@ function confirmInline(host, text, okLabel, onOk) {
   cf.append(no, si); host.appendChild(cf); si.focus();
 }
 
-function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } = {}) {
+function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, periodi = false } = {}) {
   const voci = getVoci();
-  const tot = eur(round(voci.reduce((a, v) => a + N(v.importo), 0)));
+  // nel Modello il totale conta solo le spese attive questo mese (quelle a tempo finite o future no)
+  const tot = eur(round(voci.filter((v) => !periodi || attivaNel(v, meseRif())).reduce((a, v) => a + N(v.importo), 0)));
   if (titoloFuori) container.appendChild(secHead("Spese", tot, "spese"));
   const card = document.createElement("section"); card.className = "card spese";
   card.innerHTML = titoloFuori ? "" : `<div class="card-head"><h2>Spese</h2><span class="tot" data-live="spese">${tot}</span></div>`;
@@ -302,7 +338,43 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
       const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.setAttribute("aria-label", "Elimina " + v.nome);
       del.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       del.onclick = () => confirmInline(r, `Eliminare “${v.nome}”?`, "Elimina", () => { change((list) => { const i = list.findIndex((z) => z.id === v.id); if (i >= 0) list.splice(i, 1); }); render(); });
-      r.append(nome, wi, del); g.appendChild(r);
+      r.append(nome, wi);
+      if (periodi) {
+        // spesa a tempo: etichetta sotto il nome e pulsante per impostare / cambiare il periodo
+        r.classList.add("con-per");
+        const pb = document.createElement("button"); pb.type = "button"; pb.className = "del per-btn" + (v.da ? " on" : "");
+        pb.setAttribute("aria-label", (v.da ? "Cambia il periodo di " : "Imposta un periodo per ") + v.nome); pb.title = v.da ? "Cambia il periodo" : "Solo per un periodo (es. a rate)";
+        pb.innerHTML = icona("calendar", "currentColor", 16);
+        const apriPer = () => {
+          if (r.querySelector(".per-edit")) { r.querySelector(".per-edit").remove(); return; }
+          const w = { da: v.da || meseRif(), rate: v.rate || 0 };
+          const ed = document.createElement("div"); ed.className = "per-edit";
+          const err = document.createElement("div"); err.className = "err"; err.hidden = true;
+          ed.appendChild(campiPeriodo(w, prefix + "pe-" + v.id, () => { err.hidden = true; }));
+          const act = document.createElement("div"); act.className = "per-act";
+          if (v.da) {
+            const tg = document.createElement("button"); tg.type = "button"; tg.className = "link danger-link"; tg.textContent = "Togli il periodo";
+            tg.onclick = () => { change((list) => { const x = list.find((z) => z.id === v.id); if (x) { delete x.da; delete x.rate; } }); render(); };
+            act.appendChild(tg);
+          }
+          const an = document.createElement("button"); an.type = "button"; an.className = "link"; an.textContent = "Annulla"; an.onclick = () => ed.remove();
+          const ok = document.createElement("button"); ok.type = "button"; ok.className = "link"; ok.textContent = "Fatto";
+          ok.onclick = () => {
+            if (!w.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; ed.querySelector("input").focus(); return; }
+            change((list) => { const x = list.find((z) => z.id === v.id); if (x) { x.da = w.da; x.rate = w.rate; } }); render();
+          };
+          act.append(an, ok); ed.append(err, act); r.appendChild(ed); aprire(ed);
+        };
+        pb.onclick = apriPer;
+        r.append(pb, del);
+        if (v.da) {
+          const tp = testoPeriodo(v);
+          if (tp.spenta) r.classList.add("spenta");
+          const tag = document.createElement("button"); tag.type = "button"; tag.className = "per-tag"; tag.textContent = tp.t; tag.onclick = apriPer;
+          r.appendChild(tag);
+        }
+      } else r.append(del);
+      g.appendChild(r);
     });
     card.appendChild(g);
   });
@@ -310,6 +382,16 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   form.innerHTML = `<div class="add-tit">Nuova spesa</div><input class="n" type="text" id="${prefix}a-nome" placeholder="Nome (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
   const pick = form.querySelector(".cat-pick");
   let catScelta = addCat;
+  // Modello: "Solo per un periodo" (spesa a rate)
+  const wPer = { da: meseRif(), rate: 0 }; let perOn = false, perBox = null;
+  if (periodi) {
+    const sw = switchRow(prefix + "a-per", "Solo per un periodo", "Per esempio un acquisto a rate", false, (x) => {
+      perOn = x;
+      if (x) { perBox = campiPeriodo(wPer, prefix + "a-pe", () => { form.querySelector(".err").hidden = true; }); perBox.classList.add("per-in-form"); sw.after(perBox); aprire(perBox); perBox.querySelector("input").focus({ preventScroll: true }); }
+      else if (perBox) { perBox.remove(); perBox = null; }
+    });
+    sw.classList.add("per-sw"); form.querySelector(".cat-pick").after(sw);
+  }
   const disegnaPick = () => {
     if (!categorie(state.piano).some((c) => c.k === catScelta)) catScelta = "casa";
     pick.innerHTML = categorie(state.piano).map((c) => `<button type="button" role="radio" class="cat-chip" data-k="${c.k}" aria-checked="${c.k === catScelta}" style="--cc:${c.c}">${icona(c.i, c.k === catScelta ? "#fff" : c.c, 15)}${esc(c.n)}</button>`).join("")
@@ -328,11 +410,26 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     const err = form.querySelector(".err");
     if (!nome) { err.textContent = "Scrivi il nome della voce."; err.hidden = false; return; }
     if (isNaN(imp) || imp < 0) { err.textContent = "Scrivi un importo valido, ad esempio 25,50."; err.hidden = false; return; }
+    if (perOn && !wPer.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; perBox?.querySelector("input").focus(); return; }
     const cat = catScelta;
     const nid = uid();
-    change((list) => list.push({ id: nid, nome, importo: round(imp), cat }));
-    nuovaRiga = nid; render();
-    $(prefix + "a-nome")?.focus();
+    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}) };
+    const aggiungi = (ancheMesi) => {
+      change((list) => list.push(nuova));
+      if (ancheMesi) mesiPersNelPeriodo(nuova).forEach((id) => { state.mesi[id].voci.push({ ...nuova, id: uid() }); saveMese(id); });
+      nuovaRiga = nid; render();
+      $(prefix + "a-nome")?.focus();
+    };
+    // la rata cade in mesi personalizzati (che non seguono il Modello)? Chiedo
+    const pers = perOn ? mesiPersNelPeriodo(nuova) : [];
+    if (!pers.length) { aggiungi(false); return; }
+    const nomi = pers.length <= 3 ? pers.map((id) => monthLabelLong(id).toLowerCase()).join(", ").replace(/, ([^,]*)$/, " e $1") : `${pers.length} mesi`;
+    form.querySelector(".confirm")?.remove();
+    const cf = document.createElement("div"); cf.className = "confirm per-conf";
+    cf.innerHTML = `<span>Hai personalizzato ${nomi}: ${pers.length === 1 ? "quel mese non segue" : "quei mesi non seguono"} il Modello. Aggiungo la rata anche lì?</span>`;
+    const no = document.createElement("button"); no.type = "button"; no.className = "btn"; no.textContent = "Solo nel Modello"; no.onclick = () => aggiungi(false);
+    const si = document.createElement("button"); si.type = "button"; si.className = "btn primary"; si.textContent = pers.length === 1 ? "Anche in quel mese" : "Anche in quei mesi"; si.onclick = () => aggiungi(true);
+    cf.append(no, si); form.appendChild(cf); si.focus();
   };
   // il modulo si apre solo quando serve
   const apri = document.createElement("button"); apri.type = "button"; apri.className = "add-open"; apri.id = prefix + "a-open";
@@ -758,11 +855,11 @@ function renderModello(v) {
   v.insertAdjacentHTML("beforeend", `<p class="hint flush mod-intro">I mesi che non hai personalizzato seguono il Modello: cambi qui, cambiano tutti.</p>`);
 
   // Resto in tasca
-  const m = { stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), voci: p.voci, prelievo: 0, extra: 0 };
+  const m = { stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
   const c = calcMonth(m, p);
   // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
   const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
-  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> al mese</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
+  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> ${(p.voci || []).some((x) => x.da) ? "a " + monthLabelLong(meseRif()).toLowerCase() : "al mese"}</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
   fillBar(rs.querySelector('[data-live="bar"]'), rs.querySelector('[data-live="legend"]'), m, c);
   v.appendChild(rs);
 
@@ -813,7 +910,7 @@ function renderModello(v) {
   v.appendChild(moneyField(T().rispBreve, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp", cls: "riga", hint: "Ogni mese" }));
 
   // Spese
-  vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true });
+  vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
 
   // Impostazioni: periodo e avviso
   v.appendChild(secHead("Impostazioni"));
@@ -891,7 +988,7 @@ function anima(v) {
 }
 window.addEventListener("resize", () => pillola(document.querySelector(".tabs"), "tabs"));
 const currentMonth = () => (view === "modello"
-  ? { stipendio: N(state.piano.stipendio), entrate_extra: N(state.piano.entrate_extra), risparmio: N(state.piano.risparmio), voci: state.piano.voci, prelievo: 0, extra: 0 }
+  ? { stipendio: N(state.piano.stipendio), entrate_extra: N(state.piano.entrate_extra), risparmio: N(state.piano.risparmio), voci: vociModello(), prelievo: 0, extra: 0 }
   : monthData(sel, state.piano, state.mesi));
 function updateGroupSums() {
   const voci = currentMonth().voci;

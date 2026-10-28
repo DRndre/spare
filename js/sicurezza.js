@@ -30,9 +30,11 @@ export function campoCodice(id) {
 
 /** Prima di entrare: se l'utente ha la verifica attiva, chiede il codice. Restituisce true se serve. */
 export async function serveCodice(sb) {
-  const { data, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (error) return false;
-  return data.nextLevel === "aal2" && data.currentLevel !== "aal2";
+  try {
+    const { data, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !data) return false;
+    return data.nextLevel === "aal2" && data.currentLevel !== "aal2";
+  } catch { return false; }
 }
 /** Schermata del codice dopo email e password. */
 export async function mostraCodice({ sb, box, logo, onOk }) {
