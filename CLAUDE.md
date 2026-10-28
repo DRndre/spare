@@ -59,6 +59,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   scelte da un elenco = spunta. Un campo da solo = riga a tutta larghezza (`moneyField` con `cls: "riga"`).
   Moduli per aggiungere (spesa, tasso) = riquadro grigio arrotondato dentro la scheda, con titolo ("Nuova spesa", "Nuovo tasso"),
   pulsanti Annulla / Aggiungi, campi obbligatori con messaggio rosso; Esc chiude. Obiettivo: Annulla, "Elimina obiettivo".
+- **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
+  **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
+  conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
+  "Preferisco inserire ogni mese a mano" (salta le spese fisse, Modello vuoto); con il Modello vuoto (`modelloVuoto()`)
+  i mesi dicono "Da compilare" e il Deposito "Stima solo sui mesi che hai compilato".
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
   (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
   negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").

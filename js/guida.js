@@ -70,10 +70,13 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     esistenti: (p0.voci || []).map((v) => ({ ...v })),
     nuove: {}, // nome → { importo, cat, scelta }
     altre: [],
+    manuale: false, // "Preferisco inserire ogni mese a mano" (solo al primo accesso): Modello vuoto
   };
   const haTassi = (d0.periodi || []).length > 0;
   let passo = 0;
   const PASSI = ["Le tue entrate", "Mensilità", "Spese fisse", "Risparmi", "Riepilogo"];
+  // passaggi da mostrare: chi inserisce ogni mese a mano salta le spese fisse
+  const elenco = () => (w.manuale ? [0, 1, 3, 4] : [0, 1, 2, 3, 4]);
   const f = apriFoglio("Configurazione guidata", () => onCancel && onCancel());
 
   function vociFinali() {
@@ -90,15 +93,20 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
   function disegna() {
     const b = f.body; b.innerHTML = "";
-    b.insertAdjacentHTML("beforeend", `<div class="steps" aria-label="Passaggio ${passo + 1} di ${PASSI.length}">${PASSI.map((t, i) => `<span class="${i === passo ? "on" : i < passo ? "done" : ""}"></span>`).join("")}</div>
-      <h3 class="step-title">${passo + 1}. ${PASSI[passo]}</h3>`);
+    const el = elenco(), pos = el.indexOf(passo);
+    b.insertAdjacentHTML("beforeend", `<div class="steps" aria-label="Passaggio ${pos + 1} di ${el.length}">${el.map((x, i) => `<span class="${i === pos ? "on" : i < pos ? "done" : ""}"></span>`).join("")}</div>
+      <h3 class="step-title">${pos + 1}. ${passo === 0 && w.manuale ? "Da dove partiamo" : PASSI[passo]}</h3>`);
     if (passo === 0) {
-      b.appendChild(testo("Partiamo da quanto entra ogni mese. Puoi cambiare tutto anche dopo, nella scheda <b>Modello</b>."));
       const opts = monthRange((Number(oggi.slice(0, 4)) - 2) + "-01", (Number(oggi.slice(0, 4)) + 2) + "-12").map((id) => [id, monthLabelLong(id)]);
-      b.appendChild(griglia(
-        campo("Stipendio mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
-        campo("Entrate extra", w.entrate_extra, (n) => (w.entrate_extra = n), { id: "w-entr", hint: "Seconde entrate più o meno fisse (vuoto se non ne hai)" }),
-      ));
+      if (primaVolta) b.appendChild(spunta("Preferisco inserire ogni mese a mano", w.manuale, (v) => { w.manuale = v; disegna(); },
+        w.manuale ? "Niente mese tipo: compili ogni mese nella scheda Mesi. Puoi cambiare idea quando vuoi." : "Senza un mese tipo: compili ogni mese da te."));
+      if (!w.manuale) {
+        b.appendChild(testo("Partiamo da quanto entra ogni mese. Puoi cambiare tutto anche dopo, nella scheda <b>Modello</b>."));
+        b.appendChild(griglia(
+          campo("Stipendio mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
+          campo("Entrate extra", w.entrate_extra, (n) => (w.entrate_extra = n), { id: "w-entr", hint: "Seconde entrate più o meno fisse (vuoto se non ne hai)" }),
+        ));
+      }
       b.appendChild(griglia(scelta("Da che mese partiamo?", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Di solito il mese in corso" })));
     }
     if (passo === 1) {
@@ -154,9 +162,9 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
       b.appendChild(box);
     }
     if (passo === 3) {
-      b.appendChild(testo("Quanto vuoi mettere da parte ogni mese? Lascia vuoto se per ora non risparmi."));
+      b.appendChild(testo(w.manuale ? "Quanto hai già da parte? Quanto risparmi lo scriverai mese per mese." : "Quanto vuoi mettere da parte ogni mese? Lascia vuoto se per ora non risparmi."));
       b.appendChild(griglia(
-        campo("Risparmio del mese", w.risparmio, (n) => (w.risparmio = n), { id: "w-risp" }),
+        w.manuale ? null : campo("Risparmio del mese", w.risparmio, (n) => (w.risparmio = n), { id: "w-risp" }),
         campo("Risparmi che hai già", w.saldo_iniziale, (n) => (w.saldo_iniziale = n), { id: "w-gia", hint: "Vuoto se non ne hai" }),
       ));
       if (w.mensilita >= 13) b.appendChild(spunta(`Metti da parte anche ${w.mensilita >= 14 ? "tredicesima e quattordicesima" : "la tredicesima"}`, w.extra_al_deposito, (v) => (w.extra_al_deposito = v), "Se lo spegni, restano nel resto in tasca di quei mesi."));
@@ -171,7 +179,10 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
         }
       }
     }
-    if (passo === 4) {
+    if (passo === 4 && w.manuale) {
+      b.appendChild(testo("Hai scelto di inserire <b>ogni mese a mano</b>.<br>Nella scheda <b>Mesi</b> apri un mese e scrivi entrate, spese e risparmio. Con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente.<br>Se poi vuoi un mese tipo da far seguire a tutti i mesi, lo trovi nella scheda <b>Modello</b>."));
+    }
+    if (passo === 4 && !w.manuale) {
       const pp = pianoProva();
       const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: pp.entrate_extra, risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
       b.insertAdjacentHTML("beforeend", `<div class="hero wiz-hero"><div class="label">Ogni mese ti restano in tasca</div><div class="big${c.resto < 0 ? " neg" : ""}">${eur(c.resto)}</div>
@@ -190,17 +201,18 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
       // al primo accesso, al posto di "Indietro": salto la guida e configuro da solo nel Modello
       indietro.textContent = "Salta"; indietro.onclick = () => { f.close(); onSkip(); };
     } else {
-      indietro.textContent = "Indietro"; indietro.disabled = passo === 0; indietro.onclick = () => { passo--; disegna(); f.body.scrollTop = 0; };
+      indietro.textContent = "Indietro"; indietro.disabled = passo === 0; indietro.onclick = () => { const el = elenco(); passo = el[el.indexOf(passo) - 1]; disegna(); f.body.scrollTop = 0; };
     }
     const avanti = document.createElement("button"); avanti.type = "button"; avanti.className = "btn primary";
     avanti.textContent = passo === PASSI.length - 1 ? "Fine" : "Avanti";
-    avanti.onclick = () => { if (passo < PASSI.length - 1) { passo++; disegna(); f.body.scrollTop = 0; } else salva(); };
+    avanti.onclick = () => { if (passo < PASSI.length - 1) { const el = elenco(); passo = el[el.indexOf(passo) + 1]; disegna(); f.body.scrollTop = 0; } else salva(); };
     f.foot.append(indietro, avanti);
     f.body.querySelector("input:not([disabled]), select")?.focus({ preventScroll: true });
   }
 
   function salva() {
     const p = state.piano, d = state.deposito;
+    if (w.manuale) Object.assign(w, { stipendio: 0, entrate_extra: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
     Object.assign(p, { stipendio: w.stipendio, entrate_extra: w.entrate_extra, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali(), mese_inizio: w.mese_inizio });
@@ -216,7 +228,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
 /* ---------- Come funziona ---------- */
 const AIUTO = [
-  ["Il Modello", "È il tuo <b>mese tipo</b>: stipendio, spese fisse e risparmio. Tutti i mesi lo seguono, finché non ne cambi uno. Se modifichi il Modello, cambiano tutti i mesi che non hai personalizzato."],
+  ["Il Modello", "È il tuo <b>mese tipo</b>: stipendio, spese fisse e risparmio. Tutti i mesi lo seguono, finché non ne cambi uno. Se modifichi il Modello, cambiano tutti i mesi che non hai personalizzato. Preferisci fare tutto a mano? Lascia il Modello vuoto e compila ogni mese nella scheda Mesi: con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente."],
   ["La scheda Mesi", "Qui vedi un mese alla volta. Se in un mese hai una spesa in più o uno stipendio diverso, cambialo lì: quel mese diventa <b>personalizzato</b> e gli altri non cambiano. Con <b>Ripristina dal modello</b> torna come il Modello. In alto scegli l'anno."],
   ["Resto in tasca", "È quello che ti rimane: <b>entrate</b> (stipendio, entrate extra, 13ª e 14ª) <b>meno spese meno risparmio</b>. Se va sotto zero diventa rosso. Nel Modello puoi mettere una soglia per avere un avviso quando scende sotto una cifra."],
   ["Spese che non sono mensili", "L'app ragiona a mesi. Una spesa annuale o ogni qualche mese va divisa: bollo da 232 € l'anno = 19,33 € al mese; abbonamento da 21 € ogni 6 mesi = 3,50 € al mese. Una spesa una tantum invece mettila solo nel mese in cui la paghi."],

@@ -486,3 +486,4 @@ form.add > .add-tit { grid-column: 1 / -1; order: -1; font-size: .72rem; letter-
 .mod-resto .mr-top b.neg { color: var(--bad); }
 .mod-resto .bar { height: 8px; border-radius: 4px; }
 .field.riga > .err { grid-column: 1 / -1; grid-row: 3; margin-top: 4px; }
+.mh-copia { display: inline-flex; align-items: center; gap: 5px; flex-basis: 100%; justify-content: flex-start; }

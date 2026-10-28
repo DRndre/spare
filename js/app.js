@@ -47,6 +47,8 @@ const usaDep = () => !!state.piano.usa_deposito;
 const T = () => usaDep()
   ? { tab: "Deposito", rispBreve: "Al conto deposito", prelHint: "Ripresi dal deposito", risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
   : { tab: "Risparmi", rispBreve: "Messo da parte", prelHint: "Ripresi dai risparmi", risp: "Risparmio del mese", prel: "Prelievo dai risparmi", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
+/** Modello vuoto (chi inserisce ogni mese a mano): le previsioni contano solo i mesi compilati. */
+const modelloVuoto = () => { const p = state.piano; return !N(p.stipendio) && !N(p.entrate_extra) && !N(p.risparmio) && !(p.voci || []).length; };
 /** Simulazione dei risparmi: con il conto deposito ci sono gli interessi, senza no. */
 function simula(ms) {
   const dep = state.deposito;
@@ -420,7 +422,23 @@ function renderMesi(v) {
     const rb = document.createElement("button"); rb.type = "button"; rb.className = "link"; rb.textContent = "Ripristina";
     rb.onclick = () => confirmInline(tb, `Le modifiche di ${monthLabelLong(sel)} andranno perse.`, "Ripristina", async () => { await resetMese(sel); render(); });
     box.appendChild(rb); tb.appendChild(box);
-  } else tb.insertAdjacentHTML("beforeend", '<span class="mh-right hint">Segue il Modello</span>');
+  } else tb.insertAdjacentHTML("beforeend", `<span class="mh-right hint">${modelloVuoto() ? "Da compilare" : "Segue il Modello"}</span>`);
+  // Copia dal mese prima: entrate, risparmio, prelievo e spese (non la 13ª/14ª, che dipende dal mese)
+  const prima = addMonths(sel, -1);
+  if (all.includes(prima)) {
+    const cb = document.createElement("button"); cb.type = "button"; cb.className = "link mh-copia";
+    cb.innerHTML = `${icona("copy", "currentColor", 15)} Copia dal mese prima`;
+    const copia = () => {
+      const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
+      state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: t.entrate_extra, risparmio: t.risparmio, prelievo: t.prelievo,
+        extra: old ? old.extra : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
+      saveMese(sel); render();
+    };
+    cb.onclick = () => (m.custom
+      ? confirmInline(tb, `Sostituisco i numeri di ${monthLabelLong(sel).toLowerCase()} con quelli di ${monthLabelLong(prima).toLowerCase()}?`, "Sostituisci", copia)
+      : copia());
+    tb.appendChild(cb);
+  }
   v.appendChild(tb);
 
   v.appendChild(secHead("Resto in tasca"));
@@ -659,7 +677,7 @@ function depHero(d, ms) {
     ? `${base ? `<b>${eur0(base)}</b> di partenza + ` : ""}<b>${eur0(d.totVersato)}</b> versati + <b>${eur0(d.totNetto)}</b> di interessi − <b>${eur0(d.totBollo)}</b> di bollo`
     : `${base ? `<b>${eur0(base)}</b> già da parte + ` : ""}<b>${eur0(d.totVersato)}</b> messi da parte`;
   return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big">${eur(saldoAl(d, oggi))}</div>
-    <div class="hint dh-stima">Stima dai tuoi conti, fino a ${monthLabelLong(oggi < ms[0] ? ms[0] : oggi > fine ? fine : oggi).toLowerCase()}${oggi < ms[0] ? " (i tuoi conti partono da " + monthLabelLong(ms[0]).toLowerCase() + ")" : ""}</div>
+    <div class="hint dh-stima">${modelloVuoto() ? "Stima solo sui mesi che hai compilato" : "Stima dai tuoi conti"}, fino a ${monthLabelLong(oggi < ms[0] ? ms[0] : oggi > fine ? fine : oggi).toLowerCase()}${oggi < ms[0] ? " (i tuoi conti partono da " + monthLabelLong(ms[0]).toLowerCase() + ")" : ""}</div>
     <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b>${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
 }
 
