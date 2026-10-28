@@ -80,7 +80,8 @@ input, select, button { font: inherit; color: inherit; }
 .auth-card h2 { color: var(--muted); font-size: 1rem; }
 .lf { display: flex; flex-direction: column; gap: 4px; }
 .lf input { border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; background: var(--bg); width: 100%; }
-.lf input:focus { outline: none; border-color: var(--accent); }
+.lf input:focus, .lf select:focus { outline: none; border-color: var(--accent); }
+.lf select { border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; background: var(--bg); width: 100%; font: inherit; color: inherit; }
 .msg { font-size: .85rem; color: var(--bad); }
 .msg[data-ok="1"] { color: var(--good); }
 .auth-links { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
@@ -497,3 +498,20 @@ form.add > .add-tit { grid-column: 1 / -1; order: -1; font-size: .72rem; letter-
 .dep-chart .b-d { transform-origin: bottom; }
 @media (prefers-reduced-motion: reduce) { .has-pill > .pill { transition: none; } }
 .row[data-riga] { border-radius: 8px; }
+/* Sicurezza */
+.sec-blk { display: flex; flex-direction: column; gap: 8px; }
+.sec-blk + .sec-blk, .sheet-body > .sec-blk { margin-top: 6px; }
+.sic-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.sic-card .add-open.flush-x { margin: 0; width: 100%; }
+.sic-pill { display: inline-block; font-size: .75rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+.sic-pill.on { background: var(--good-soft); color: var(--good); }
+.sic-pill.off { background: var(--seg-bg); color: var(--muted); }
+.sic-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 6px; border-top: 1px solid var(--line); border-radius: 8px; }
+.sic-n { display: flex; flex-direction: column; font-weight: 500; }
+.sic-n small { color: var(--muted); font-weight: 400; font-size: .78rem; }
+.sic-qr { align-items: center; text-align: center; }
+.sic-qr img { background: #fff; padding: 8px; border-radius: 12px; }
+.sic-key { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.sic-key code { font-family: var(--f-num); font-size: .95rem; letter-spacing: .04em; background: var(--seg-bg); padding: 6px 10px; border-radius: 8px; word-break: break-all; }
+input.codice { font-family: var(--f-num); font-size: 1.5rem; letter-spacing: .35em; text-align: center; font-variant-numeric: tabular-nums; }
+.btn.wide { width: 100%; }

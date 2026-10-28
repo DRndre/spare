@@ -12,6 +12,7 @@ import { categorie, catInfo, badge, icona } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
+import { apriSicurezza, serveCodice, mostraCodice } from "./sicurezza.js";
 import { pillola, entra, riempi, allunga, cresci, contaNumeri, fermaNumero, ricorda, apri as aprire, chiudi, evidenzia } from "./anim.js";
 
 const $ = (id) => document.getElementById(id);
@@ -211,6 +212,12 @@ function traduciErrore(e) {
 
 /* ---------- Avvio ---------- */
 async function start() {
+  // Verifica in due passaggi: se l'utente l'ha attivata, prima chiedo il codice
+  if (await serveCodice(sb)) {
+    $("app").hidden = true; const a = $("auth"); a.hidden = false; document.title = SLOGAN;
+    mostraCodice({ sb, box: a, logo: LOGO, onOk: () => start() });
+    return;
+  }
   $("auth").hidden = true; $("app").hidden = false;
   $("who").textContent = state.user.email || "";
   setStatus("idle", "Caricamento…");
@@ -963,6 +970,7 @@ function guida(primaVolta) {
 $("doGuida").onclick = () => { chiudiMenu(); guida(empty); };
 $("doCategorie").onclick = () => { chiudiMenu(); apriCategorie({ state, savePiano, saveMese, onChange: () => render() }); };
 $("doAiuto").onclick = () => { chiudiMenu(); apriAiuto(); };
+$("doSicurezza").onclick = () => { chiudiMenu(); apriSicurezza({ sb }); };
 $("doImport").onclick = () => { chiudiMenu(); $("importFile").click(); };
 $("importFile").onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = "";
