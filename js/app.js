@@ -83,13 +83,14 @@ function goalStatus(ms) {
     <div class="hint">${quando}</div>`;
 }
 let goalEdit = false; // modulo dell'obiettivo aperto
+let goalPrima = null;  // valori prima di aprire il modulo (per "Annulla")
 function goalCard(v, ms) {
   const dep = state.deposito, g = N(dep.obiettivo);
   const card = document.createElement("section"); card.className = "card pad goal";
   if (!goalEdit && !(g > 0)) {
     card.innerHTML = `<p class="hint flush">Hai un traguardo? Per esempio la caparra della casa: vedi a che punto sei e quando ci arrivi.</p>`;
     const b = document.createElement("button"); b.type = "button"; b.className = "add-open flush-x"; b.innerHTML = `${icona("plus", "currentColor", 16)} Imposta un obiettivo`;
-    b.onclick = () => { goalEdit = true; render(); $("g-imp")?.focus(); };
+    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; render(); $("g-imp")?.focus(); };
     card.appendChild(b); v.appendChild(card); return;
   }
   if (goalEdit) {
@@ -106,10 +107,23 @@ function goalCard(v, ms) {
   const act = document.createElement("div"); act.className = "goal-act";
   const mb = document.createElement("button"); mb.type = "button"; mb.className = "link";
   mb.textContent = goalEdit ? "Fatto" : "Modifica";
-  mb.onclick = () => { goalEdit = !goalEdit; render(); };
+  mb.onclick = () => {
+    if (!goalEdit) goalPrima = { obiettivo: g, nome: dep.obiettivo_nome || "" };
+    goalEdit = !goalEdit; render();
+  };
   act.appendChild(mb);
-  if (goalEdit && g > 0) {
-    const rm = document.createElement("button"); rm.type = "button"; rm.className = "link danger-link"; rm.textContent = "Togli l'obiettivo";
+  if (goalEdit) {
+    // Annulla: rimette i valori di prima e chiude il modulo
+    const an = document.createElement("button"); an.type = "button"; an.className = "link"; an.textContent = "Annulla";
+    an.onclick = () => {
+      const pr = goalPrima || { obiettivo: g, nome: dep.obiettivo_nome || "" };
+      if (N(dep.obiettivo) !== pr.obiettivo || (dep.obiettivo_nome || "") !== pr.nome) { dep.obiettivo = pr.obiettivo; dep.obiettivo_nome = pr.nome; saveDeposito(); }
+      goalEdit = false; render();
+    };
+    act.prepend(an);
+  }
+  if (goalEdit && goalPrima && goalPrima.obiettivo > 0) {
+    const rm = document.createElement("button"); rm.type = "button"; rm.className = "link danger-link"; rm.textContent = "Elimina obiettivo";
     rm.onclick = () => { dep.obiettivo = 0; dep.obiettivo_nome = ""; saveDeposito(); goalEdit = false; render(); };
     act.prepend(rm);
   }
@@ -279,7 +293,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     card.appendChild(g);
   });
   const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off";
-  form.innerHTML = `<input class="n" type="text" id="${prefix}a-nome" placeholder="Nuova voce (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><button class="btn primary" type="submit">Aggiungi</button><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
+  form.innerHTML = `<input class="n" type="text" id="${prefix}a-nome" placeholder="Nuova voce (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
   const pick = form.querySelector(".cat-pick");
   let catScelta = addCat;
   const disegnaPick = () => {
@@ -311,6 +325,13 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   const aperto = addAperto === prefix || !voci.length;
   form.hidden = !aperto; apri.hidden = aperto;
   apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; $(prefix + "a-nome")?.focus(); };
+  // Annulla (o Esc): svuota e chiude il modulo senza aggiungere niente
+  const chiudiForm = () => {
+    form.reset(); form.querySelector(".err").hidden = true;
+    addAperto = null; form.hidden = true; apri.hidden = false; apri.focus();
+  };
+  form.querySelector("[data-annulla]").onclick = chiudiForm;
+  form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiForm(); } });
   card.append(apri, form);
   container.appendChild(card);
 }
