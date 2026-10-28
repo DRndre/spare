@@ -89,16 +89,24 @@ alter table public.piani add column if not exists categorie jsonb not null defau
 
 -- Verifica in due passaggi: chi l'ha attivata vede i suoi dati solo se è entrato anche con il codice (aal2).
 -- Chi non l'ha attivata non nota differenze. Si può rieseguire.
+-- La tabella auth.mfa_factors non è leggibile dagli utenti: la controllo con una funzione "security definer"
+-- che risponde solo sì/no per l'utente collegato.
+create or replace function public.ha_verifica() returns boolean
+  language sql stable security definer set search_path = ''
+  as $$ select exists (select 1 from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified') $$;
+revoke all on function public.ha_verifica() from public, anon;
+grant execute on function public.ha_verifica() to authenticated;
+
 drop policy if exists "codice se attivo" on public.piani;
 drop policy if exists "codice se attivo" on public.depositi;
 drop policy if exists "codice se attivo" on public.mesi;
 
 create policy "codice se attivo" on public.piani as restrictive for all to authenticated
-  using (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'))
-  with check (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'));
+  using ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()))
+  with check ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()));
 create policy "codice se attivo" on public.depositi as restrictive for all to authenticated
-  using (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'))
-  with check (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'));
+  using ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()))
+  with check ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()));
 create policy "codice se attivo" on public.mesi as restrictive for all to authenticated
-  using (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'))
-  with check (array[(select auth.jwt()->>'aal')] <@ (select case when count(id) > 0 then array['aal2'] else array['aal1', 'aal2'] end from auth.mfa_factors where user_id = (select auth.uid()) and status = 'verified'));
+  using ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()))
+  with check ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()));
