@@ -457,3 +457,8 @@ form.add .err { order: 4; }
 .field.riga > .money { grid-column: 2; grid-row: 1 / 3; width: 9.5em; }
 .field.riga > .money input { text-align: right; }
 @media (max-width: 560px) { .field.riga > .money { width: 7em; } }
+/* Modulo "nuovo tasso" nella scheda Deposito */
+form.add.tasso { grid-template-columns: 150px 120px minmax(0, 1fr); }
+form.add.tasso .imp input { width: 100%; background: var(--surface); }
+form.add.tasso > .add-act { order: 3; }
+@media (max-width: 560px) { form.add.tasso { grid-template-columns: 1fr 1fr; } form.add.tasso > #pa-n { grid-column: 1 / -1; } }

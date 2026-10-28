@@ -82,6 +82,7 @@ function goalStatus(ms) {
     <div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${pct}%"></span></div>
     <div class="hint">${quando}</div>`;
 }
+let tassoAperto = false; // modulo "nuovo tasso" aperto
 let goalEdit = false; // modulo dell'obiettivo aperto
 let goalPrima = null;  // valori prima di aprire il modulo (per "Annulla")
 function goalCard(v, ms) {
@@ -567,13 +568,33 @@ function renderDeposito(v) {
   });
   const ab = document.createElement("button"); ab.type = "button"; ab.className = "add-open"; ab.id = "p-add";
   ab.innerHTML = `${icona("plus", "currentColor", 16)} ${periodi.length ? "Aggiungi un cambio di tasso" : "Aggiungi il tasso"}`;
-  ab.onclick = () => {
-    const last = periodi[periodi.length - 1];
-    const da = last ? addMonths(last.da, 12) : ms[0];
-    dep.periodi = [...(dep.periodi || []), { id: uid(), da: opts.includes(da) ? da : opts[opts.length - 1], tasso: last ? N(last.tasso) : 0, nome: "" }];
-    saveDeposito(); render(); document.querySelector(".row.periodo:last-of-type input")?.focus();
+  // Modulo per un nuovo tasso: si apre col pulsante, tasso vuoto e obbligatorio, con Annulla
+  const oggi = meseCorrente();
+  let daProposto = oggi < ms[0] ? ms[0] : oggi; // mese di oggi; se ha già un tasso, il mese dopo l'ultimo
+  if (periodi.some((x) => x.da >= daProposto)) daProposto = addMonths(periodi[periodi.length - 1].da, 1);
+  if (!opts.includes(daProposto)) daProposto = opts[opts.length - 1];
+  const form = document.createElement("form"); form.className = "add tasso"; form.autocomplete = "off";
+  form.innerHTML = `<select id="pa-da" aria-label="Dal mese">${opts.map((id) => `<option value="${id}"${id === daProposto ? " selected" : ""}>da ${monthLabel(id)}</option>`).join("")}</select>`
+    + `<span class="imp"><input type="text" inputmode="decimal" id="pa-t" placeholder="es. 2,50" aria-label="Tasso lordo annuo"><span class="eur">%</span></span>`
+    + `<input type="text" id="pa-n" placeholder="Banca o conto (facoltativo)" aria-label="Nome del conto">`
+    + `<div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="err" hidden></div>`;
+  const errT = form.querySelector(".err");
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+    const txt = $("pa-t").value.trim(), n = parseNum(txt), da = $("pa-da").value;
+    if (!txt || isNaN(n)) { errT.textContent = "Scrivi il tasso, ad esempio 2,50."; errT.hidden = false; $("pa-t").focus(); return; }
+    if (n < 0 || n >= 100) { errT.textContent = "Il tasso deve essere tra 0 e 100."; errT.hidden = false; $("pa-t").focus(); return; }
+    if ((dep.periodi || []).some((x) => x.da === da)) { errT.textContent = `C'è già un tasso da ${monthLabel(da)}: cambialo nella sua riga qui sopra.`; errT.hidden = false; return; }
+    dep.periodi = [...(dep.periodi || []), { id: uid(), da, tasso: round(n), nome: $("pa-n").value.trim() }];
+    tassoAperto = false; saveDeposito(); render();
   };
-  card.appendChild(ab);
+  const chiudiTasso = () => { tassoAperto = false; form.reset(); errT.hidden = true; form.hidden = true; ab.hidden = false; ab.focus(); };
+  form.querySelector("[data-annulla]").onclick = chiudiTasso;
+  form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiTasso(); } });
+  form.querySelector("#pa-t").addEventListener("input", () => { errT.hidden = true; });
+  form.hidden = !tassoAperto; ab.hidden = tassoAperto;
+  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; $("pa-t").focus(); };
+  card.append(ab, form);
   v.appendChild(card);
 
   // Impostazioni del conto
