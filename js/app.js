@@ -12,6 +12,7 @@ import { categorie, catInfo, badge, icona } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
+import { pillola, entra, riempi, allunga, cresci, contaNumeri, fermaNumero, ricorda, apri as aprire, chiudi, evidenzia } from "./anim.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -86,6 +87,7 @@ function goalStatus(ms) {
 }
 let tassoAperto = false; // modulo "nuovo tasso" aperto
 let avvisoAperto = false; // interruttore "Avviso resto basso" acceso ma senza cifra
+let goalAnima = false; // il modulo dell'obiettivo si è appena aperto
 let goalEdit = false; // modulo dell'obiettivo aperto
 let goalPrima = null;  // valori prima di aprire il modulo (per "Annulla")
 function goalCard(v, ms) {
@@ -94,7 +96,7 @@ function goalCard(v, ms) {
   if (!goalEdit && !(g > 0)) {
     card.innerHTML = `<p class="hint flush">Hai un traguardo? Per esempio la caparra della casa: vedi a che punto sei e quando ci arrivi.</p>`;
     const b = document.createElement("button"); b.type = "button"; b.className = "add-open flush-x"; b.innerHTML = `${icona("plus", "currentColor", 16)} Imposta un obiettivo`;
-    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; render(); $("g-imp")?.focus(); };
+    b.onclick = () => { goalPrima = { obiettivo: 0, nome: "" }; goalEdit = true; goalAnima = true; render(); $("g-imp")?.focus({ preventScroll: true }); };
     card.appendChild(b); v.appendChild(card); return;
   }
   if (goalEdit) {
@@ -112,7 +114,7 @@ function goalCard(v, ms) {
   const mb = document.createElement("button"); mb.type = "button"; mb.className = "link";
   mb.textContent = goalEdit ? "Fatto" : "Modifica";
   mb.onclick = () => {
-    if (!goalEdit) goalPrima = { obiettivo: g, nome: dep.obiettivo_nome || "" };
+    if (!goalEdit) { goalPrima = { obiettivo: g, nome: dep.obiettivo_nome || "" }; goalAnima = true; }
     goalEdit = !goalEdit; render();
   };
   act.appendChild(mb);
@@ -133,6 +135,7 @@ function goalCard(v, ms) {
   }
   card.appendChild(act);
   v.appendChild(card);
+  if (goalEdit && goalAnima) { goalAnima = false; aprire(card.querySelector(".fields")); }
 }
 /** Chiave della categoria di una spesa (una categoria sconosciuta o eliminata conta come "Altro"). */
 const ck = (k) => catInfo(state.piano, k).k;
@@ -281,7 +284,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     const g = document.createElement("div"); g.className = "group";
     g.innerHTML = `<div class="group-head"><span class="gname">${badge(c, 24)}${esc(c.n)}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
     vs.forEach((v) => {
-      const r = document.createElement("div"); r.className = "row";
+      const r = document.createElement("div"); r.className = "row"; r.dataset.riga = v.id;
       const nome = document.createElement("input"); nome.type = "text"; nome.value = v.nome; nome.id = prefix + "n-" + v.id; nome.setAttribute("aria-label", "Nome voce");
       nome.addEventListener("input", () => change((list) => { const x = list.find((z) => z.id === v.id); if (x) x.nome = nome.value; }));
       const wi = document.createElement("span"); wi.className = "imp";
@@ -319,8 +322,9 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
     if (!nome) { err.textContent = "Scrivi il nome della voce."; err.hidden = false; return; }
     if (isNaN(imp) || imp < 0) { err.textContent = "Scrivi un importo valido, ad esempio 25,50."; err.hidden = false; return; }
     const cat = catScelta;
-    change((list) => list.push({ id: uid(), nome, importo: round(imp), cat }));
-    render();
+    const nid = uid();
+    change((list) => list.push({ id: nid, nome, importo: round(imp), cat }));
+    nuovaRiga = nid; render();
     $(prefix + "a-nome")?.focus();
   };
   // il modulo si apre solo quando serve
@@ -328,11 +332,11 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false } 
   apri.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Aggiungi una spesa';
   const aperto = addAperto === prefix || !voci.length;
   form.hidden = !aperto; apri.hidden = aperto;
-  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; $(prefix + "a-nome")?.focus(); };
+  apri.onclick = () => { addAperto = prefix; form.hidden = false; apri.hidden = true; aprire(form); $(prefix + "a-nome")?.focus({ preventScroll: true }); };
   // Annulla (o Esc): svuota e chiude il modulo senza aggiungere niente
   const chiudiForm = () => {
-    form.reset(); form.querySelector(".err").hidden = true;
-    addAperto = null; form.hidden = true; apri.hidden = false; apri.focus();
+    form.reset(); form.querySelector(".err").hidden = true; addAperto = null;
+    chiudi(form, () => { form.hidden = true; apri.hidden = false; apri.focus(); });
   };
   form.querySelector("[data-annulla]").onclick = chiudiForm;
   form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiForm(); } });
@@ -357,7 +361,7 @@ function formula(m, c, extraNome) {
 function hero(m, c, extraNome, { conTitolo = false } = {}) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
   s.innerHTML = `${conTitolo ? "" : '<div class="label">Resto in tasca</div>'}
-    <div class="hero-row"><div class="big${c.resto < 0 ? " neg" : ""}" data-live="resto">${eur(c.resto)}</div>
+    <div class="hero-row"><div class="big${c.resto < 0 ? " neg" : ""}" data-live="resto" data-k="resto-mesi" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</div>
     <div class="chip" data-k="${statoResto(c.resto, state.piano.soglia)}" data-live="chip">${testoResto(c.resto, state.piano.soglia)}</div></div>
     <div class="formula" data-live="formula">${formula(m, c, extraNome)}</div>
     <div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div class="legend" data-live="legend"></div>`;
@@ -519,7 +523,7 @@ function chartHtml(d) {
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
-  return `<div class="ya-head"><div><small>Entrate</small><b>${eur0(entrate)}</b></div><div><small>Spese</small><b>${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos">${eur0(parte)}</b></div></div>
+  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b></div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
@@ -568,7 +572,7 @@ function renderDeposito(v) {
   card.innerHTML = `<p class="hint card-hint">Ogni tasso vale dal suo mese fino al successivo.</p>`;
   if (!periodi.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessun tasso: aggiungi il primo qui sotto.</div>');
   periodi.forEach((p) => {
-    const r = document.createElement("div"); r.className = "row periodo";
+    const r = document.createElement("div"); r.className = "row periodo"; r.dataset.riga = p.id;
     const da = document.createElement("select"); da.id = "p-da-" + p.id; da.setAttribute("aria-label", "Dal mese");
     da.innerHTML = opts.map((id) => `<option value="${id}"${id === p.da ? " selected" : ""}>da ${monthLabel(id)}</option>`).join("");
     da.onchange = () => { p.da = da.value; saveDeposito(); render(); };
@@ -604,15 +608,16 @@ function renderDeposito(v) {
     if (!txt || isNaN(n)) { errT.textContent = "Scrivi il tasso, ad esempio 2,50."; errT.hidden = false; $("pa-t").focus(); return; }
     if (n < 0 || n >= 100) { errT.textContent = "Il tasso deve essere tra 0 e 100."; errT.hidden = false; $("pa-t").focus(); return; }
     if ((dep.periodi || []).some((x) => x.da === da)) { errT.textContent = `C'è già un tasso da ${monthLabel(da)}: cambialo nella sua riga qui sopra.`; errT.hidden = false; return; }
-    dep.periodi = [...(dep.periodi || []), { id: uid(), da, tasso: round(n), nome: $("pa-n").value.trim() }];
-    tassoAperto = false; saveDeposito(); render();
+    const nid = uid();
+    dep.periodi = [...(dep.periodi || []), { id: nid, da, tasso: round(n), nome: $("pa-n").value.trim() }];
+    tassoAperto = false; saveDeposito(); nuovaRiga = nid; render();
   };
-  const chiudiTasso = () => { tassoAperto = false; form.reset(); errT.hidden = true; form.hidden = true; ab.hidden = false; ab.focus(); };
+  const chiudiTasso = () => { tassoAperto = false; form.reset(); errT.hidden = true; chiudi(form, () => { form.hidden = true; ab.hidden = false; ab.focus(); }); };
   form.querySelector("[data-annulla]").onclick = chiudiTasso;
   form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiTasso(); } });
   form.querySelector("#pa-t").addEventListener("input", () => { errT.hidden = true; });
   form.hidden = !tassoAperto; ab.hidden = tassoAperto;
-  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; $("pa-t").focus(); };
+  ab.onclick = () => { tassoAperto = true; form.hidden = false; ab.hidden = true; aprire(form); $("pa-t").focus({ preventScroll: true }); };
   card.append(ab, form);
   v.appendChild(card);
 
@@ -641,7 +646,7 @@ function disegnaDepAnno(tc, ms, d) {
       <div><b>${dep ? "Il conto" : "I risparmi"} nel ${depAnno}</b><small>Come ${dep ? "cresce il saldo" : "crescono"}, mese per mese</small></div></div>`;
   const yb = yearsBar(ms, depAnno, (a) => { depAnno = a; depChartSel = null; render(); }, "dy-");
   tc.appendChild(yb);
-  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>${dep ? "Versato" : "Messo da parte"} nel ${depAnno}</small><b>${eur0(vers)}</b></div>${dep ? `<div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div>` : `<div><small>Prelievi</small><b>${eur0(prel)}</b></div>`}</div>
+  tc.insertAdjacentHTML("beforeend", `<div class="ya-head two"><div><small>${dep ? "Versato" : "Messo da parte"} nel ${depAnno}</small><b data-k="dy-vers" data-n="${vers}" data-f="eur0">${eur0(vers)}</b></div>${dep ? `<div><small>Interessi netti</small><b class="pos">${net >= 0 ? "+" : ""}${eur0(net)}</b></div>` : `<div><small>Prelievi</small><b>${eur0(prel)}</b></div>`}</div>
     <div class="yc-chart dep-chart" id="dep-chart">${depChartHtml(righe)}</div>
     <button type="button" class="yc-link" id="dep-toggle" aria-expanded="${showDepTable}">${showDepTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showDepTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="dep-table"${showDepTable ? "" : " hidden"}>${dep ? depTable(d, depAnno) : risTable(d, depAnno)}</div>`);
@@ -676,9 +681,9 @@ function depHero(d, ms) {
   const dettaglio = dep
     ? `${base ? `<b>${eur0(base)}</b> di partenza + ` : ""}<b>${eur0(d.totVersato)}</b> versati + <b>${eur0(d.totNetto)}</b> di interessi − <b>${eur0(d.totBollo)}</b> di bollo`
     : `${base ? `<b>${eur0(base)}</b> già da parte + ` : ""}<b>${eur0(d.totVersato)}</b> messi da parte`;
-  return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big">${eur(saldoAl(d, oggi))}</div>
+  return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big" data-k="dep-oggi" data-n="${saldoAl(d, oggi)}" data-f="eur">${eur(saldoAl(d, oggi))}</div>
     <div class="hint dh-stima">${modelloVuoto() ? "Stima solo sui mesi che hai compilato" : "Stima dai tuoi conti"}, fino a ${monthLabelLong(oggi < ms[0] ? ms[0] : oggi > fine ? fine : oggi).toLowerCase()}${oggi < ms[0] ? " (i tuoi conti partono da " + monthLabelLong(ms[0]).toLowerCase() + ")" : ""}</div>
-    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b>${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
+    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b data-k="dep-fine" data-n="${d.saldo}" data-f="eur0">${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
 }
 
 function renderRisparmi(v) {
@@ -750,7 +755,7 @@ function renderModello(v) {
   const c = calcMonth(m, p);
   // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
   const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
-  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto">${eur(c.resto)}</b> al mese</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
+  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> al mese</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
   fillBar(rs.querySelector('[data-live="bar"]'), rs.querySelector('[data-live="legend"]'), m, c);
   v.appendChild(rs);
 
@@ -855,7 +860,29 @@ function render() {
   if (view === "mesi") renderMesi(v); else if (view === "deposito") (usaDep() ? renderDeposito : renderRisparmi)(v); else renderModello(v);
   updateGroupSums();
   window.scrollTo(0, y);
+  anima(v);
 }
+/* ---------- Animazioni: solo quando cambi scheda, mese o anno (non mentre modifichi) ---------- */
+let visto = { view: null, sel: null, depAnno: null };
+let nuovaRiga = null; // id della spesa o del tasso appena aggiunti, da evidenziare
+function anima(v) {
+  const cambioVista = view !== visto.view, cambioMese = !cambioVista && view === "mesi" && sel !== visto.sel;
+  const cambioAnnoDep = !cambioVista && view === "deposito" && depAnno !== visto.depAnno;
+  visto = { view, sel, depAnno };
+  pillola(document.querySelector(".tabs"), "tabs");
+  pillola(v.querySelector(".seg.mens"), "mens");
+  contaNumeri(v, { eur, eur0 }, { daZero: cambioVista });
+  if (nuovaRiga) { evidenzia(document.querySelector(`[data-riga="${nuovaRiga}"]`)); nuovaRiga = null; }
+  if (cambioVista) {
+    entra([...v.children]);
+    riempi([...v.querySelectorAll(".bar")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d")]);
+  } else if (cambioMese) {
+    const kids = [...v.children], i = kids.findIndex((el) => el.classList.contains("month-head"));
+    entra(kids.slice(Math.max(0, i)));
+    riempi([...v.querySelectorAll(".bar")]);
+  } else if (cambioAnnoDep) cresci([...v.querySelectorAll(".dep-chart .b-d")]);
+}
+window.addEventListener("resize", () => pillola(document.querySelector(".tabs"), "tabs"));
 const currentMonth = () => (view === "modello"
   ? { stipendio: N(state.piano.stipendio), entrate_extra: N(state.piano.entrate_extra), risparmio: N(state.piano.risparmio), voci: state.piano.voci, prelievo: 0, extra: 0 }
   : monthData(sel, state.piano, state.mesi));
@@ -872,10 +899,11 @@ function refresh() {
     if ($("dep-chart")) $("dep-chart").innerHTML = depChartHtml(d.rows.filter((r) => r.id.startsWith(depAnno)));
     if ($("dep-table")) $("dep-table").innerHTML = usaDep() ? depTable(d, depAnno) : risTable(d, depAnno);
     if ($("goal-status")) $("goal-status").innerHTML = goalStatus(ms);
+    ricorda($("view"));
     return;
   }
   const m = currentMonth(), c = calcMonth(m, state.piano), q = (s) => document.querySelector(`[data-live="${s}"]`);
-  if (q("resto")) { q("resto").textContent = eur(c.resto); q("resto").classList.toggle("neg", c.resto < 0); }
+  if (q("resto")) { fermaNumero(q("resto"), c.resto); q("resto").textContent = eur(c.resto); q("resto").classList.toggle("neg", c.resto < 0); }
   if (q("chip")) { q("chip").dataset.k = statoResto(c.resto, state.piano.soglia); q("chip").textContent = testoResto(c.resto, state.piano.soglia); }
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
@@ -890,6 +918,7 @@ function refresh() {
     if ($("year-card")) { const d = datiAnno(ms); $("yc-chart").innerHTML = chartHtml(d, sel.slice(0, 4)); $("yc-table").innerHTML = tabellaAnno(d, sel.slice(0, 4));
       $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); }
   }
+  ricorda($("view"));
 }
 function softRender() {
   const a = document.activeElement;
@@ -908,6 +937,7 @@ $("brand").innerHTML = LOGO;
 /** Apre o chiude il menu: il pulsante passa da hamburger a X (animazione in CSS). */
 function setMenu(aperto) {
   $("menu").hidden = !aperto;
+  if (aperto) pillola($("temaSeg"), "tema");
   $("menuBtn").setAttribute("aria-expanded", String(aperto));
   $("menuBtn").setAttribute("aria-label", aperto ? "Chiudi menu" : "Apri menu");
 }
@@ -955,6 +985,7 @@ function applicaTema(t) {
   const scuro = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => { m.content = scuro ? "#000000" : "#F2F2F7"; if (t !== "auto") m.removeAttribute("media"); });
   document.querySelectorAll("#temaSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.t === t)));
+  pillola($("temaSeg"), "tema");
 }
 document.querySelectorAll("#temaSeg button").forEach((b) => (b.onclick = () => applicaTema(b.dataset.t)));
 applicaTema(temaAttuale());

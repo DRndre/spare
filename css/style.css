@@ -487,3 +487,13 @@ form.add > .add-tit { grid-column: 1 / -1; order: -1; font-size: .72rem; letter-
 .mod-resto .bar { height: 8px; border-radius: 4px; }
 .field.riga > .err { grid-column: 1 / -1; grid-row: 3; margin-top: 4px; }
 .mh-copia { display: inline-flex; align-items: center; gap: 5px; flex-basis: 100%; justify-content: flex-start; }
+/* ---------- Animazioni ---------- */
+.has-pill { position: relative; }
+.has-pill > .pill { position: absolute; left: 0; top: 2px; bottom: 2px; width: 0; background: var(--seg-on); box-shadow: var(--seg-shadow); border-radius: 8px; z-index: 0; pointer-events: none;
+  transition: transform .3s cubic-bezier(.25, .8, .25, 1), width .3s cubic-bezier(.25, .8, .25, 1); }
+.seg.has-pill > .pill { border-radius: 7px; }
+.has-pill > button { position: relative; z-index: 1; transition: color .2s; }
+.has-pill > button[aria-selected="true"], .has-pill > button[aria-pressed="true"] { background: transparent !important; box-shadow: none !important; }
+.dep-chart .b-d { transform-origin: bottom; }
+@media (prefers-reduced-motion: reduce) { .has-pill > .pill { transition: none; } }
+.row[data-riga] { border-radius: 8px; }

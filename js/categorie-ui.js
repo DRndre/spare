@@ -2,6 +2,7 @@
 import { uid } from "./calc.js";
 import { BASE, ICONE, PALETTE, categorie, badge, icona } from "./categorie.js";
 import { apriFoglio } from "./guida.js";
+import { entra, evidenzia } from "./anim.js";
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
@@ -20,14 +21,14 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
   const f = apriFoglio("Categorie", () => onChange && onChange());
   const chiudi = () => { f.close(); onChange && onChange(); };
 
-  function elenco() {
+  function elenco(nuovaK, anima = true) {
     f.body.innerHTML = "";
     const mie = categorie(state.piano).filter((c) => !c.base);
     f.body.insertAdjacentHTML("beforeend", `<p class="hint flush">Ogni spesa ha una categoria: il colore è quello della barra in <b>Resto in tasca</b>. Puoi creare le tue.</p>`);
     const box = document.createElement("div"); box.className = "card cat-list";
     box.innerHTML = `<div class="cat-sec">Le tue categorie</div>` + (mie.length ? "" : '<div class="empty">Non hai ancora creato categorie.</div>');
     mie.forEach((c) => {
-      const b = document.createElement("button"); b.type = "button"; b.className = "cat-row";
+      const b = document.createElement("button"); b.type = "button"; b.className = "cat-row"; b.dataset.k = c.k;
       const n = usi(state, c.k);
       b.innerHTML = `${badge(c, 30)}<span class="cat-n">${esc(c.n)}<small>${n ? `${n} ${n === 1 ? "spesa" : "spese"}` : "Nessuna spesa"}</small></span><span class="cat-go" aria-hidden="true">›</span>`;
       b.onclick = () => modulo(c);
@@ -43,6 +44,8 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
     f.foot.innerHTML = "";
     const ok = document.createElement("button"); ok.type = "button"; ok.className = "btn primary"; ok.textContent = "Fatto"; ok.onclick = chiudi;
     f.foot.appendChild(ok);
+    if (anima) entra([...f.body.children]);
+    if (nuovaK) evidenzia(f.body.querySelector(`.cat-row[data-k="${nuovaK}"]`));
   }
 
   function modulo(cat) {
@@ -100,7 +103,7 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
       if (i >= 0) lista[i] = dato; else lista.push(dato);
       savePiano();
       if (nuova && !cat) { f.close(); onCreata && onCreata(w.k); onChange && onChange(); return; }
-      elenco();
+      elenco(w.k);
     };
     if (cat) {
       const del = document.createElement("button"); del.type = "button"; del.className = "btn danger-soft"; del.textContent = "Elimina";
@@ -120,6 +123,7 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
       };
       f.foot.append(indietro, del, salva);
     } else f.foot.append(indietro, salva);
+    entra([...f.body.children]);
     if (!cat) ni.focus();
   }
 
@@ -134,5 +138,5 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
     return false;
   }
 
-  if (nuova) modulo(null); else elenco();
+  if (nuova) modulo(null); else elenco(null, false);
 }
