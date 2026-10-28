@@ -46,8 +46,9 @@ function scelta(label, value, opzioni, onCh, { hint = "", id } = {}) {
   return f;
 }
 function spunta(testo, checked, onCh, sotto = "") {
-  const l = document.createElement("label"); l.className = "check";
-  l.innerHTML = `<input type="checkbox"${checked ? " checked" : ""}><span><b>${esc(testo)}</b>${sotto ? `<br><span class="hint">${esc(sotto)}</span>` : ""}</span>`;
+  // Scelta sì/no: interruttore stile iPhone (come nel Modello)
+  const l = document.createElement("label"); l.className = "field riga sw-row";
+  l.innerHTML = `<span class="label">${esc(testo)}</span><input type="checkbox" role="switch" class="sw"${checked ? " checked" : ""}>${sotto ? `<span class="hint">${esc(sotto)}</span>` : ""}`;
   l.querySelector("input").onchange = (e) => onCh(e.target.checked);
   return l;
 }
@@ -158,8 +159,8 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
         campo("Risparmio del mese", w.risparmio, (n) => (w.risparmio = n), { id: "w-risp" }),
         campo("Risparmi che hai già", w.saldo_iniziale, (n) => (w.saldo_iniziale = n), { id: "w-gia", hint: "Vuoto se non ne hai" }),
       ));
-      if (w.mensilita >= 13) b.appendChild(spunta(`Metti da parte anche ${w.mensilita >= 14 ? "tredicesima e quattordicesima" : "la tredicesima"}`, w.extra_al_deposito, (v) => (w.extra_al_deposito = v), "Se non la spunti, restano nel resto in tasca di quei mesi."));
-      b.appendChild(spunta("Tengo i risparmi su un conto deposito", w.usa_deposito, (v) => { w.usa_deposito = v; disegna(); }, "Un conto che ti dà degli interessi. Se non ce l'hai, non spuntare."));
+      if (w.mensilita >= 13) b.appendChild(spunta(`Metti da parte anche ${w.mensilita >= 14 ? "tredicesima e quattordicesima" : "la tredicesima"}`, w.extra_al_deposito, (v) => (w.extra_al_deposito = v), "Se lo spegni, restano nel resto in tasca di quei mesi."));
+      b.appendChild(spunta("Tengo i risparmi su un conto deposito", w.usa_deposito, (v) => { w.usa_deposito = v; disegna(); }, "Un conto che ti dà degli interessi. Se non ce l'hai, lascialo spento."));
       if (w.usa_deposito) {
         if (haTassi) b.appendChild(testo("I tassi del tuo conto li trovi e li cambi nella scheda <b>Deposito</b>.", "note"));
         else {

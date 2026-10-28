@@ -83,6 +83,7 @@ function goalStatus(ms) {
     <div class="hint">${quando}</div>`;
 }
 let tassoAperto = false; // modulo "nuovo tasso" aperto
+let avvisoAperto = false; // interruttore "Avviso resto basso" acceso ma senza cifra
 let goalEdit = false; // modulo dell'obiettivo aperto
 let goalPrima = null;  // valori prima di aprire il modulo (per "Annulla")
 function goalCard(v, ms) {
@@ -729,8 +730,11 @@ function renderModello(v) {
   // Resto in tasca
   const m = { stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), voci: p.voci, prelievo: 0, extra: 0 };
   const c = calcMonth(m, p);
-  v.appendChild(secHead("Resto in tasca"));
-  v.appendChild(hero(m, c, "", { conTitolo: true }));
+  // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
+  const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
+  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto">${eur(c.resto)}</b> al mese</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
+  fillBar(rs.querySelector('[data-live="bar"]'), rs.querySelector('[data-live="legend"]'), m, c);
+  v.appendChild(rs);
 
   // Entrate
   v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
@@ -777,7 +781,6 @@ function renderModello(v) {
   // Risparmio
   v.appendChild(secHead("Risparmio", eur(c.toDep), "risparmio"));
   v.appendChild(moneyField(T().rispBreve, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp", cls: "riga", hint: "Ogni mese" }));
-  v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
 
   // Spese
   vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true });
@@ -801,7 +804,24 @@ function renderModello(v) {
     savePiano(); render();
   };
   v.appendChild(per);
-  v.appendChild(moneyField("Avviso resto basso", N(p.soglia), (n) => { p.soglia = n; savePiano(); }, { id: "t-soglia", cls: "riga", hint: "Se il resto in tasca scende sotto questa cifra. 0 = mai" }));
+  v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
+
+  // Avviso resto basso: interruttore; acceso chiede una cifra obbligatoria (soglia 0 = spento)
+  const avvisoOn = N(p.soglia) > 0 || avvisoAperto;
+  v.appendChild(switchRow("t-avviso", "Avviso resto basso", avvisoOn ? "Ti avvisa se il resto in tasca scende sotto la cifra" : "Spento", avvisoOn, (x) => {
+    if (x) { avvisoAperto = true; render(); $("t-soglia")?.focus(); }
+    else { avvisoAperto = false; if (N(p.soglia)) { p.soglia = 0; savePiano(); } render(); }
+  }));
+  if (avvisoOn) {
+    const fsg = moneyField("Avvisami sotto", N(p.soglia), (n) => { const x = n > 0 ? n : 0; if (x !== N(p.soglia)) { p.soglia = x; savePiano(); } }, { id: "t-soglia", cls: "riga" });
+    const inp = fsg.querySelector("input"), err = document.createElement("span");
+    err.className = "err"; err.textContent = "Scrivi una cifra, ad esempio 300."; err.hidden = true; fsg.appendChild(err);
+    inp.placeholder = "es. 300"; if (!(N(p.soglia) > 0)) inp.value = "";
+    const controlla = () => { const n = parseNum(inp.value); err.hidden = !isNaN(n) && n > 0; if (!err.hidden && N(p.soglia)) { p.soglia = 0; savePiano(); refresh(); } };
+    inp.addEventListener("input", controlla);
+    inp.addEventListener("blur", () => { controlla(); if (!(N(p.soglia) > 0)) inp.value = ""; });
+    v.appendChild(fsg);
+  }
 }
 
 /* ---------- Render ---------- */
@@ -813,6 +833,7 @@ function render() {
   if (empty) { renderOnboarding(v); return; }
   document.querySelector('.tabs button[data-v="deposito"]').textContent = T().tab;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
+  if (view !== "modello") avvisoAperto = false;
   if (view === "mesi") renderMesi(v); else if (view === "deposito") (usaDep() ? renderDeposito : renderRisparmi)(v); else renderModello(v);
   updateGroupSums();
   window.scrollTo(0, y);

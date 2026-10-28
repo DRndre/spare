@@ -49,8 +49,16 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   *Tasso nel tempo* (periodi, "+ Aggiungi un cambio di tasso"), *Impostazioni del conto* (saldo di partenza, tasse, bollo),
   *Il tuo anno* (anni, Versato / Interessi netti, grafico a barre verdi del saldo mese per mese, "Vedi la tabella completa").
   Senza deposito (*Risparmi*) stessa struttura: *Messo da parte*, *Obiettivo*, *Impostazioni*, *Il tuo anno* (Messo da parte / Prelievi).
-- **Da fare (chiesto da Andrea):** applicare le stesse regole (titoli sopra i gruppi, etichette corte, sezioni separate)
-  anche al **Modello**.
+- **Scheda Modello** (ordine): titolo "Il mese tipo" (a destra quanti mesi personalizzati), riga piccola
+  "Ti restano X € al mese" con barra sottile (niente riquadro grande: quello è in Mesi), *Entrate* (Stipendio, Entrate extra),
+  *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
+  *Risparmio* (riga a tutta larghezza), *Spese*, *Impostazioni* (Dal mese / Fino a, interruttore "Uso un conto deposito",
+  interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
+  spegnendolo la cifra si cancella).
+- Regole di design: scelte sì/no = **interruttore** stile iPhone (`switchRow`, classe `.sw`), anche nella configurazione guidata;
+  scelte da un elenco = spunta. Un campo da solo = riga a tutta larghezza (`moneyField` con `cls: "riga"`).
+  Moduli per aggiungere (spesa, tasso) = riquadro grigio arrotondato dentro la scheda, con titolo ("Nuova spesa", "Nuovo tasso"),
+  pulsanti Annulla / Aggiungi, campi obbligatori con messaggio rosso; Esc chiude. Obiettivo: Annulla, "Elimina obiettivo".
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
   (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
   negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").
