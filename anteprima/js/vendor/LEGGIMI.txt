@@ -1,0 +1,8 @@
+supabase.js = @supabase/supabase-js 2.117.3 (licenza MIT, https://github.com/supabase/supabase-js),
+raccolto in un file unico con esbuild, così l'app non dipende da siti esterni per caricarlo.
+
+Per aggiornarlo (da un computer con Node):
+  npm i @supabase/supabase-js@VERSIONE esbuild
+  echo 'export { createClient } from "@supabase/supabase-js";' > entry.js
+  npx esbuild entry.js --bundle --format=esm --minify --platform=browser --target=es2020 --legal-comments=eof --outfile=supabase.js
+poi copia supabase.js qui e aumenta VERSION in sw.js.
