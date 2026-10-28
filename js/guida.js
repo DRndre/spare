@@ -236,6 +236,7 @@ const AIUTO = [
   ["Deposito o Risparmi", "Se usi un conto deposito, la scheda <b>Deposito</b> stima gli interessi: in <b>Tasso nel tempo</b> aggiungi una riga ogni volta che cambia il tasso o cambi banca. Se non hai un conto deposito, la scheda si chiama <b>Risparmi</b> e conta solo quanto metti da parte. Lo scegli nel Modello."],
   ["Obiettivo", "Nella scheda Deposito o Risparmi puoi scrivere una cifra da raggiungere (es. la caparra della casa): vedi a che punto sei e in che mese ci arrivi continuando così."],
   ["Telefono e computer", "Entra con la stessa email e password: i dati sono gli stessi ovunque. Sul telefono puoi aggiungere Spare alla schermata Home (iPhone: Safari → Condividi → Aggiungi alla schermata Home). Il tema chiaro o scuro si sceglie dal menu ☰."],
+  ["Sicurezza", "Dal menu ☰ → <b>Sicurezza</b> vedi quando è stato fatto l'ultimo accesso e puoi uscire da tutti i dispositivi. Puoi anche attivare la <b>verifica in due passaggi</b>: oltre alla password, entrando da un dispositivo nuovo ti chiede un codice dall'app di autenticazione del telefono. Collega almeno due app (o due dispositivi): se le perdi tutte, la verifica si toglie solo dal pannello di Supabase (Authentication → Users)."],
   ["Backup e privacy", "I tuoi dati li vedi solo tu. Dal menu ☰ puoi esportare un backup (un file) e reimportarlo quando vuoi."],
 ];
 export function apriAiuto() {
