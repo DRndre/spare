@@ -8,7 +8,7 @@ import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
 } from "./store.js";
 import { LOGO } from "./logo.js";
-import { categorie, catInfo, badge, icona } from "./categorie.js";
+import { categorie, catInfo, badge, icona, PALETTE } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
@@ -18,7 +18,7 @@ import { pillola, entra, riempi, allunga, cresci, contaNumeri, fermaNumero, rico
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
-let view = ["mesi", "deposito", "modello"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "mesi";
+let view = ["riepilogo", "mesi", "deposito", "modello"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "riepilogo";
 let sel = null;
 let needsRender = false;
 let empty = false;
@@ -951,17 +951,142 @@ function renderModello(v) {
   }
 }
 
+/* ---------- Riepilogo (anteprima) ---------- */
+// Altri investimenti: nell'anteprima solo su questo dispositivo (nell'app vera andrebbero nel database)
+const INV_KEY = "spare-anteprima-investimenti";
+function leggiInv() { try { const x = JSON.parse(localStorage.getItem(INV_KEY) || "[]"); return Array.isArray(x) ? x : []; } catch { return []; } }
+function scriviInv(l) { try { localStorage.setItem(INV_KEY, JSON.stringify(l)); } catch { /* niente */ } }
+let invAperto = false;
+function vaiA(nuova, mese) { view = nuova; if (mese) sel = mese; history.replaceState(null, "", "#" + nuova); render(); window.scrollTo(0, 0); }
+
+function renderRiepilogo(v) {
+  const ms = months(), oggi = meseCorrente(), rif = meseRif(), anno = rif.slice(0, 4), dep = usaDep();
+  const d = simula(ms), suConto = saldoAl(d, oggi);
+  const inv = leggiInv(), totInv = round(inv.reduce((a, x) => a + N(x.valore), 0)), tot = round(suConto + totInv);
+
+  // Quello che hai
+  const tb = document.createElement("div"); tb.className = "toolbar month-head";
+  tb.innerHTML = `<h2>Il tuo quadro</h2><span class="mh-right hint">Stima a ${monthLabelLong(oggi).toLowerCase()}</span>`;
+  v.appendChild(tb);
+  v.appendChild(secHead("Quello che hai"));
+  const parti = [{ n: dep ? "Conto deposito" : "Risparmi", v: suConto, c: "var(--c-risp)" }].concat(inv.map((x, i) => ({ n: x.nome, v: N(x.valore), c: PALETTE[(i * 3) % PALETTE.length] }))).filter((x) => x.v > 0);
+  const base = parti.reduce((a, x) => a + x.v, 0) || 1;
+  const h = document.createElement("section"); h.className = "hero rp-hero";
+  h.innerHTML = `<div class="big" data-k="rp-tot" data-n="${tot}" data-f="eur0">${eur0(tot)}</div>
+    <div class="hint">${dep ? "Conto deposito" : "Risparmi"}${inv.length ? " e altri investimenti" : ""}. Il conto corrente non è compreso.</div>
+    ${parti.length ? `<div class="bar">${parti.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur0(x.v)}"></span>`).join("")}</div>
+    <div class="rp-leg">${parti.map((x) => `<span><i style="background:${x.c}"></i>${esc(x.n)} <b>${eur0(x.v)}</b></span>`).join("")}</div>` : ""}`;
+  v.appendChild(h);
+
+  // Altri investimenti (scritti a mano)
+  v.appendChild(secHead("Altri investimenti", totInv ? eur0(totInv) : ""));
+  const ic = document.createElement("section"); ic.className = "card spese";
+  if (!inv.length) ic.insertAdjacentHTML("beforeend", '<div class="empty">ETF, azioni, fondi, buoni postali… Scrivi quanto valgono oggi e aggiornali quando vuoi.</div>');
+  inv.forEach((x) => {
+    const r = document.createElement("div"); r.className = "row"; r.dataset.riga = x.id;
+    const ni = document.createElement("input"); ni.type = "text"; ni.value = x.nome; ni.setAttribute("aria-label", "Nome investimento");
+    ni.addEventListener("input", () => { x.nome = ni.value; scriviInv(inv); });
+    ni.addEventListener("blur", () => render());
+    const wi = document.createElement("span"); wi.className = "imp";
+    const vi = document.createElement("input"); vi.type = "text"; vi.inputMode = "decimal"; vi.value = fmt.format(N(x.valore)); vi.setAttribute("aria-label", "Valore di " + x.nome);
+    vi.addEventListener("input", () => { const n = parseNum(vi.value); if (!isNaN(n) && n >= 0) { x.valore = round(n); scriviInv(inv); } });
+    vi.addEventListener("blur", () => render());
+    wi.append(vi, Object.assign(document.createElement("span"), { className: "eur", textContent: "€" }));
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.setAttribute("aria-label", "Elimina " + x.nome);
+    del.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    del.onclick = () => confirmInline(r, `Eliminare “${x.nome}”?`, "Elimina", () => { scriviInv(inv.filter((z) => z.id !== x.id)); render(); });
+    r.append(ni, wi, del); ic.appendChild(r);
+  });
+  const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off"; form.hidden = !invAperto;
+  form.innerHTML = `<div class="add-tit">Nuovo investimento</div><input class="n" type="text" id="inv-nome" placeholder="Nome (es. ETF mondo)" aria-label="Nome"><input type="text" inputmode="decimal" id="inv-val" placeholder="Valore oggi" aria-label="Valore di oggi"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="err" hidden></div>`;
+  const ab = document.createElement("button"); ab.type = "button"; ab.className = "add-open"; ab.hidden = invAperto;
+  ab.innerHTML = `${icona("plus", "currentColor", 16)} Aggiungi un investimento`;
+  ab.onclick = () => { invAperto = true; form.hidden = false; ab.hidden = true; aprire(form); $("inv-nome").focus({ preventScroll: true }); };
+  const chiudiInv = () => { invAperto = false; form.reset(); form.querySelector(".err").hidden = true; chiudi(form, () => { form.hidden = true; ab.hidden = false; }); };
+  form.querySelector("[data-annulla]").onclick = chiudiInv;
+  form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiInv(); } });
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+    const nome = $("inv-nome").value.trim(), val = parseNum($("inv-val").value), err = form.querySelector(".err");
+    if (!nome) { err.textContent = "Scrivi il nome, per esempio \"ETF mondo\"."; err.hidden = false; return; }
+    if (isNaN(val) || val < 0) { err.textContent = "Scrivi quanto vale oggi, ad esempio 2.500."; err.hidden = false; return; }
+    const id = uid(); scriviInv([...inv, { id, nome, valore: round(val) }]); invAperto = false; nuovaRiga = id; render();
+  };
+  ic.append(ab, form);
+  ic.insertAdjacentHTML("beforeend", '<p class="hint card-hint rp-nota">Nell\'anteprima gli investimenti restano solo su questo dispositivo.</p>');
+  v.appendChild(ic);
+
+  // Questo mese
+  const md = monthData(rif, state.piano, state.mesi), c = calcMonth(md, state.piano);
+  v.appendChild(secHead(monthLabelLong(rif)));
+  const tl = document.createElement("div"); tl.className = "rp-tiles";
+  [["Resto in tasca", c.resto, c.resto < 0 ? " neg" : ""], ["Spese", c.spese, ""], [T().col, round(c.toDep - N(md.prelievo)), " pos"]].forEach(([t, n, cl], i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "rp-tile";
+    b.innerHTML = `<small>${t}</small><b class="${cl}" data-k="rp-m${i}" data-n="${n}" data-f="eur0">${eur0(n)}</b>`;
+    b.onclick = () => vaiA("mesi", rif); tl.appendChild(b);
+  });
+  v.appendChild(tl);
+
+  // L'anno in breve
+  const ma = ms.filter((id) => id.startsWith(anno)), da = datiAnno(ma);
+  const ent = round(da.reduce((a, x) => a + x.cc.entrate, 0)), spe = round(da.reduce((a, x) => a + x.cc.spese, 0)), par = round(da.reduce((a, x) => a + x.parte, 0));
+  const interessi = round(d.rows.filter((r) => r.id.startsWith(anno)).reduce((a, r) => a + r.netto - r.bollo, 0));
+  const perCat = {};
+  ma.forEach((id) => monthData(id, state.piano, state.mesi).voci.forEach((x) => { const k = ck(x.cat); perCat[k] = (perCat[k] || 0) + N(x.importo); }));
+  const top = Object.entries(perCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  v.appendChild(secHead("Il tuo " + anno));
+  const yc = document.createElement("section"); yc.className = "card pad rp-anno";
+  yc.innerHTML = `<div class="ya-head ${dep ? "four" : ""}"><div><small>Entrate</small><b data-k="rp-ent" data-n="${ent}" data-f="eur0">${eur0(ent)}</b></div><div><small>Spese</small><b data-k="rp-spe" data-n="${spe}" data-f="eur0">${eur0(spe)}</b></div><div><small>${T().col}</small><b class="pos" data-k="rp-par" data-n="${par}" data-f="eur0">${eur0(par)}</b></div>${dep ? `<div><small>Interessi</small><b class="pos">+${eur0(interessi)}</b></div>` : ""}</div>
+    ${top.length ? `<div class="rp-sec">Dove spendi di più</div>${top.map(([k, val]) => { const ci = catInfo(state.piano, k); return `<div class="ya-row"><span class="ya-ic" style="--cc:${ci.c}">${icona(ci.i, ci.c, 15)}</span><span class="ya-n">${esc(ci.n)}</span><span class="ya-v">${eur0(val)}</span><span class="ya-p">${spe ? Math.round((val / spe) * 100) : 0}%</span></div>`; }).join("")}` : ""}
+    <div class="rp-sec">Resto in tasca mese per mese</div>${andamentoHtml(da, anno)}`;
+  yc.onclick = (e) => { const b = e.target.closest("[data-mese]"); if (b) vaiA("mesi", b.dataset.mese); };
+  v.appendChild(yc);
+
+  // Rate in corso
+  const rate = (state.piano.voci || []).filter((x) => x.da && attivaNel(x, rif));
+  if (rate.length) {
+    const fineUlt = rate.map(fineSpesa).sort().slice(-1)[0], totR = round(rate.reduce((a, x) => a + N(x.importo), 0));
+    v.appendChild(secHead("Rate in corso", eur(totR) + " al mese"));
+    const rc = document.createElement("section"); rc.className = "card pad rp-rate";
+    rc.innerHTML = rate.sort((a, b) => fineSpesa(a).localeCompare(fineSpesa(b))).map((x) => `<div class="ya-row"><span class="ya-n">${esc(x.nome)}</span><span class="ya-v">${eur(N(x.importo))}</span><span class="ya-p">fino a ${meseCorto(fineSpesa(x))}</span></div>`).join("")
+      + `<p class="hint flush">Da ${monthLabelLong(addMonths(fineUlt, 1)).toLowerCase()}, finite tutte, avrai <b>${eur(totR)}</b> in più al mese.</p>`;
+    v.appendChild(rc);
+  }
+
+  // Obiettivo
+  v.appendChild(secHead("Obiettivo"));
+  const gc = document.createElement("section"); gc.className = "card pad goal";
+  if (N(state.deposito.obiettivo) > 0) gc.innerHTML = `<div class="goal-status">${goalStatus(ms)}</div>`;
+  else gc.innerHTML = '<p class="hint flush">Nessun obiettivo. Puoi impostarlo nella scheda ' + T().tab + '.</p>';
+  const gl = document.createElement("button"); gl.type = "button"; gl.className = "link rp-vai"; gl.textContent = N(state.deposito.obiettivo) > 0 ? `Apri ${T().tab}` : "Imposta un obiettivo";
+  gl.onclick = () => vaiA("deposito"); gc.appendChild(gl);
+  v.appendChild(gc);
+}
+/** Piccolo grafico del resto in tasca mese per mese (barre rosse se negativo). Tocca un mese per aprirlo. */
+function andamentoHtml(da, anno) {
+  const tutti = Array.from({ length: 12 }, (_, i) => anno + "-" + String(i + 1).padStart(2, "0"));
+  const by = Object.fromEntries(da.map((x) => [x.id, x]));
+  const max = Math.max(1, ...da.map((x) => Math.abs(x.resto)));
+  const oggi = meseCorrente();
+  return `<div class="rp-chart">${tutti.map((id) => {
+    const x = by[id];
+    if (!x) return '<span class="rp-col off"></span>';
+    const h = Math.max(4, (Math.abs(x.resto) / max) * 100);
+    return `<button type="button" class="rp-col${x.resto < 0 ? " neg" : ""}${id === oggi ? " oggi" : ""}" data-mese="${id}" title="${monthLabelLong(id)}: ${eur0(x.resto)}" aria-label="${monthLabelLong(id)}: ${eur0(x.resto)}"><span style="height:${h}%"></span></button>`;
+  }).join("")}</div><div class="rp-x">${tutti.map((id) => `<span${id === oggi ? ' class="oggi"' : ""}>${MESI_NOMI[Number(id.slice(5)) - 1][0]}</span>`).join("")}</div>`;
+}
+
 /* ---------- Render ---------- */
 function render() {
   needsRender = false;
   const v = $("view"), y = window.scrollY;
   v.innerHTML = "";
-  document.title = empty ? SLOGAN : "Spare | " + (view === "mesi" ? "Mesi" : view === "modello" ? "Modello" : T().tab);
+  document.title = empty ? SLOGAN : "Spare | " + (view === "riepilogo" ? "Riepilogo" : view === "mesi" ? "Mesi" : view === "modello" ? "Modello" : T().tab);
   if (empty) { renderOnboarding(v); return; }
   document.querySelector('.tabs button[data-v="deposito"]').textContent = T().tab;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
   if (view !== "modello") avvisoAperto = false;
-  if (view === "mesi") renderMesi(v); else if (view === "deposito") (usaDep() ? renderDeposito : renderRisparmi)(v); else renderModello(v);
+  if (view === "riepilogo") renderRiepilogo(v); else if (view === "mesi") renderMesi(v); else if (view === "deposito") (usaDep() ? renderDeposito : renderRisparmi)(v); else renderModello(v);
   updateGroupSums();
   window.scrollTo(0, y);
   anima(v);
@@ -979,7 +1104,7 @@ function anima(v) {
   if (nuovaRiga) { evidenzia(document.querySelector(`[data-riga="${nuovaRiga}"]`)); nuovaRiga = null; }
   if (cambioVista) {
     entra([...v.children]);
-    riempi([...v.querySelectorAll(".bar")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d")]);
+    riempi([...v.querySelectorAll(".bar")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d, .rp-col > span")]);
   } else if (cambioMese) {
     const kids = [...v.children], i = kids.findIndex((el) => el.classList.contains("month-head"));
     entra(kids.slice(Math.max(0, i)));

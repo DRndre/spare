@@ -536,3 +536,31 @@ form.add .per-conf { order: 5; display: flex; flex-wrap: wrap; gap: 8px; align-i
 form.add .per-conf > span { flex-basis: 100%; }
 form.add input.sw { width: 51px; height: 31px; padding: 0; border: 0; border-radius: 999px; background: var(--seg-bg); }
 form.add input.sw:checked { background: var(--accent); }
+/* Riepilogo */
+.rp-hero { display: flex; flex-direction: column; gap: 10px; }
+.rp-leg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; color: var(--muted); }
+.rp-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-leg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.rp-leg b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.rp-nota { margin-bottom: 12px; }
+.rp-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rp-tile { background: var(--surface); border: 0; border-radius: 14px; padding: 12px 14px; text-align: left; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-tile small { color: var(--muted); font-size: .72rem; font-weight: 600; }
+.rp-tile b { font-size: 1.2rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-tile b.neg { color: var(--bad); } .rp-tile b.pos { color: var(--good); }
+.rp-anno { display: flex; flex-direction: column; gap: 6px; }
+.ya-head.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 560px) { .ya-head.four { grid-template-columns: 1fr 1fr; row-gap: 10px; } .rp-tile b { font-size: 1.05rem; } }
+.rp-sec { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-top: 12px; }
+.rp-chart { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; height: 90px; align-items: end; margin-top: 6px; }
+.rp-col { height: 100%; border: 0; background: transparent; padding: 0; display: flex; align-items: flex-end; cursor: pointer; }
+.rp-col span { display: block; width: 100%; background: var(--accent); border-radius: 4px 4px 2px 2px; opacity: .85; transform-origin: bottom; }
+.rp-col.neg span { background: var(--bad); }
+.rp-col.oggi span { opacity: 1; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--accent); }
+.rp-col.off { height: 4px; background: var(--seg-bg); border-radius: 2px; align-self: end; }
+.rp-x { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; text-align: center; font-size: .7rem; color: var(--muted); }
+.rp-x .oggi { color: var(--accent); font-weight: 700; }
+.rp-rate { display: flex; flex-direction: column; gap: 4px; }
+.rp-rate .ya-p { width: auto; white-space: nowrap; }
+.rp-vai { align-self: flex-end; margin-top: 8px; }
+.goal .rp-vai { display: block; margin-left: auto; }
