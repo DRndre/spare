@@ -549,24 +549,3 @@ form.add input.sw:checked { background: var(--accent); }
 .field.buoni .bp-x { color: var(--muted); }
 .field.buoni .eur { margin-left: auto; }
 .field.buoni .bp-fisso { font-family: var(--f-num); font-size: 1.15rem; font-weight: 500; font-variant-numeric: tabular-nums; padding: 5px 0; }
-/* Voce automatica dei buoni pasto */
-.row.auto { color: var(--muted); }
-.row.auto .auto-n { padding: 5px 0; color: var(--fg); }
-.row.auto .auto-i { justify-content: flex-end; font-family: var(--f-num); padding-right: 0; color: var(--fg); }
-.row.auto .auto-lock { display: grid; place-items: center; color: var(--muted); }
-/* Borsellino dei buoni pasto */
-.bp-wallet { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface); border-radius: 14px; padding: 10px 16px; margin-top: -8px; }
-.bp-wallet .bp-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
-.bp-wallet .bp-t { display: flex; flex-direction: column; }
-.bp-wallet small { color: var(--muted); font-size: .78rem; }
-.bp-wallet .bp-d { display: flex; flex-direction: column; align-items: flex-end; }
-.bp-wallet .bp-d b { font-variant-numeric: tabular-nums; }
-.bp-wallet .bp-d.neg b { color: var(--bad); }
-.bp-wallet .bp-warn { grid-column: 1 / -1; color: var(--bad); font-size: .8rem; }
-.bp-tag { background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; gap: 4px; }
-.f-bp { color: var(--muted); }
-.yc-bp .ya-n small { display: block; color: var(--muted); font-size: .76rem; font-weight: 400; }
-.per-edit .field.riga { background: var(--surface); }
-#yc-buoni .yc-bp { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 62px; align-items: center; gap: 8px; padding: 10px 2px 4px; margin-top: 6px; border-top: 1px solid var(--line); }
-#yc-buoni .ya-p { font-size: .8rem; color: var(--muted); text-align: right; }
-#yc-buoni .ya-v { font-variant-numeric: tabular-nums; }

@@ -2,7 +2,7 @@
 import {
   N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
-  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, saldoBuoni,
+  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
@@ -142,8 +142,6 @@ function goalCard(v, ms) {
 function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ? ms[0] : o > ms[ms.length - 1] ? ms[ms.length - 1] : o; }
 /** Spese del Modello attive nel mese di riferimento (quelle a tempo finite o non iniziate non contano). */
 const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
-/** I buoni pasto sono attivi (valore del buono impostato nel Modello)? */
-const buoniAttivi = () => N(state.piano.buoni_valore) > 0;
 const meseCorto = (id) => monthLabel(id).toLowerCase();
 /** Testo dell'etichetta di una spesa a tempo. */
 function testoPeriodo(v) {
@@ -317,23 +315,6 @@ function numField(label, value, onVal, { hint = "", id, unit = "" } = {}) {
   return f;
 }
 
-/** Buoni pasto nell'anno: ricevuti, usati e quanti ne restano a fine anno. */
-function buoniAnnoHtml(anno) {
-  if (!buoniAttivi()) return "";
-  const tutti = saldoBuoni(months().filter((x) => x.slice(0, 4) <= anno), state.piano, state.mesi), a = tutti.filter((x) => x.id.startsWith(anno));
-  if (!a.length) return "";
-  const ric = round(a.reduce((t, x) => t + x.ricevuti, 0)), us = round(a.reduce((t, x) => t + x.usati, 0)), fine = a[a.length - 1].daParte;
-  return `<div class="yr-head yc-bp"><span class="ya-ic" style="--cc:var(--accent)">${icona("ticket", "var(--accent)", 15)}</span><span class="ya-n">Buoni pasto<small>Ricevuti ${eur0(ric)} · usati ${eur0(us)}</small></span><span class="ya-v${fine < 0 ? " neg" : ""}">${eur0(fine)}</span><span class="ya-p">da parte</span></div>`;
-}
-/** Borsellino dei buoni pasto del mese: ricevuti, usati, da parte (accumulati). */
-function borsellinoHtml(id) {
-  const ms = months(), r = saldoBuoni(ms.filter((x) => x <= id), state.piano, state.mesi).pop();
-  if (!r) return "";
-  const neg = r.daParte < 0;
-  return `<span class="bp-ic">${icona("ticket", "currentColor", 16)}</span><span class="bp-t"><b>Buoni pasto</b><small>Ricevuti ${eur(r.ricevuti)} · usati ${eur(r.usati)}</small></span>
-    <span class="bp-d${neg ? " neg" : ""}"><small>${neg ? "Mancano" : "Da parte"}</small><b>${eur(Math.abs(r.daParte))}</b></span>
-    ${neg ? '<span class="bp-warn">Hai segnato più spese con i buoni di quanti buoni hai: controlla le spese segnate.</span>' : ""}`;
-}
 /** Buoni pasto in un solo riquadro: [20] buoni × [6,50] € = 130,00 €. Senza onValore il valore è fisso (dal Modello). */
 function buoniField(num, valore, onNum, onValore, { id } = {}) {
   const f = document.createElement("div"); f.className = "field buoni";
@@ -395,27 +376,25 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
         // spesa a tempo: etichetta sotto il nome e pulsante per impostare / cambiare il periodo
         r.classList.add("con-per");
         const pb = document.createElement("button"); pb.type = "button"; pb.className = "del per-btn" + (v.da ? " on" : "");
-        pb.setAttribute("aria-label", "Opzioni di " + v.nome); pb.title = buoniAttivi() ? "Periodo e buoni pasto" : v.da ? "Cambia il periodo" : "Solo per un periodo (es. a rate)";
-        pb.innerHTML = icona(buoniAttivi() ? "ellipsis" : "calendar", "currentColor", 16);
+        pb.setAttribute("aria-label", (v.da ? "Cambia il periodo di " : "Imposta un periodo per ") + v.nome); pb.title = v.da ? "Cambia il periodo" : "Solo per un periodo (es. a rate)";
+        pb.innerHTML = icona("calendar", "currentColor", 16);
         const apriPer = () => {
-          // opzioni della spesa: solo per un periodo (a rate) e, se ci sono, pagata con i buoni pasto
           if (r.querySelector(".per-edit")) { r.querySelector(".per-edit").remove(); return; }
-          const w = { da: v.da || meseRif(), rate: v.rate || 0 }; let perOn = !!v.da, bOn = !!v.buoni;
+          const w = { da: v.da || meseRif(), rate: v.rate || 0 };
           const ed = document.createElement("div"); ed.className = "per-edit";
           const err = document.createElement("div"); err.className = "err"; err.hidden = true;
-          const campi = campiPeriodo(w, prefix + "pe-" + v.id, () => { err.hidden = true; }); campi.hidden = !perOn;
-          ed.appendChild(switchRow(prefix + "pe-sw-" + v.id, "Solo per un periodo", "Per esempio un acquisto a rate", perOn, (x) => { perOn = x; campi.hidden = !x; if (x) aprire(campi); }));
-          ed.appendChild(campi);
-          if (buoniAttivi()) ed.appendChild(switchRow(prefix + "pe-bp-" + v.id, "Pagata con i buoni pasto", "Non tocca il resto in tasca: esce dai buoni", bOn, (x) => { bOn = x; }));
+          ed.appendChild(campiPeriodo(w, prefix + "pe-" + v.id, () => { err.hidden = true; }));
           const act = document.createElement("div"); act.className = "per-act";
+          if (v.da) {
+            const tg = document.createElement("button"); tg.type = "button"; tg.className = "link danger-link"; tg.textContent = "Togli il periodo";
+            tg.onclick = () => { change((list) => { const x = list.find((z) => z.id === v.id); if (x) { delete x.da; delete x.rate; } }); render(); };
+            act.appendChild(tg);
+          }
           const an = document.createElement("button"); an.type = "button"; an.className = "link"; an.textContent = "Annulla"; an.onclick = () => ed.remove();
           const ok = document.createElement("button"); ok.type = "button"; ok.className = "link"; ok.textContent = "Fatto";
           ok.onclick = () => {
-            if (perOn && !w.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; campi.querySelector("input").focus(); return; }
-            change((list) => { const x = list.find((z) => z.id === v.id); if (!x) return;
-              if (perOn) { x.da = w.da; x.rate = w.rate; } else { delete x.da; delete x.rate; }
-              if (bOn) x.buoni = true; else delete x.buoni; });
-            render();
+            if (!w.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; ed.querySelector("input").focus(); return; }
+            change((list) => { const x = list.find((z) => z.id === v.id); if (x) { x.da = w.da; x.rate = w.rate; } }); render();
           };
           act.append(an, ok); ed.append(err, act); r.appendChild(ed); aprire(ed);
         };
@@ -428,15 +407,6 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
           r.appendChild(tag);
         }
       } else {
-        if (buoniAttivi()) {
-          // nel mese: un tocco per dire "pagata con i buoni pasto"
-          r.classList.add("con-per");
-          const tb = document.createElement("button"); tb.type = "button"; tb.className = "del per-btn" + (v.buoni ? " on" : "");
-          tb.setAttribute("aria-pressed", String(!!v.buoni)); tb.setAttribute("aria-label", "Pagata con i buoni pasto: " + v.nome); tb.title = "Pagata con i buoni pasto";
-          tb.innerHTML = icona("ticket", "currentColor", 16);
-          tb.onclick = () => { change((list) => { const x = list.find((z) => z.id === v.id); if (x) { if (x.buoni) delete x.buoni; else x.buoni = true; } }); render(); };
-          r.append(tb);
-        }
         r.append(del);
         if (mese && v.da && fineSpesa(v)) {
           // in un mese: "Rata 3 di 6 · fino a apr 2027"
@@ -446,10 +416,6 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
           r.classList.add("con-tag"); r.appendChild(tag);
         }
       }
-      if (v.buoni) {
-        const bt = document.createElement("span"); bt.className = "per-tag ro bp-tag"; bt.innerHTML = `${icona("ticket", "currentColor", 12)} Con i buoni`;
-        r.classList.add("con-tag"); r.appendChild(bt);
-      }
       g.appendChild(r);
     });
     card.appendChild(g);
@@ -458,12 +424,6 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   form.innerHTML = `<div class="add-tit">Nuova spesa</div><input class="n" type="text" id="${prefix}a-nome" placeholder="Nome (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
   const pick = form.querySelector(".cat-pick");
   let catScelta = addCat;
-  // Pagata con i buoni pasto (se ci sono)
-  let bpOn = false;
-  if (buoniAttivi()) {
-    const swb = switchRow(prefix + "a-bp", "Pagata con i buoni pasto", "Non tocca il resto in tasca: esce dai buoni", false, (x) => { bpOn = x; });
-    swb.classList.add("per-sw"); form.querySelector(".cat-pick").after(swb);
-  }
   // Modello: "Solo per un periodo" (spesa a rate)
   const wPer = { da: meseRif(), rate: 0 }; let perOn = false, perBox = null;
   if (periodi) {
@@ -495,7 +455,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     if (perOn && !wPer.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; perBox?.querySelector("input").focus(); return; }
     const cat = catScelta;
     const nid = uid();
-    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn ? { buoni: true } : {}) };
+    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}) };
     const aggiungi = (ancheMesi) => {
       change((list) => list.push(nuova));
       if (ancheMesi) mesiPersNelPeriodo(nuova).forEach((id) => { state.mesi[id].voci.push({ ...nuova, id: uid() }); saveMese(id); });
@@ -540,9 +500,10 @@ function secHead(titolo, totale = "", live = "") {
 
 function formula(m, c, extraNome) {
   let f = `<b>${eur(m.stipendio)}</b> stipendio`;
+  if (N(m.buoni)) f += ` + <b>${eur(m.buoni)}</b> buoni pasto`;
   if (N(m.entrate_extra)) f += ` + <b>${eur(m.entrate_extra)}</b> entrate extra`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
-  return f + ` − spese <b>${eur(c.speseSoldi)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>` + (c.speseBuoni ? ` <span class="f-bp">(${eur(c.speseBuoni)} pagati con i buoni)</span>` : "");
+  return f + ` − spese <b>${eur(c.spese)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>`;
 }
 function hero(m, c, extraNome, { conTitolo = false } = {}) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
@@ -555,7 +516,7 @@ function hero(m, c, extraNome, { conTitolo = false } = {}) {
   return s;
 }
 function fillBar(bar, leg, m, c) {
-  const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k && !v.buoni).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
+  const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
   if (c.toDep > 0) parts.push({ n: T().leg, c: "--c-risp", v: c.toDep });
   const base = Math.max(c.entrate, parts.reduce((a, p) => a + p.v, 0)) || 1;
   bar.innerHTML = ""; leg.innerHTML = "";
@@ -571,7 +532,7 @@ function fillBar(bar, leg, m, c) {
 function ensureMese(id) {
   if (!state.mesi[id]) {
     const t = monthData(id, state.piano, state.mesi);
-    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.filter((v) => !v.auto).map((v) => ({ ...v })) };
+    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
   }
   return state.mesi[id];
 }
@@ -621,7 +582,7 @@ function renderMesi(v) {
     const copia = () => {
       const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
       state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: t.buoni_num, risparmio: t.risparmio, prelievo: t.prelievo,
-        extra: old ? old.extra : null, voci: t.voci.filter((x) => !x.auto).map((x) => ({ ...x, id: uid() })) };
+        extra: old ? old.extra : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
       saveMese(sel); render();
     };
     cb.onclick = () => (m.custom
@@ -642,11 +603,8 @@ function renderMesi(v) {
     fe.appendChild(buoniField(m.buoni_num, vb, (n) => { ensureMese(sel).buoni_num = n; saveMese(sel); }, null, { id: "m-buoni-" + sel }));
   }
   fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Solo questo mese" }));
-  const bpBox = buoniAttivi() ? document.createElement("div") : null;
-  if (bpBox) { bpBox.className = "bp-wallet"; bpBox.id = "bp-wallet"; bpBox.innerHTML = borsellinoHtml(sel); }
   if (ex) fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
   v.appendChild(fe);
-  if (bpBox) v.appendChild(bpBox);
 
   v.appendChild(secHead("Risparmio", eur(round(c.toDep - N(m.prelievo))), "risparmio"));
   const fr = document.createElement("div"); fr.className = "fields";
@@ -686,7 +644,6 @@ function yearCardHtml(ms, anno) {
     <div><b>Il tuo ${anno}</b><small>Dove vanno le entrate dell'anno${d.length < 12 ? ` (${d.length} ${d.length === 1 ? "mese" : "mesi"})` : ""}</small></div></div>
     <div id="yc-chart">${chartHtml(d, anno)}</div>
     <div class="yc-stats" id="yc-stats">${statsAnno(d, anno)}</div>
-    <div id="yc-buoni">${buoniAnnoHtml(anno)}</div>
     <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
 }
@@ -706,8 +663,7 @@ function statsAnno(d) {
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
   // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
-  const buoniA = round(d.reduce((a, x) => a + N(x.cc.buoni), 0)), usatiA = round(d.reduce((a, x) => a + N(x.cc.speseBuoni), 0));
-  const entrate = round(d.reduce((a, x) => a + x.cc.entrate, 0) + buoniA);
+  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), buoniA = round(d.reduce((a, x) => a + N(x.cc.buoni), 0));
   const perCat = {};
   d.forEach((x) => monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo); }));
   const parte = d.reduce((a, x) => a + x.parte, 0), resto = d.reduce((a, x) => a + x.resto, 0);
@@ -718,7 +674,7 @@ function chartHtml(d) {
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
-  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} in buoni</span>` : ""}</div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b>${usatiA ? `<span class="ya-sub">di cui ${eur0(usatiA)} con i buoni</span>` : ""}</div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
+  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} in buoni</span>` : ""}</div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
@@ -1105,8 +1061,6 @@ function refresh() {
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
   if (q("spese")) q("spese").textContent = eur(c.spese);
-  if ($("bp-wallet") && view === "mesi") $("bp-wallet").innerHTML = borsellinoHtml(sel);
-
   if (q("entrate")) q("entrate").textContent = eur(c.entrate);
   if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
   updateGroupSums();
@@ -1115,7 +1069,7 @@ function refresh() {
     if (chip) { chip.querySelector(".pin").dataset.k = statoResto(c.resto, state.piano.soglia); }
     const ms = months().filter((id) => id.startsWith(sel.slice(0, 4)));
     if ($("year-card")) { const d = datiAnno(ms); $("yc-chart").innerHTML = chartHtml(d, sel.slice(0, 4)); $("yc-table").innerHTML = tabellaAnno(d, sel.slice(0, 4));
-      $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); if ($("yc-buoni")) $("yc-buoni").innerHTML = buoniAnnoHtml(sel.slice(0, 4)); }
+      $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); }
   }
   ricorda($("view"));
 }

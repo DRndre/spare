@@ -188,8 +188,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     }
     if (passo === 4 && !w.manuale) {
       const pp = pianoProva();
-      const bpp = round(N(pp.buoni_num) * N(pp.buoni_valore));
-      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: 0, buoni: bpp, risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
+      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: 0, buoni: round(N(pp.buoni_num) * N(pp.buoni_valore)), risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
       b.insertAdjacentHTML("beforeend", `<div class="hero wiz-hero"><div class="label">Ogni mese ti restano in tasca</div><div class="big${c.resto < 0 ? " neg" : ""}">${eur(c.resto)}</div>
         <div class="formula"><b>${eur(c.entrate)}</b> di entrate − <b>${eur(c.spese)}</b> di spese (${pp.voci.length}) − <b>${eur(c.toDep)}</b> messi da parte</div></div>`);
       if (c.resto < 0) b.appendChild(testo("Le spese superano le entrate: torna indietro e controlla le cifre, oppure riduci il risparmio.", "note"));
