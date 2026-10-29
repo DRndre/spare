@@ -37,11 +37,32 @@ function fixCategorie(v) {
     : [];
 }
 
+/** Investimenti e saldi scritti a mano (per il futuro Riepilogo): [{id, nome, tipo, versato, valore, aggiornato}].
+ *  tipo: "investimento" (ETF, azioni, buoni…) o "conto" (es. conto corrente); versato = quanto ci hai messo
+ *  (0 = non indicato); aggiornato = "AAAA-MM-GG" del valore; storico = [{data, versato, valore}] per il grafico. */
+export function fixInvestimenti(v) {
+  return Array.isArray(v)
+    ? v.filter((x) => x && String(x.nome || "").trim()).map((x) => ({
+      id: String(x.id || uid()), nome: String(x.nome).trim().slice(0, 60), tipo: x.tipo === "conto" ? "conto" : "investimento",
+      versato: Math.max(0, N(x.versato)), valore: Math.max(0, N(x.valore)),
+      aggiornato: /^\d{4}-\d{2}-\d{2}$/.test(String(x.aggiornato || "")) ? String(x.aggiornato) : "",
+      // storico dei valori (per il grafico "andamento nel tempo"): un punto ogni volta che aggiorni il valore
+      storico: (Array.isArray(x.storico) ? x.storico : [])
+        .filter((h) => h && /^\d{4}-\d{2}-\d{2}$/.test(String(h.data || "")))
+        .map((h) => ({ data: String(h.data), versato: Math.max(0, N(h.versato)), valore: Math.max(0, N(h.valore)) }))
+        .sort((a, b) => a.data.localeCompare(b.data)),
+    }))
+    : [];
+}
+// La colonna piani.investimenti esiste nel database? (la salvo solo se c'è, così l'app funziona anche prima della query)
+let colInvestimenti = false;
+
 function pianoFromRow(r) {
   const p = { ...DEFAULT_PIANO };
   for (const k of Object.keys(DEFAULT_PIANO)) if (r[k] != null) p[k] = r[k];
   p.voci = fixVoci(r.voci);
   p.categorie = fixCategorie(r.categorie);
+  p.investimenti = fixInvestimenti(r.investimenti);
   ["stipendio", "entrate_extra", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
   // Dati della prima versione (senza mensilità): la ricavo dagli importi
   if (r.mensilita == null) p.mensilita = N(p.quattordicesima) > 0 ? 14 : N(p.tredicesima) > 0 ? 13 : 12;
@@ -78,7 +99,7 @@ function meseFromRow(r) {
 /** Piano per chi parte da zero: inizia dal mese corrente e non ha fine. */
 function pianoNuovo() {
   const oggi = meseCorrente();
-  return { ...DEFAULT_PIANO, voci: [], mese_inizio: oggi, mese_fine: (Number(oggi.slice(0, 4)) + 1) + "-12" };
+  return { ...DEFAULT_PIANO, voci: [], investimenti: [], mese_inizio: oggi, mese_fine: (Number(oggi.slice(0, 4)) + 1) + "-12" };
 }
 
 /** Carica tutto dell'utente collegato. Restituisce true se l'utente non ha ancora dati. */
@@ -91,6 +112,7 @@ export async function loadAll() {
   ]);
   for (const r of [p, d, m]) if (r.error) throw r.error;
   // Non sovrascrivere ciò che l'utente sta modificando in questo momento
+  if (p.data && "investimenti" in p.data) colInvestimenti = true;
   if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : pianoNuovo();
   if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO, periodi: [] };
   const next = {};
@@ -142,6 +164,7 @@ export function savePiano() {
       mensilita: N(p.mensilita), mese_13: N(p.mese_13), mese_14: N(p.mese_14), senza_fine: !!p.senza_fine, usa_deposito: !!p.usa_deposito,
       extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
       voci: cleanVoci(p.voci), categorie: fixCategorie(p.categorie), updated_at: now(),
+      ...(colInvestimenti ? { investimenti: fixInvestimenti(p.investimenti) } : {}),
     });
   });
 }
@@ -182,7 +205,8 @@ export async function importData(json) {
   state.mesi = {};
   Object.entries(json.mesi || {}).forEach(([id, r]) => { if (/^\d{4}-\d{2}$/.test(id)) state.mesi[id] = meseFromRow(r); });
   const u = state.user.id, t = now(), p = state.piano, d = state.deposito;
-  const r1 = await sb.from("piani").upsert({ user_id: u, ...p, voci: cleanVoci(p.voci), updated_at: t });
+  const { investimenti, ...pBase } = p;
+  const r1 = await sb.from("piani").upsert({ user_id: u, ...pBase, voci: cleanVoci(p.voci), updated_at: t, ...(colInvestimenti ? { investimenti: fixInvestimenti(investimenti) } : {}) });
   if (r1.error) throw r1.error;
   const r2 = await sb.from("depositi").upsert({ user_id: u, ...depositoRow(d), updated_at: t });
   if (r2.error) throw r2.error;

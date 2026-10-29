@@ -110,3 +110,7 @@ create policy "codice se attivo" on public.depositi as restrictive for all to au
 create policy "codice se attivo" on public.mesi as restrictive for all to authenticated
   using ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()))
   with check ((select auth.jwt()->>'aal') = 'aal2' or not (select public.ha_verifica()));
+
+-- Investimenti e saldi scritti a mano, per il futuro Riepilogo:
+-- [{id, nome, tipo ("investimento" | "conto"), versato, valore, aggiornato "AAAA-MM-GG"}]
+alter table public.piani add column if not exists investimenti jsonb not null default '[]'::jsonb;
