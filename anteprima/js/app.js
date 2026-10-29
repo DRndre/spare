@@ -951,73 +951,119 @@ function renderModello(v) {
   }
 }
 
-/* ---------- Riepilogo (anteprima) ---------- */
-// Altri investimenti: nell'anteprima solo su questo dispositivo (nell'app vera andrebbero nel database)
-const INV_KEY = "spare-anteprima-investimenti";
-function leggiInv() { try { const x = JSON.parse(localStorage.getItem(INV_KEY) || "[]"); return Array.isArray(x) ? x : []; } catch { return []; } }
-function scriviInv(l) { try { localStorage.setItem(INV_KEY, JSON.stringify(l)); } catch { /* niente */ } }
-let invAperto = false;
+/* ---------- Riepilogo (anteprima, stile Moneyfarm) ---------- */
+let invAperto = false, invEdit = null, rpRange = null, rpSel = null;
 function vaiA(nuova, mese) { view = nuova; if (mese) sel = mese; history.replaceState(null, "", "#" + nuova); render(); window.scrollTo(0, 0); }
+const oggiISO = () => new Date().toLocaleDateString("sv-SE"); // AAAA-MM-GG nel fuso locale
+const dataCorta = (iso) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" }) : "");
+const investimenti = () => state.piano.investimenti || (state.piano.investimenti = []);
+/** Valore e versato di un investimento alla fine del mese id (l'ultimo aggiornamento fino a quel mese). */
+function puntoAl(x, id) {
+  const st = (x.storico || []).filter((h) => h.data.slice(0, 7) <= id);
+  if (st.length) { const h = st[st.length - 1]; return { valore: N(h.valore), versato: N(h.versato) || N(h.valore) }; }
+  if (!(x.storico || []).length && (!x.aggiornato || x.aggiornato.slice(0, 7) <= id)) return { valore: N(x.valore), versato: N(x.versato) || N(x.valore) };
+  return null;
+}
+/** Andamento mese per mese fino a oggi: valore e versato di deposito + investimenti. */
+function serieMesi() {
+  const ms = months(), oggi = meseCorrente(), d = simula(ms), inv = investimenti();
+  let inizio = ms[0];
+  inv.forEach((x) => (x.storico || []).forEach((h) => { if (h.data.slice(0, 7) < inizio) inizio = h.data.slice(0, 7); }));
+  const lista = monthRange(inizio, oggi < inizio ? inizio : oggi);
+  const righe = Object.fromEntries(d.rows.map((r) => [r.id, r]));
+  let vers = N(state.deposito.saldo_iniziale), sal = vers;
+  return lista.map((id) => {
+    const r = righe[id]; if (r) { vers += r.versato - r.prelievo; sal = r.saldo; }
+    let iv = 0, ivv = 0;
+    inv.forEach((x) => { const p = puntoAl(x, id); if (p) { iv += p.valore; ivv += p.versato; } });
+    return { id, valore: round(sal + iv), versato: round(vers + ivv), dep: round(sal), depVers: round(vers) };
+  });
+}
+const segnato = (n, f = eur0) => (n > 0 ? "+" : n < 0 ? "−" : "") + f(Math.abs(n));
+const pctTxt = (g, base) => (base > 0 ? (g >= 0 ? "+" : "−") + Math.abs((g / base) * 100).toLocaleString("it-IT", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + "%" : "");
 
 function renderRiepilogo(v) {
-  const ms = months(), oggi = meseCorrente(), rif = meseRif(), anno = rif.slice(0, 4), dep = usaDep();
-  const d = simula(ms), suConto = saldoAl(d, oggi);
-  const inv = leggiInv(), totInv = round(inv.reduce((a, x) => a + N(x.valore), 0)), tot = round(suConto + totInv);
+  const dep = usaDep(), oggi = meseCorrente(), serie = serieMesi(), ult = serie[serie.length - 1];
+  const inv = investimenti();
+  const totVal = ult.valore, totVers = ult.versato, gain = round(totVal - totVers);
 
-  // Quello che hai
   const tb = document.createElement("div"); tb.className = "toolbar month-head";
-  tb.innerHTML = `<h2>Il tuo quadro</h2><span class="mh-right hint">Stima a ${monthLabelLong(oggi).toLowerCase()}</span>`;
+  tb.innerHTML = `<h2>Il tuo patrimonio</h2><span class="mh-right hint">Stima a ${monthLabelLong(oggi).toLowerCase()}</span>`;
   v.appendChild(tb);
-  v.appendChild(secHead("Quello che hai"));
-  const parti = [{ n: dep ? "Conto deposito" : "Risparmi", v: suConto, c: "var(--c-risp)" }].concat(inv.map((x, i) => ({ n: x.nome, v: N(x.valore), c: PALETTE[(i * 3) % PALETTE.length] }))).filter((x) => x.v > 0);
-  const base = parti.reduce((a, x) => a + x.v, 0) || 1;
+
+  // Valore totale, versato, guadagno
   const h = document.createElement("section"); h.className = "hero rp-hero";
-  h.innerHTML = `<div class="big" data-k="rp-tot" data-n="${tot}" data-f="eur0">${eur0(tot)}</div>
-    <div class="hint">${dep ? "Conto deposito" : "Risparmi"}${inv.length ? " e altri investimenti" : ""}. Il conto corrente non è compreso.</div>
-    ${parti.length ? `<div class="bar">${parti.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur0(x.v)}"></span>`).join("")}</div>
-    <div class="rp-leg">${parti.map((x) => `<span><i style="background:${x.c}"></i>${esc(x.n)} <b>${eur0(x.v)}</b></span>`).join("")}</div>` : ""}`;
+  h.innerHTML = `<div class="dh-label">Valore totale</div><div class="big" data-k="rp-tot" data-n="${totVal}" data-f="eur0">${eur0(totVal)}</div>
+    <div class="rp-gain"><span>Versati <b>${eur0(totVers)}</b></span><span class="${gain >= 0 ? "pos" : "neg"}">Guadagno <b>${segnato(gain)}</b> ${pctTxt(gain, totVers)}</span></div>`;
   v.appendChild(h);
 
-  // Altri investimenti (scritti a mano)
-  v.appendChild(secHead("Altri investimenti", totInv ? eur0(totInv) : ""));
-  const ic = document.createElement("section"); ic.className = "card spese";
-  if (!inv.length) ic.insertAdjacentHTML("beforeend", '<div class="empty">ETF, azioni, fondi, buoni postali… Scrivi quanto valgono oggi e aggiornali quando vuoi.</div>');
-  inv.forEach((x) => {
-    const r = document.createElement("div"); r.className = "row"; r.dataset.riga = x.id;
-    const ni = document.createElement("input"); ni.type = "text"; ni.value = x.nome; ni.setAttribute("aria-label", "Nome investimento");
-    ni.addEventListener("input", () => { x.nome = ni.value; scriviInv(inv); });
-    ni.addEventListener("blur", () => render());
-    const wi = document.createElement("span"); wi.className = "imp";
-    const vi = document.createElement("input"); vi.type = "text"; vi.inputMode = "decimal"; vi.value = fmt.format(N(x.valore)); vi.setAttribute("aria-label", "Valore di " + x.nome);
-    vi.addEventListener("input", () => { const n = parseNum(vi.value); if (!isNaN(n) && n >= 0) { x.valore = round(n); scriviInv(inv); } });
-    vi.addEventListener("blur", () => render());
-    wi.append(vi, Object.assign(document.createElement("span"), { className: "eur", textContent: "€" }));
-    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.setAttribute("aria-label", "Elimina " + x.nome);
-    del.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    del.onclick = () => confirmInline(r, `Eliminare “${x.nome}”?`, "Elimina", () => { scriviInv(inv.filter((z) => z.id !== x.id)); render(); });
-    r.append(ni, wi, del); ic.appendChild(r);
+  // Andamento nel tempo
+  if (!rpRange) rpRange = serie.length > 12 ? "1a" : "tutto";
+  const vis = rpRange === "1a" ? serie.slice(-12) : serie;
+  v.appendChild(secHead("Andamento"));
+  const ac = document.createElement("section"); ac.className = "card pad rp-and";
+  ac.innerHTML = `<div class="rp-and-top"><div class="seg rp-range" role="group" aria-label="Periodo"><button type="button" data-r="1a" aria-pressed="${rpRange === "1a"}">1 anno</button><button type="button" data-r="tutto" aria-pressed="${rpRange === "tutto"}">Tutto</button></div>
+    <div class="rp-leg"><span><i class="l-val"></i>Valore</span><span><i class="l-ver"></i>Versato</span></div></div>
+    <div class="rp-tip" id="rp-tip"></div><div class="rp-graf" id="rp-graf">${graficoHtml(vis)}</div>
+    ${serie.length < 3 ? '<p class="hint flush">Il grafico si riempie mese dopo mese, e ogni volta che aggiorni il valore di un investimento.</p>' : ""}`;
+  ac.querySelectorAll(".rp-range button").forEach((b) => (b.onclick = () => { rpRange = b.dataset.r; rpSel = null; render(); }));
+  const tip = ac.querySelector("#rp-tip"), gr = ac.querySelector("#rp-graf");
+  const mostra = (i) => {
+    const p = vis[Math.max(0, Math.min(vis.length - 1, i))]; rpSel = p.id;
+    const g2 = round(p.valore - p.versato);
+    tip.innerHTML = `<b>${monthLabelLong(p.id)}</b> · Valore ${eur0(p.valore)} · Versato ${eur0(p.versato)} · <span class="${g2 >= 0 ? "pos" : "neg"}">${segnato(g2)}</span>`;
+    const ln = gr.querySelector(".rp-cur"); if (ln) { ln.style.left = (vis.length > 1 ? (i / (vis.length - 1)) * 100 : 50) + "%"; ln.hidden = false; }
+  };
+  const dove = (e) => { const r = gr.getBoundingClientRect(); return Math.round(((e.clientX - r.left) / r.width) * (vis.length - 1)); };
+  gr.addEventListener("pointermove", (e) => mostra(dove(e)));
+  gr.addEventListener("pointerdown", (e) => mostra(dove(e)));
+  mostra(rpSel ? Math.max(0, vis.findIndex((x) => x.id === rpSel)) : vis.length - 1);
+  v.appendChild(ac);
+
+  // Composizione per prodotto
+  const parti = [{ id: "dep", n: dep ? "Conto deposito" : "Risparmi", val: ult.dep, ver: ult.depVers, c: "var(--c-risp)", note: "Stima dai tuoi conti" }]
+    .concat(inv.map((x, i) => { const p = puntoAl(x, oggi) || { valore: 0, versato: 0 }; return { id: x.id, n: x.nome, val: p.valore, ver: p.versato, c: PALETTE[(i * 3) % PALETTE.length], note: x.aggiornato ? "Aggiornato il " + dataCorta(x.aggiornato) : "" }; }));
+  const base = parti.reduce((a, x) => a + Math.max(0, x.val), 0) || 1;
+  v.appendChild(secHead("Composizione"));
+  const cc = document.createElement("section"); cc.className = "card pad rp-comp";
+  cc.innerHTML = `<div class="bar">${parti.filter((x) => x.val > 0).map((x) => `<span style="flex:0 0 ${(x.val / base) * 100}%;background:${x.c}" title="${esc(x.n)}"></span>`).join("")}</div>`;
+  parti.forEach((x) => {
+    const g2 = round(x.val - x.ver);
+    const r = document.createElement(x.id === "dep" ? "div" : "button"); r.className = "rp-prod"; r.dataset.riga = x.id;
+    if (x.id !== "dep") { r.type = "button"; r.onclick = () => { invEdit = invEdit === x.id ? null : x.id; invAperto = false; render(); }; }
+    r.innerHTML = `<i style="background:${x.c}"></i><span class="rp-pn">${esc(x.n)}<small>${esc(x.note)}</small></span>
+      <span class="rp-pv">${eur0(x.val)}<small class="${g2 >= 0 ? "pos" : "neg"}">${x.ver ? segnato(g2) + " " + pctTxt(g2, x.ver) : ""}</small></span><span class="rp-pp">${Math.round((Math.max(0, x.val) / base) * 100)}%</span>`;
+    cc.appendChild(r);
+    if (invEdit === x.id) cc.appendChild(editorInv(inv.find((z) => z.id === x.id)));
   });
-  const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off"; form.hidden = !invAperto;
-  form.innerHTML = `<div class="add-tit">Nuovo investimento</div><input class="n" type="text" id="inv-nome" placeholder="Nome (es. ETF mondo)" aria-label="Nome"><input type="text" inputmode="decimal" id="inv-val" placeholder="Valore oggi" aria-label="Valore di oggi"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="err" hidden></div>`;
+  // Nuovo investimento
   const ab = document.createElement("button"); ab.type = "button"; ab.className = "add-open"; ab.hidden = invAperto;
   ab.innerHTML = `${icona("plus", "currentColor", 16)} Aggiungi un investimento`;
-  ab.onclick = () => { invAperto = true; form.hidden = false; ab.hidden = true; aprire(form); $("inv-nome").focus({ preventScroll: true }); };
+  const form = document.createElement("form"); form.className = "add inv"; form.autocomplete = "off"; form.hidden = !invAperto;
+  form.innerHTML = `<div class="add-tit">Nuovo investimento</div><input class="n" type="text" id="inv-nome" placeholder="Nome (es. ETF mondo, buoni postali)" aria-label="Nome">
+    <label class="per-f" for="inv-ver"><span class="label">Versato in totale</span><input type="text" inputmode="decimal" id="inv-ver" placeholder="Facoltativo"></label>
+    <label class="per-f" for="inv-val"><span class="label">Valore oggi</span><input type="text" inputmode="decimal" id="inv-val" placeholder="0,00"></label>
+    <div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="err" hidden></div>`;
+  ab.onclick = () => { invAperto = true; invEdit = null; form.hidden = false; ab.hidden = true; aprire(form); $("inv-nome").focus({ preventScroll: true }); };
   const chiudiInv = () => { invAperto = false; form.reset(); form.querySelector(".err").hidden = true; chiudi(form, () => { form.hidden = true; ab.hidden = false; }); };
   form.querySelector("[data-annulla]").onclick = chiudiInv;
   form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiInv(); } });
   form.onsubmit = (ev) => {
     ev.preventDefault();
-    const nome = $("inv-nome").value.trim(), val = parseNum($("inv-val").value), err = form.querySelector(".err");
+    const nome = $("inv-nome").value.trim(), val = parseNum($("inv-val").value), vt = $("inv-ver").value.trim(), ver = vt ? parseNum(vt) : 0, err = form.querySelector(".err");
     if (!nome) { err.textContent = "Scrivi il nome, per esempio \"ETF mondo\"."; err.hidden = false; return; }
-    if (isNaN(val) || val < 0) { err.textContent = "Scrivi quanto vale oggi, ad esempio 2.500."; err.hidden = false; return; }
-    const id = uid(); scriviInv([...inv, { id, nome, valore: round(val) }]); invAperto = false; nuovaRiga = id; render();
+    if (isNaN(val) || val < 0 || !$("inv-val").value.trim()) { err.textContent = "Scrivi quanto vale oggi, ad esempio 2.500."; err.hidden = false; $("inv-val").focus(); return; }
+    if (isNaN(ver) || ver < 0) { err.textContent = "Il versato deve essere una cifra, ad esempio 2.000 (o lascialo vuoto)."; err.hidden = false; return; }
+    const id = uid(), d0 = oggiISO();
+    investimenti().push({ id, nome, tipo: "investimento", versato: round(ver), valore: round(val), aggiornato: d0, storico: [{ data: d0, versato: round(ver), valore: round(val) }] });
+    savePiano(); invAperto = false; nuovaRiga = id; render();
   };
-  ic.append(ab, form);
-  ic.insertAdjacentHTML("beforeend", '<p class="hint card-hint rp-nota">Nell\'anteprima gli investimenti restano solo su questo dispositivo.</p>');
-  v.appendChild(ic);
+  cc.append(ab, form);
+  cc.insertAdjacentHTML("beforeend", '<p class="hint flush rp-nota">I valori li scrivi tu: tocca un investimento per aggiornarlo. Ogni aggiornamento resta nel grafico.</p>');
+  v.appendChild(cc);
 
-  // Questo mese
-  const md = monthData(rif, state.piano, state.mesi), c = calcMonth(md, state.piano);
+  // I conti del mese, in breve
+  const rif = meseRif(), md = monthData(rif, state.piano, state.mesi), c = calcMonth(md, state.piano);
   v.appendChild(secHead(monthLabelLong(rif)));
   const tl = document.createElement("div"); tl.className = "rp-tiles";
   [["Resto in tasca", c.resto, c.resto < 0 ? " neg" : ""], ["Spese", c.spese, ""], [T().col, round(c.toDep - N(md.prelievo)), " pos"]].forEach(([t, n, cl], i) => {
@@ -1026,21 +1072,6 @@ function renderRiepilogo(v) {
     b.onclick = () => vaiA("mesi", rif); tl.appendChild(b);
   });
   v.appendChild(tl);
-
-  // L'anno in breve
-  const ma = ms.filter((id) => id.startsWith(anno)), da = datiAnno(ma);
-  const ent = round(da.reduce((a, x) => a + x.cc.entrate, 0)), spe = round(da.reduce((a, x) => a + x.cc.spese, 0)), par = round(da.reduce((a, x) => a + x.parte, 0));
-  const interessi = round(d.rows.filter((r) => r.id.startsWith(anno)).reduce((a, r) => a + r.netto - r.bollo, 0));
-  const perCat = {};
-  ma.forEach((id) => monthData(id, state.piano, state.mesi).voci.forEach((x) => { const k = ck(x.cat); perCat[k] = (perCat[k] || 0) + N(x.importo); }));
-  const top = Object.entries(perCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  v.appendChild(secHead("Il tuo " + anno));
-  const yc = document.createElement("section"); yc.className = "card pad rp-anno";
-  yc.innerHTML = `<div class="ya-head ${dep ? "four" : ""}"><div><small>Entrate</small><b data-k="rp-ent" data-n="${ent}" data-f="eur0">${eur0(ent)}</b></div><div><small>Spese</small><b data-k="rp-spe" data-n="${spe}" data-f="eur0">${eur0(spe)}</b></div><div><small>${T().col}</small><b class="pos" data-k="rp-par" data-n="${par}" data-f="eur0">${eur0(par)}</b></div>${dep ? `<div><small>Interessi</small><b class="pos">+${eur0(interessi)}</b></div>` : ""}</div>
-    ${top.length ? `<div class="rp-sec">Dove spendi di più</div>${top.map(([k, val]) => { const ci = catInfo(state.piano, k); return `<div class="ya-row"><span class="ya-ic" style="--cc:${ci.c}">${icona(ci.i, ci.c, 15)}</span><span class="ya-n">${esc(ci.n)}</span><span class="ya-v">${eur0(val)}</span><span class="ya-p">${spe ? Math.round((val / spe) * 100) : 0}%</span></div>`; }).join("")}` : ""}
-    <div class="rp-sec">Resto in tasca mese per mese</div>${andamentoHtml(da, anno)}`;
-  yc.onclick = (e) => { const b = e.target.closest("[data-mese]"); if (b) vaiA("mesi", b.dataset.mese); };
-  v.appendChild(yc);
 
   // Rate in corso
   const rate = (state.piano.voci || []).filter((x) => x.da && attivaNel(x, rif));
@@ -1054,26 +1085,51 @@ function renderRiepilogo(v) {
   }
 
   // Obiettivo
-  v.appendChild(secHead("Obiettivo"));
-  const gc = document.createElement("section"); gc.className = "card pad goal";
-  if (N(state.deposito.obiettivo) > 0) gc.innerHTML = `<div class="goal-status">${goalStatus(ms)}</div>`;
-  else gc.innerHTML = '<p class="hint flush">Nessun obiettivo. Puoi impostarlo nella scheda ' + T().tab + '.</p>';
-  const gl = document.createElement("button"); gl.type = "button"; gl.className = "link rp-vai"; gl.textContent = N(state.deposito.obiettivo) > 0 ? `Apri ${T().tab}` : "Imposta un obiettivo";
-  gl.onclick = () => vaiA("deposito"); gc.appendChild(gl);
-  v.appendChild(gc);
+  if (N(state.deposito.obiettivo) > 0) {
+    v.appendChild(secHead("Obiettivo"));
+    const gc = document.createElement("section"); gc.className = "card pad goal";
+    gc.innerHTML = `<div class="goal-status">${goalStatus(months())}</div>`;
+    const gl = document.createElement("button"); gl.type = "button"; gl.className = "link rp-vai"; gl.textContent = `Apri ${T().tab}`; gl.onclick = () => vaiA("deposito");
+    gc.appendChild(gl); v.appendChild(gc);
+  }
 }
-/** Piccolo grafico del resto in tasca mese per mese (barre rosse se negativo). Tocca un mese per aprirlo. */
-function andamentoHtml(da, anno) {
-  const tutti = Array.from({ length: 12 }, (_, i) => anno + "-" + String(i + 1).padStart(2, "0"));
-  const by = Object.fromEntries(da.map((x) => [x.id, x]));
-  const max = Math.max(1, ...da.map((x) => Math.abs(x.resto)));
-  const oggi = meseCorrente();
-  return `<div class="rp-chart">${tutti.map((id) => {
-    const x = by[id];
-    if (!x) return '<span class="rp-col off"></span>';
-    const h = Math.max(4, (Math.abs(x.resto) / max) * 100);
-    return `<button type="button" class="rp-col${x.resto < 0 ? " neg" : ""}${id === oggi ? " oggi" : ""}" data-mese="${id}" title="${monthLabelLong(id)}: ${eur0(x.resto)}" aria-label="${monthLabelLong(id)}: ${eur0(x.resto)}"><span style="height:${h}%"></span></button>`;
-  }).join("")}</div><div class="rp-x">${tutti.map((id) => `<span${id === oggi ? ' class="oggi"' : ""}>${MESI_NOMI[Number(id.slice(5)) - 1][0]}</span>`).join("")}</div>`;
+/** Pannello per aggiornare un investimento: valore di oggi, versato, elimina. */
+function editorInv(x) {
+  const ed = document.createElement("div"); ed.className = "per-edit rp-edit";
+  ed.innerHTML = `<div class="per-campi"><label class="per-f" for="ie-val"><span class="label">Valore oggi</span><input type="text" inputmode="decimal" id="ie-val"></label>
+    <label class="per-f" for="ie-ver"><span class="label">Versato in totale</span><input type="text" inputmode="decimal" id="ie-ver" placeholder="Facoltativo"></label></div>
+    <span class="hint">Salvando, il valore di oggi si aggiunge al grafico.</span><div class="err" hidden></div><div class="per-act"></div>`;
+  ed.querySelector("#ie-val").value = fmt.format(N(x.valore)); if (N(x.versato)) ed.querySelector("#ie-ver").value = fmt.format(N(x.versato));
+  const act = ed.querySelector(".per-act"), err = ed.querySelector(".err");
+  const el = document.createElement("button"); el.type = "button"; el.className = "link danger-link"; el.textContent = "Elimina";
+  el.onclick = () => confirmInline(ed, `Eliminare “${x.nome}” e il suo storico?`, "Elimina", () => { state.piano.investimenti = investimenti().filter((z) => z.id !== x.id); savePiano(); invEdit = null; render(); });
+  const an = document.createElement("button"); an.type = "button"; an.className = "link"; an.textContent = "Annulla"; an.onclick = () => { invEdit = null; render(); };
+  const ok = document.createElement("button"); ok.type = "button"; ok.className = "link"; ok.textContent = "Salva";
+  ok.onclick = () => {
+    const val = parseNum(ed.querySelector("#ie-val").value), vt = ed.querySelector("#ie-ver").value.trim(), ver = vt ? parseNum(vt) : 0;
+    if (isNaN(val) || val < 0) { err.textContent = "Scrivi quanto vale oggi."; err.hidden = false; return; }
+    if (isNaN(ver) || ver < 0) { err.textContent = "Il versato deve essere una cifra (o lascialo vuoto)."; err.hidden = false; return; }
+    const d0 = oggiISO();
+    x.valore = round(val); x.versato = round(ver); x.aggiornato = d0;
+    x.storico = (x.storico || []).filter((h) => h.data !== d0).concat([{ data: d0, versato: x.versato, valore: x.valore }]).sort((a, b) => a.data.localeCompare(b.data));
+    savePiano(); invEdit = null; nuovaRiga = x.id; render();
+  };
+  act.append(el, an, ok);
+  return ed;
+}
+/** Grafico a linee: valore (area azzurra) contro versato (tratteggio grigio). */
+function graficoHtml(vis) {
+  const W = 600, H = 180, n = vis.length;
+  const max = tetto(Math.max(1, ...vis.map((p) => Math.max(p.valore, p.versato))));
+  const x = (i) => (n > 1 ? (i / (n - 1)) * W : W / 2), y = (val) => H - (val / max) * H;
+  const linea = (k) => vis.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join(" ");
+  const pts = n === 1 ? `M0,${y(vis[0].valore)} L${W},${y(vis[0].valore)}` : linea("valore");
+  const ptsV = n === 1 ? `M0,${y(vis[0].versato)} L${W},${y(vis[0].versato)}` : linea("versato");
+  const area = `${pts} L${n === 1 ? W : x(n - 1)},${H} L0,${H} Z`;
+  const lab = [0, Math.floor((n - 1) / 2), n - 1].filter((v2, i, a) => a.indexOf(v2) === i).map((i) => `<span style="left:${n > 1 ? (i / (n - 1)) * 100 : 50}%">${monthLabel(vis[i].id)}</span>`).join("");
+  return `<div class="rp-plot"><em class="rp-max">${eur0(max)}</em>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="rp-area" d="${area}"/><path class="rp-lver" d="${ptsV}" vector-effect="non-scaling-stroke"/><path class="rp-lval" d="${pts}" vector-effect="non-scaling-stroke"/></svg>
+    <span class="rp-cur" hidden></span></div><div class="rp-xl">${lab}</div>`;
 }
 
 /* ---------- Render ---------- */
@@ -1100,11 +1156,12 @@ function anima(v) {
   visto = { view, sel, depAnno };
   pillola(document.querySelector(".tabs"), "tabs");
   pillola(v.querySelector(".seg.mens"), "mens");
+  pillola(v.querySelector(".rp-range"), "rprange");
   contaNumeri(v, { eur, eur0 }, { daZero: cambioVista });
   if (nuovaRiga) { evidenzia(document.querySelector(`[data-riga="${nuovaRiga}"]`)); nuovaRiga = null; }
   if (cambioVista) {
     entra([...v.children]);
-    riempi([...v.querySelectorAll(".bar")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d, .rp-col > span")]);
+    riempi([...v.querySelectorAll(".bar, .rp-plot svg")]); allunga([...v.querySelectorAll(".goal-bar > span")]); cresci([...v.querySelectorAll(".dep-chart .b-d")]);
   } else if (cambioMese) {
     const kids = [...v.children], i = kids.findIndex((el) => el.classList.contains("month-head"));
     entra(kids.slice(Math.max(0, i)));
