@@ -2,7 +2,7 @@
 import {
   N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
-  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel,
+  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
@@ -142,6 +142,15 @@ function goalCard(v, ms) {
 function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ? ms[0] : o > ms[ms.length - 1] ? ms[ms.length - 1] : o; }
 /** Spese del Modello attive nel mese di riferimento (quelle a tempo finite o non iniziate non contano). */
 const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
+/** Buoni pasto attivi (valore del buono impostato nel Modello) e spese che si possono pagare con i buoni. */
+const buoniAttivi = () => N(state.piano.buoni_valore) > 0;
+const puoBuoni = (cat) => buoniAttivi() && CAT_BUONI.includes(ck(cat));
+/** Riga dei buoni pasto sotto il resto in tasca: disponibili, usati, avanzano (o quanto è uscito di tasca). */
+function bpHtml(c, modello = false) {
+  if (!buoniAttivi()) return "";
+  if (modello) return `${icona("ticket", "currentColor", 14)}<span>+ <b>${eur(c.buoni)}</b> in buoni pasto${c.buoniUsati ? ` · ne usi <b>${eur(c.buoniUsati)}</b>` : ""}</span>`;
+  return `${icona("ticket", "currentColor", 14)}<span>Buoni pasto: <b>${eur(c.buoniDisp)}</b> disponibili · usati <b>${eur(c.buoniUsati)}</b> · avanzano <b${c.buoniAvanzo < 0 ? ' class="neg"' : ""}>${eur(c.buoniAvanzo)}</b></span>`;
+}
 const meseCorto = (id) => monthLabel(id).toLowerCase();
 /** Testo dell'etichetta di una spesa a tempo. */
 function testoPeriodo(v) {
@@ -416,6 +425,16 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
           r.classList.add("con-tag"); r.appendChild(tag);
         }
       }
+      if (puoBuoni(v.cat)) {
+        // spesa di Spesa o Svago e uscite: si può segnare "pagata con i buoni pasto"
+        const bc = document.createElement("button"); bc.type = "button"; bc.className = "per-tag bp-chip" + (v.buoni ? " on" : "");
+        bc.setAttribute("aria-pressed", String(!!v.buoni));
+        bc.innerHTML = `${icona("ticket", "currentColor", 12)} ${v.buoni ? "Pagata con i buoni" : "Paga con i buoni"}`;
+        bc.onclick = () => { change((list) => { const x = list.find((z) => z.id === v.id); if (x) { if (x.buoni) delete x.buoni; else x.buoni = true; } }); render(); };
+        r.appendChild(bc);
+      }
+      const tags = [...r.querySelectorAll(":scope > .per-tag")];
+      if (tags.length) { const w = document.createElement("div"); w.className = "row-tags"; tags.forEach((t) => w.appendChild(t)); r.appendChild(w); r.classList.add("con-tag"); }
       g.appendChild(r);
     });
     card.appendChild(g);
@@ -424,6 +443,12 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   form.innerHTML = `<div class="add-tit">Nuova spesa</div><input class="n" type="text" id="${prefix}a-nome" placeholder="Nome (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
   const pick = form.querySelector(".cat-pick");
   let catScelta = addCat;
+  // "Pagata con i buoni pasto": solo per le categorie dove si possono usare
+  let bpOn = false, swb = null;
+  if (buoniAttivi()) {
+    swb = switchRow(prefix + "a-bp", "Pagata con i buoni pasto", "Esce dai buoni, non dal resto in tasca", false, (x) => { bpOn = x; });
+    swb.classList.add("per-sw"); swb.hidden = !CAT_BUONI.includes(catScelta); form.querySelector(".cat-pick").after(swb);
+  }
   // Modello: "Solo per un periodo" (spesa a rate)
   const wPer = { da: meseRif(), rate: 0 }; let perOn = false, perBox = null;
   if (periodi) {
@@ -444,6 +469,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.new) { apriCategorie({ state, savePiano, saveMese, nuova: true, onCreata: (k) => { addCat = k; }, onChange: () => { addAperto = prefix; render(); } }); return; }
     catScelta = addCat = b.dataset.k; disegnaPick();
+    if (swb) { swb.hidden = !CAT_BUONI.includes(catScelta); if (swb.hidden) { bpOn = false; swb.querySelector("input").checked = false; } }
   };
   form.onsubmit = (ev) => {
     ev.preventDefault();
@@ -455,7 +481,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     if (perOn && !wPer.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; perBox?.querySelector("input").focus(); return; }
     const cat = catScelta;
     const nid = uid();
-    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}) };
+    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && CAT_BUONI.includes(cat) ? { buoni: true } : {}) };
     const aggiungi = (ancheMesi) => {
       change((list) => list.push(nuova));
       if (ancheMesi) mesiPersNelPeriodo(nuova).forEach((id) => { state.mesi[id].voci.push({ ...nuova, id: uid() }); saveMese(id); });
@@ -500,10 +526,9 @@ function secHead(titolo, totale = "", live = "") {
 
 function formula(m, c, extraNome) {
   let f = `<b>${eur(m.stipendio)}</b> stipendio`;
-  if (N(m.buoni)) f += ` + <b>${eur(m.buoni)}</b> buoni pasto`;
   if (N(m.entrate_extra)) f += ` + <b>${eur(m.entrate_extra)}</b> entrate extra`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
-  return f + ` − spese <b>${eur(c.spese)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>`;
+  return f + ` − spese <b>${eur(c.speseSoldi)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>` + (c.buoniUsati ? ` <span class="f-bp">(più ${eur(c.buoniUsati)} pagati con i buoni)</span>` : "");
 }
 function hero(m, c, extraNome, { conTitolo = false } = {}) {
   const s = document.createElement("section"); s.className = "hero"; s.setAttribute("aria-live", "polite");
@@ -511,12 +536,15 @@ function hero(m, c, extraNome, { conTitolo = false } = {}) {
     <div class="hero-row"><div class="big${c.resto < 0 ? " neg" : ""}" data-live="resto" data-k="resto-mesi" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</div>
     <div class="chip" data-k="${statoResto(c.resto, state.piano.soglia)}" data-live="chip">${testoResto(c.resto, state.piano.soglia)}</div></div>
     <div class="formula" data-live="formula">${formula(m, c, extraNome)}</div>
+    ${buoniAttivi() ? `<div class="hero-bp" data-live="bp">${bpHtml(c)}</div>` : ""}
     <div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div class="legend" data-live="legend"></div>`;
   fillBar(s.querySelector('[data-live="bar"]'), s.querySelector('[data-live="legend"]'), m, c);
   return s;
 }
 function fillBar(bar, leg, m, c) {
-  const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k).reduce((a, v) => a + N(v.importo), 0) })).filter((p) => p.v > 0);
+  const fb = c.speseBuoni ? c.buoniUsati / c.speseBuoni : 0; // quota pagata con i buoni (non pesa sulle entrate in soldi)
+  const quota = (v) => N(v.importo) * (v.buoni && CAT_BUONI.includes(ck(v.cat)) ? 1 - fb : 1);
+  const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k).reduce((a, v) => a + quota(v), 0) })).filter((p) => p.v > 0);
   if (c.toDep > 0) parts.push({ n: T().leg, c: "--c-risp", v: c.toDep });
   const base = Math.max(c.entrate, parts.reduce((a, p) => a + p.v, 0)) || 1;
   bar.innerHTML = ""; leg.innerHTML = "";
@@ -632,6 +660,12 @@ function datiAnno(ms) {
     return { id, resto: cc.resto, parte: Math.max(0, round(cc.toDep - N(md.prelievo))), cc, ex: extraInfo(id, state.piano) };
   });
 }
+/** Buoni pasto nell'anno: ricevuti, usati e quanti ne avanzano alla fine. */
+function buoniAnnoHtml(d) {
+  if (!buoniAttivi() || !d.length) return "";
+  const ric = round(d.reduce((t, x) => t + x.cc.buoni, 0)), us = round(d.reduce((t, x) => t + x.cc.buoniUsati, 0)), fine = d[d.length - 1].cc.buoniAvanzo;
+  return `<div class="yr-head yc-bp"><span class="ya-ic" style="--cc:var(--accent)">${icona("ticket", "var(--accent)", 15)}</span><span class="ya-n">Buoni pasto<small>Ricevuti ${eur0(ric)} · usati ${eur0(us)}</small></span><span class="ya-v${fine < 0 ? " neg" : ""}">${eur0(fine)}</span><span class="ya-p">avanzano</span></div>`;
+}
 function tetto(v) { // valore "tondo" per la scala: 100, 200, 500, 1.000, 1.600, 2.000…
   if (v <= 0) return 100;
   const passi = [1, 1.2, 1.5, 1.6, 2, 2.5, 3, 4, 5, 6, 8, 10];
@@ -644,6 +678,7 @@ function yearCardHtml(ms, anno) {
     <div><b>Il tuo ${anno}</b><small>Dove vanno le entrate dell'anno${d.length < 12 ? ` (${d.length} ${d.length === 1 ? "mese" : "mesi"})` : ""}</small></div></div>
     <div id="yc-chart">${chartHtml(d, anno)}</div>
     <div class="yc-stats" id="yc-stats">${statsAnno(d, anno)}</div>
+    <div id="yc-buoni">${buoniAnnoHtml(d)}</div>
     <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
 }
@@ -663,9 +698,10 @@ function statsAnno(d) {
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
   // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
-  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), buoniA = round(d.reduce((a, x) => a + N(x.cc.buoni), 0));
+  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), usatiA = round(d.reduce((a, x) => a + N(x.cc.buoniUsati), 0));
   const perCat = {};
-  d.forEach((x) => monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo); }));
+  d.forEach((x) => { const fb = x.cc.speseBuoni ? x.cc.buoniUsati / x.cc.speseBuoni : 0;
+    monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo) * (v.buoni && CAT_BUONI.includes(k) ? 1 - fb : 1); }); });
   const parte = d.reduce((a, x) => a + x.parte, 0), resto = d.reduce((a, x) => a + x.resto, 0);
   const spese = Object.values(perCat).reduce((a, v) => a + v, 0);
   const righe = categorie(state.piano).filter((c) => perCat[c.k] > 0).map((c) => ({ n: c.n, c: c.c, i: c.i, v: perCat[c.k] })).sort((a, b) => b.v - a.v);
@@ -674,7 +710,7 @@ function chartHtml(d) {
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
-  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} in buoni</span>` : ""}</div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
+  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b></div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b>${usatiA ? `<span class="ya-sub">più ${eur0(usatiA)} con i buoni</span>` : ""}</div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
@@ -685,8 +721,8 @@ function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };
   let html = `<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>${T().col}</th><th>Resto</th></tr></thead><tbody>`;
   d.forEach(({ id, cc, ex }) => {
-    t.e += cc.entrate; t.s += cc.spese; t.d += cc.toDep; t.r += cc.resto;
-    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.spese)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.resto < 0 ? "neg" : ""}">${fmt.format(cc.resto)}</td></tr>`;
+    t.e += cc.entrate; t.s += cc.speseSoldi; t.d += cc.toDep; t.r += cc.resto;
+    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.speseSoldi)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.resto < 0 ? "neg" : ""}">${fmt.format(cc.resto)}</td></tr>`;
   });
   return html + `</tbody><tfoot><tr><td>Totale ${anno}</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
 }
@@ -906,7 +942,7 @@ function renderModello(v) {
   const c = calcMonth(m, p);
   // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
   const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
-  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> ${(p.voci || []).some((x) => x.da) ? "a " + monthLabelLong(meseRif()).toLowerCase() : "al mese"}</div><div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
+  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> ${(p.voci || []).some((x) => x.da) ? "a " + monthLabelLong(meseRif()).toLowerCase() : "al mese"}</div>${buoniAttivi() ? `<div class="hero-bp" data-live="bp">${bpHtml(c, true)}</div>` : ""}<div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
   fillBar(rs.querySelector('[data-live="bar"]'), rs.querySelector('[data-live="legend"]'), m, c);
   v.appendChild(rs);
 
@@ -1057,6 +1093,7 @@ function refresh() {
   }
   const m = currentMonth(), c = calcMonth(m, state.piano), q = (s) => document.querySelector(`[data-live="${s}"]`);
   if (q("resto")) { fermaNumero(q("resto"), c.resto); q("resto").textContent = eur(c.resto); q("resto").classList.toggle("neg", c.resto < 0); }
+  if (q("bp")) q("bp").innerHTML = bpHtml(c, view === "modello");
   if (q("chip")) { q("chip").dataset.k = statoResto(c.resto, state.piano.soglia); q("chip").textContent = testoResto(c.resto, state.piano.soglia); }
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
@@ -1069,7 +1106,7 @@ function refresh() {
     if (chip) { chip.querySelector(".pin").dataset.k = statoResto(c.resto, state.piano.soglia); }
     const ms = months().filter((id) => id.startsWith(sel.slice(0, 4)));
     if ($("year-card")) { const d = datiAnno(ms); $("yc-chart").innerHTML = chartHtml(d, sel.slice(0, 4)); $("yc-table").innerHTML = tabellaAnno(d, sel.slice(0, 4));
-      $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); }
+      $("yc-stats").innerHTML = statsAnno(d, sel.slice(0, 4)); if ($("yc-buoni")) $("yc-buoni").innerHTML = buoniAnnoHtml(d); }
   }
   ricorda($("view"));
 }

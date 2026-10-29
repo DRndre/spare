@@ -104,8 +104,29 @@ export const fineSpesa = (v) => (v && v.da && N(v.rate) >= 1 ? addMonths(v.da, N
 /** La spesa conta nel mese id? (senza periodo: sempre) */
 export const attivaNel = (v, id) => !v || !v.da || (id >= v.da && (!fineSpesa(v) || id <= fineSpesa(v)));
 
-/** Dati effettivi di un mese: quelli personalizzati se esistono, altrimenti il Modello. */
+/** Categorie dove si può pagare con i buoni pasto (interruttore "Pagata con i buoni"). */
+export const CAT_BUONI = ["spesa", "svago"];
+/** Spese di un mese pagate con i buoni (solo categorie ammesse). */
+const conBuoni = (voci) => round(voci.filter((v) => v.buoni && CAT_BUONI.includes(v.cat)).reduce((a, v) => a + N(v.importo), 0));
+
+/** Dati effettivi di un mese: quelli personalizzati se esistono, altrimenti il Modello.
+ *  buoniAvanzati = buoni pasto non spesi nei mesi prima (si accumulano dal primo mese dei conti). */
 export function monthData(id, piano, mesi) {
+  const m = meseBase(id, piano, mesi);
+  m.buoniAvanzati = buoniAvanzatiPrima(id, piano, mesi);
+  return m;
+}
+function buoniAvanzatiPrima(id, piano, mesi) {
+  if (!(N(piano.buoni_valore) > 0)) return 0;
+  let av = 0;
+  for (const x of monthRange(piano.mese_inizio, id)) {
+    if (x >= id) break;
+    const b = meseBase(x, piano, mesi), disp = av + N(b.buoni);
+    av = round(disp - conBuoni(b.voci));
+  }
+  return av;
+}
+function meseBase(id, piano, mesi) {
   const d = mesi[id];
   const ex = extraInfo(id, piano);
   const exDefault = ex ? ex.importo : 0;
@@ -129,10 +150,17 @@ export function calcMonth(m, piano) {
   const spese = round(m.voci.reduce((a, v) => a + N(v.importo), 0));
   const extraDep = piano.extra_al_deposito ? N(m.extra) : 0;
   const toDep = round(N(m.risparmio) + extraDep);
+  // Buoni pasto di lato: non entrano nel resto in tasca. Le spese "pagate con i buoni" escono dai buoni disponibili
+  // (avanzati + ricevuti) e non toccano mai il resto.
   const buoni = round(N(m.buoni));
-  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + buoni + N(m.extra));
-  const resto = round(entrate - spese - toDep);
-  return { spese, toDep, entrate, resto, extraDep, buoni };
+  const buoniDisp = round(N(m.buoniAvanzati) + buoni);
+  const speseBuoni = conBuoni(m.voci);
+  const buoniUsati = speseBuoni;
+  const buoniAvanzo = round(buoniDisp - buoniUsati);
+  const speseSoldi = round(spese - buoniUsati);
+  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + N(m.extra)); // solo soldi veri
+  const resto = round(entrate - speseSoldi - toDep);
+  return { spese, speseSoldi, toDep, entrate, resto, extraDep, buoni, buoniDisp, speseBuoni, buoniUsati, buoniAvanzo };
 }
 
 export function statoResto(resto, soglia) {
