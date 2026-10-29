@@ -62,7 +62,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
   // copia di lavoro
   const w = {
     mese_inizio: primaVolta ? oggi : p0.mese_inizio,
-    stipendio: N(p0.stipendio), entrate_extra: N(p0.entrate_extra),
+    stipendio: N(p0.stipendio), buoni_num: N(p0.buoni_num), buoni_valore: N(p0.buoni_valore),
     mensilita: N(p0.mensilita) || 13, tredicesima: N(p0.tredicesima), quattordicesima: N(p0.quattordicesima),
     mese_13: N(p0.mese_13) || 12, mese_14: N(p0.mese_14) || 6,
     risparmio: N(p0.risparmio), saldo_iniziale: N(d0.saldo_iniziale), extra_al_deposito: p0.extra_al_deposito !== false,
@@ -86,7 +86,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     return out;
   }
   function pianoProva() {
-    return { ...p0, stipendio: w.stipendio, entrate_extra: w.entrate_extra, risparmio: w.risparmio, mensilita: w.mensilita,
+    return { ...p0, stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali() };
   }
@@ -104,8 +104,12 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
         b.appendChild(testo("Partiamo da quanto entra ogni mese. Puoi cambiare tutto anche dopo, nella scheda <b>Modello</b>."));
         b.appendChild(griglia(
           campo("Stipendio mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
-          campo("Entrate extra", w.entrate_extra, (n) => (w.entrate_extra = n), { id: "w-entr", hint: "Seconde entrate più o meno fisse (vuoto se non ne hai)" }),
         ));
+        b.appendChild(testo("Ricevi buoni pasto? Scrivi quanti in un mese tipo e quanto vale uno (vuoto se non ne hai)."));
+        const nb = campo("Buoni pasto al mese", w.buoni_num, (n) => (w.buoni_num = Math.round(n)), { id: "w-buoni", unit: "buoni" });
+        { const ib = nb.querySelector("input"); ib.inputMode = "numeric"; ib.placeholder = "0"; ib.value = w.buoni_num ? String(w.buoni_num) : "";
+          ib.addEventListener("blur", () => { const n = Math.round(parseNum(ib.value)); ib.value = n > 0 ? String(n) : ""; }); }
+        b.appendChild(griglia(nb, campo("Valore di un buono", w.buoni_valore, (n) => (w.buoni_valore = n), { id: "w-buoniv" })));
       }
       b.appendChild(griglia(scelta("Da che mese partiamo?", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Di solito il mese in corso" })));
     }
@@ -184,7 +188,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     }
     if (passo === 4 && !w.manuale) {
       const pp = pianoProva();
-      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: pp.entrate_extra, risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
+      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: 0, buoni: round(N(pp.buoni_num) * N(pp.buoni_valore)), risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
       b.insertAdjacentHTML("beforeend", `<div class="hero wiz-hero"><div class="label">Ogni mese ti restano in tasca</div><div class="big${c.resto < 0 ? " neg" : ""}">${eur(c.resto)}</div>
         <div class="formula"><b>${eur(c.entrate)}</b> di entrate − <b>${eur(c.spese)}</b> di spese (${pp.voci.length}) − <b>${eur(c.toDep)}</b> messi da parte</div></div>`);
       if (c.resto < 0) b.appendChild(testo("Le spese superano le entrate: torna indietro e controlla le cifre, oppure riduci il risparmio.", "note"));
@@ -212,8 +216,8 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
   function salva() {
     const p = state.piano, d = state.deposito;
-    if (w.manuale) Object.assign(w, { stipendio: 0, entrate_extra: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
-    Object.assign(p, { stipendio: w.stipendio, entrate_extra: w.entrate_extra, risparmio: w.risparmio, mensilita: w.mensilita,
+    if (w.manuale) Object.assign(w, { stipendio: 0, buoni_num: 0, buoni_valore: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
+    Object.assign(p, { stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, entrate_extra: 0, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali(), mese_inizio: w.mese_inizio });
     if (p.mese_fine < p.mese_inizio) p.senza_fine = true;
@@ -229,7 +233,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 /* ---------- Come funziona ---------- */
 const AIUTO = [
   ["Il Modello", "È il tuo <b>mese tipo</b>: stipendio, spese fisse e risparmio. Tutti i mesi lo seguono, finché non ne cambi uno. Se modifichi il Modello, cambiano tutti i mesi che non hai personalizzato. Preferisci fare tutto a mano? Lascia il Modello vuoto e compila ogni mese nella scheda Mesi: con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente."],
-  ["La scheda Mesi", "Qui vedi un mese alla volta. Se in un mese hai una spesa in più o uno stipendio diverso, cambialo lì: quel mese diventa <b>personalizzato</b> e gli altri non cambiano. Con <b>Ripristina dal modello</b> torna come il Modello. In alto scegli l'anno."],
+  ["La scheda Mesi", "Qui vedi un mese alla volta. Se in un mese hai una spesa in più o uno stipendio diverso, cambialo lì: quel mese diventa <b>personalizzato</b> e gli altri non cambiano. Con <b>Torna al Modello</b> il mese torna a seguire il Modello. In alto scegli l'anno."],
   ["Resto in tasca", "È quello che ti rimane: <b>entrate</b> (stipendio, entrate extra, 13ª e 14ª) <b>meno spese meno risparmio</b>. Se va sotto zero diventa rosso. Nel Modello puoi mettere una soglia per avere un avviso quando scende sotto una cifra."],
   ["Spese che non sono mensili", "L'app ragiona a mesi. Una spesa annuale o ogni qualche mese va divisa: bollo da 232 € l'anno = 19,33 € al mese; abbonamento da 21 € ogni 6 mesi = 3,50 € al mese. Una spesa una tantum invece mettila solo nel mese in cui la paghi. Una spesa <b>a rate</b> (es. 12 rate da 49,90 €) aggiungila nel Modello con <b>Solo per un periodo</b>: conta solo dalla prima all'ultima rata. Anche per una spesa che c'è già puoi impostare il periodo con l'icona del calendario."],
   ["Tredicesima e quattordicesima", "Nel Modello scegli quante mensilità hai (12, 13 o 14), quanto valgono e in che mese arrivano. Puoi metterle da parte in automatico oppure lasciarle nel resto in tasca di quel mese."],

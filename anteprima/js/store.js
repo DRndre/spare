@@ -26,6 +26,7 @@ function fixVoci(v) {
       const o = { id: String(x.id || uid()), nome: String(x.nome || ""), importo: N(x.importo), cat: x.cat ? String(x.cat) : "altro" };
       // spesa a tempo (facoltativo): dal mese "AAAA-MM" per n rate
       if (/^\d{4}-\d{2}$/.test(String(x.da || "")) && N(x.rate) >= 1) { o.da = String(x.da); o.rate = Math.round(N(x.rate)); }
+      if (x.buoni === true) o.buoni = true; // pagata con i buoni pasto
       return o;
     })
     : [];
@@ -56,6 +57,8 @@ export function fixInvestimenti(v) {
 }
 // La colonna piani.investimenti esiste nel database? (la salvo solo se c'è, così l'app funziona anche prima della query)
 let colInvestimenti = false;
+// Le colonne dei buoni pasto esistono? (query 10) Prima della query uso le vecchie entrate extra del Modello come buoni.
+let colBuoni = false;
 
 function pianoFromRow(r) {
   const p = { ...DEFAULT_PIANO };
@@ -63,7 +66,8 @@ function pianoFromRow(r) {
   p.voci = fixVoci(r.voci);
   p.categorie = fixCategorie(r.categorie);
   p.investimenti = fixInvestimenti(r.investimenti);
-  ["stipendio", "entrate_extra", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
+  if (!("buoni_valore" in r) && N(r.entrate_extra) > 0) { p.buoni_num = 1; p.buoni_valore = N(r.entrate_extra); }
+  ["buoni_num", "buoni_valore", "stipendio", "entrate_extra", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
   // Dati della prima versione (senza mensilità): la ricavo dagli importi
   if (r.mensilita == null) p.mensilita = N(p.quattordicesima) > 0 ? 14 : N(p.tredicesima) > 0 ? 13 : 12;
   if (![12, 13, 14].includes(p.mensilita)) p.mensilita = 13;
@@ -93,7 +97,7 @@ function depositoFromRow(r) {
 }
 const depositoRow = (d) => ({ saldo_iniziale: N(d.saldo_iniziale), periodi: fixPeriodi(d.periodi), obiettivo: N(d.obiettivo), obiettivo_nome: String(d.obiettivo_nome || ""), tasse: N(d.tasse), bollo: N(d.bollo) });
 function meseFromRow(r) {
-  return { stipendio: N(r.stipendio), entrate_extra: r.entrate_extra == null ? null : N(r.entrate_extra), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), voci: fixVoci(r.voci) };
+  return { stipendio: N(r.stipendio), entrate_extra: r.entrate_extra == null ? null : N(r.entrate_extra), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), buoni_num: r.buoni_num == null ? null : N(r.buoni_num), voci: fixVoci(r.voci) };
 }
 
 /** Piano per chi parte da zero: inizia dal mese corrente e non ha fine. */
@@ -113,6 +117,7 @@ export async function loadAll() {
   for (const r of [p, d, m]) if (r.error) throw r.error;
   // Non sovrascrivere ciò che l'utente sta modificando in questo momento
   if (p.data && "investimenti" in p.data) colInvestimenti = true;
+  if (p.data && "buoni_valore" in p.data) colBuoni = true;
   if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : pianoNuovo();
   if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO, periodi: [] };
   const next = {};
@@ -165,6 +170,7 @@ export function savePiano() {
       extra_al_deposito: !!p.extra_al_deposito, mese_inizio: p.mese_inizio, mese_fine: p.mese_fine,
       voci: cleanVoci(p.voci), categorie: fixCategorie(p.categorie), updated_at: now(),
       ...(colInvestimenti ? { investimenti: fixInvestimenti(p.investimenti) } : {}),
+      ...(colBuoni ? { buoni_num: N(p.buoni_num), buoni_valore: N(p.buoni_valore) } : {}),
     });
   });
 }
@@ -181,6 +187,7 @@ export function saveMese(id) {
       user_id: state.user.id, mese: id,
       stipendio: N(m.stipendio), entrate_extra: m.entrate_extra == null ? null : N(m.entrate_extra), risparmio: N(m.risparmio), prelievo: N(m.prelievo),
       extra: m.extra == null ? null : N(m.extra), voci: cleanVoci(m.voci), updated_at: now(),
+      ...(colBuoni ? { buoni_num: m.buoni_num == null ? null : N(m.buoni_num) } : {}),
     });
   });
 }
@@ -205,14 +212,14 @@ export async function importData(json) {
   state.mesi = {};
   Object.entries(json.mesi || {}).forEach(([id, r]) => { if (/^\d{4}-\d{2}$/.test(id)) state.mesi[id] = meseFromRow(r); });
   const u = state.user.id, t = now(), p = state.piano, d = state.deposito;
-  const { investimenti, ...pBase } = p;
-  const r1 = await sb.from("piani").upsert({ user_id: u, ...pBase, voci: cleanVoci(p.voci), updated_at: t, ...(colInvestimenti ? { investimenti: fixInvestimenti(investimenti) } : {}) });
+  const { investimenti, buoni_num, buoni_valore, ...pBase } = p;
+  const r1 = await sb.from("piani").upsert({ user_id: u, ...pBase, voci: cleanVoci(p.voci), updated_at: t, ...(colInvestimenti ? { investimenti: fixInvestimenti(investimenti) } : {}), ...(colBuoni ? { buoni_num: N(buoni_num), buoni_valore: N(buoni_valore) } : {}) });
   if (r1.error) throw r1.error;
   const r2 = await sb.from("depositi").upsert({ user_id: u, ...depositoRow(d), updated_at: t });
   if (r2.error) throw r2.error;
   const r3 = await sb.from("mesi").delete().eq("user_id", u);
   if (r3.error) throw r3.error;
-  const rows = Object.entries(state.mesi).map(([id, m]) => ({ user_id: u, mese: id, ...m, voci: cleanVoci(m.voci), updated_at: t }));
+  const rows = Object.entries(state.mesi).map(([id, { buoni_num: bn, ...m }]) => ({ user_id: u, mese: id, ...m, voci: cleanVoci(m.voci), updated_at: t, ...(colBuoni ? { buoni_num: bn == null ? null : N(bn) } : {}) }));
   if (rows.length) { const r4 = await sb.from("mesi").insert(rows); if (r4.error) throw r4.error; }
   status("saved", "Salvato");
 }
