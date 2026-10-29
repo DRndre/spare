@@ -148,8 +148,8 @@ const puoBuoni = (cat) => buoniAttivi() && CAT_BUONI.includes(ck(cat));
 /** Riga dei buoni pasto sotto il resto in tasca: disponibili, usati, avanzano (o quanto è uscito di tasca). */
 function bpHtml(c, modello = false) {
   if (!buoniAttivi()) return "";
-  if (modello) return `${icona("ticket", "currentColor", 14)}<span>+ <b>${eur(c.buoni)}</b> in buoni pasto${c.buoniUsati ? ` · ne usi <b>${eur(c.buoniUsati)}</b>` : ""}${c.buoniMancano ? ` · <span class="neg">${eur(c.buoniMancano)} di tasca</span>` : ""}</span>`;
-  return `${icona("ticket", "currentColor", 14)}<span>Buoni pasto: <b>${eur(c.buoniDisp)}</b> disponibili · usati <b>${eur(c.buoniUsati)}</b> · ${c.buoniMancano ? `<span class="neg">mancavano ${eur(c.buoniMancano)}, pagati di tasca</span>` : `avanzano <b>${eur(c.buoniAvanzo)}</b>`}</span>`;
+  if (modello) return `${icona("ticket", "currentColor", 14)}<span>+ <b>${eur(c.buoni)}</b> in buoni pasto${c.buoniUsati ? ` · ne usi <b>${eur(c.buoniUsati)}</b>` : ""}</span>`;
+  return `${icona("ticket", "currentColor", 14)}<span>Buoni pasto: <b>${eur(c.buoniDisp)}</b> disponibili · usati <b>${eur(c.buoniUsati)}</b> · avanzano <b>${eur(c.buoniAvanzo)}</b></span>`;
 }
 const meseCorto = (id) => monthLabel(id).toLowerCase();
 /** Testo dell'etichetta di una spesa a tempo. */

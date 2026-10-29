@@ -122,7 +122,7 @@ function buoniAvanzatiPrima(id, piano, mesi) {
   for (const x of monthRange(piano.mese_inizio, id)) {
     if (x >= id) break;
     const b = meseBase(x, piano, mesi), disp = av + N(b.buoni);
-    av = round(disp - Math.min(conBuoni(b.voci), disp));
+    av = round(disp - conBuoni(b.voci));
   }
   return av;
 }
@@ -151,17 +151,16 @@ export function calcMonth(m, piano) {
   const extraDep = piano.extra_al_deposito ? N(m.extra) : 0;
   const toDep = round(N(m.risparmio) + extraDep);
   // Buoni pasto di lato: non entrano nel resto in tasca. Le spese "pagate con i buoni" escono dai buoni disponibili
-  // (avanzati + ricevuti); se non bastano, la parte che manca la paghi di tasca ed esce dal resto.
+  // (avanzati + ricevuti) e non toccano mai il resto.
   const buoni = round(N(m.buoni));
   const buoniDisp = round(N(m.buoniAvanzati) + buoni);
   const speseBuoni = conBuoni(m.voci);
-  const buoniUsati = round(Math.min(speseBuoni, buoniDisp));
-  const buoniMancano = round(speseBuoni - buoniUsati);
+  const buoniUsati = speseBuoni;
   const buoniAvanzo = round(buoniDisp - buoniUsati);
   const speseSoldi = round(spese - buoniUsati);
   const entrate = round(N(m.stipendio) + N(m.entrate_extra) + N(m.extra)); // solo soldi veri
   const resto = round(entrate - speseSoldi - toDep);
-  return { spese, speseSoldi, toDep, entrate, resto, extraDep, buoni, buoniDisp, speseBuoni, buoniUsati, buoniMancano, buoniAvanzo };
+  return { spese, speseSoldi, toDep, entrate, resto, extraDep, buoni, buoniDisp, speseBuoni, buoniUsati, buoniAvanzo };
 }
 
 export function statoResto(resto, soglia) {
