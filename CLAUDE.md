@@ -86,10 +86,6 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   (spese segnate "con i buoni", buoni non usati che si accumulano). Problemi emersi: i buoni non si spendono sempre tutti
   (si possono accumulare) e non solo in spesa (Edenred: Deliveroo, ristoranti). Andrea si era perso: non riproporre senza
   che lo chieda, e nel caso partire da un'anteprima.
-  **Nuova proposta in anteprima** (branch `anteprima-buoni`, online in `anteprima/`): buoni **di lato**, fuori dal resto in tasca
-  (riga "Buoni pasto: X disponibili · usati · avanzano" sotto il resto); chip "Paga con i buoni" solo su spese di **Spesa** e
-  **Svago e uscite** (`CAT_BUONI`), anche nel modulo Nuova spesa; i buoni non usati si accumulano (`buoniAvanzati` in monthData);
-  se non bastano la differenza esce dal resto (`buoniMancano`). Riepilogo dell'anno: Spese "più X con i buoni", riga Buoni pasto.
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
@@ -98,8 +94,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
   (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
   negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").
-  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo` (in `anteprima/`
-  ora c'è l'anteprima dei buoni pasto; per rimettere il Riepilogo: `git archive anteprima-riepilogo`). Scheda "Riepilogo" prima: Quello che hai (deposito + altri
+  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo`, online in
+  `anteprima/` su main finché Andrea non dice di toglierla. Scheda "Riepilogo" prima: Quello che hai (deposito + altri
   investimenti, conto corrente escluso), Altri investimenti scritti a mano (nell'anteprima in localStorage; nell'app vera
   servirebbe una colonna jsonb), mese di oggi, anno in breve con top 3 categorie e grafico del resto, rate in corso, obiettivo.
   Decisioni di Andrea (d'accordo): dati veri da aggiornare ogni tanto, non solo previsioni; per ogni investimento **quanto
