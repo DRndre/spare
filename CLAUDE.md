@@ -83,6 +83,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   resto in tasca (pagano spese già in elenco); "di cui X € in buoni" sotto Entrate nel riepilogo dell'anno. `piani.entrate_extra`
   non si usa più (le entrate extra sono solo nei mesi). Prima della query 10 l'app tratta le vecchie entrate extra del Modello
   come 1 buono (`colBuoni`). Nei mesi le spese a rate mostrano l'etichetta "Rata 3 di 6 · fino a apr 2027".
+  **Voce automatica "Spesa (buoni pasto)"** (categoria Spesa, `voceBuoni()` in calc.js, `auto: true`, id `__buoni`): aggiunta da
+  `monthData` (e nel Modello da `vociModello`/`conBuoniM`) con importo = buoni del mese; mai salvata (filtrata in `ensureMese`
+  e "Copia dal mese prima"); riga con lucchetto, non modificabile, si aggiorna mentre cambi il numero dei buoni. Così i buoni
+  entrano ed escono: il resto in tasca non cambia. Sotto Spese nel riepilogo dell'anno "di cui X € con i buoni".
+  Consiglio dato ad Andrea: l'eventuale altra voce della spesa al supermercato = solo la parte pagata in contanti.
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore

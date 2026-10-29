@@ -2,7 +2,7 @@
 import {
   N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
-  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel,
+  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, voceBuoni,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
@@ -141,7 +141,9 @@ function goalCard(v, ms) {
 /** Mese di riferimento del Modello: oggi, dentro il periodo dei conti. */
 function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ? ms[0] : o > ms[ms.length - 1] ? ms[ms.length - 1] : o; }
 /** Spese del Modello attive nel mese di riferimento (quelle a tempo finite o non iniziate non contano). */
-const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
+const buoniModello = () => round(N(state.piano.buoni_num) * N(state.piano.buoni_valore));
+const conBuoniM = (voci) => (buoniModello() > 0 ? voci.concat([voceBuoni(buoniModello())]) : voci);
+const vociModello = () => conBuoniM((state.piano.voci || []).filter((v) => attivaNel(v, meseRif())));
 const meseCorto = (id) => monthLabel(id).toLowerCase();
 /** Testo dell'etichetta di una spesa a tempo. */
 function testoPeriodo(v) {
@@ -324,7 +326,7 @@ function buoniField(num, valore, onNum, onValore, { id } = {}) {
     <span class="hint"></span>`;
   const ni = f.querySelector(".bp-n"), vi = f.querySelector(".bp-v"), h = f.querySelector(".hint");
   let n = Math.round(N(num)), v = N(valore);
-  const tot = () => { h.textContent = v > 0 ? `${n} ${n === 1 ? "buono" : "buoni"} = ${eur(round(n * v))}` : "Numero × valore di un buono (0 se non ne ricevi)"; };
+  const tot = () => { h.textContent = v > 0 ? `${n} ${n === 1 ? "buono" : "buoni"} = ${eur(round(n * v))}, anche tra le spese` : "Numero × valore di un buono (0 se non ne ricevi)"; };
   ni.value = String(n);
   ni.addEventListener("input", () => { ni.value = ni.value.replace(/\D/g, "").slice(0, 3); n = Number(ni.value || 0); onNum(n); tot(); refresh(); });
   ni.addEventListener("blur", () => { if (!ni.value) ni.value = "0"; });
@@ -360,6 +362,12 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     const g = document.createElement("div"); g.className = "group";
     g.innerHTML = `<div class="group-head"><span class="gname">${badge(c, 24)}${esc(c.n)}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
     vs.forEach((v) => {
+      if (v.auto) {
+        // voce automatica dei buoni pasto: si cambia dal numero dei buoni, non qui
+        const r = document.createElement("div"); r.className = "row auto con-tag";
+        r.innerHTML = `<span class="auto-n">${esc(v.nome)}</span><span class="imp auto-i">${fmt.format(N(v.importo))}<span class="eur">€</span></span><span class="auto-lock" title="Si aggiorna da solo con i buoni pasto">${icona("lock", "currentColor", 15)}</span><span class="per-tag ro">Dai buoni pasto · si aggiorna da sola</span>`;
+        g.appendChild(r); return;
+      }
       const r = document.createElement("div"); r.className = "row"; r.dataset.riga = v.id;
       const nome = document.createElement("input"); nome.type = "text"; nome.value = v.nome; nome.id = prefix + "n-" + v.id; nome.setAttribute("aria-label", "Nome voce");
       nome.addEventListener("input", () => change((list) => { const x = list.find((z) => z.id === v.id); if (x) x.nome = nome.value; }));
@@ -532,7 +540,7 @@ function fillBar(bar, leg, m, c) {
 function ensureMese(id) {
   if (!state.mesi[id]) {
     const t = monthData(id, state.piano, state.mesi);
-    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
+    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.filter((v) => !v.auto).map((v) => ({ ...v })) };
   }
   return state.mesi[id];
 }
@@ -582,7 +590,7 @@ function renderMesi(v) {
     const copia = () => {
       const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
       state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: t.buoni_num, risparmio: t.risparmio, prelievo: t.prelievo,
-        extra: old ? old.extra : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
+        extra: old ? old.extra : null, voci: t.voci.filter((x) => !x.auto).map((x) => ({ ...x, id: uid() })) };
       saveMese(sel); render();
     };
     cb.onclick = () => (m.custom
@@ -674,7 +682,7 @@ function chartHtml(d) {
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
-  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} in buoni</span>` : ""}</div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
+  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} in buoni</span>` : ""}</div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} con i buoni</span>` : ""}</div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
@@ -959,7 +967,7 @@ function renderModello(v) {
   v.appendChild(moneyField(T().rispBreve, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp", cls: "riga", hint: "Ogni mese" }));
 
   // Spese
-  vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
+  vociEditor(v, () => conBuoniM(p.voci || []), (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
 
   // Impostazioni: periodo e avviso
   v.appendChild(secHead("Impostazioni"));
@@ -1061,6 +1069,10 @@ function refresh() {
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
   if (q("spese")) q("spese").textContent = eur(c.spese);
+  // voce automatica dei buoni pasto nell'elenco delle spese
+  const vb = m.voci.find((x) => x.auto), rb = document.querySelector(".row.auto .auto-i");
+  if (rb && vb) rb.innerHTML = `${fmt.format(N(vb.importo))}<span class="eur">€</span>`;
+  if (!!rb !== !!vb) needsRender = true;
   if (q("entrate")) q("entrate").textContent = eur(c.entrate);
   if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
   updateGroupSums();

@@ -104,6 +104,10 @@ export const fineSpesa = (v) => (v && v.da && N(v.rate) >= 1 ? addMonths(v.da, N
 /** La spesa conta nel mese id? (senza periodo: sempre) */
 export const attivaNel = (v, id) => !v || !v.da || (id >= v.da && (!fineSpesa(v) || id <= fineSpesa(v)));
 
+/** Voce automatica: i buoni pasto si spendono in categoria Spesa (entrano ed escono con la stessa cifra). Non si salva. */
+export const voceBuoni = (importo) => ({ id: "__buoni", nome: "Spesa (buoni pasto)", importo: round(importo), cat: "spesa", auto: true });
+const conBuoni = (voci, buoni) => (buoni > 0 ? voci.concat([voceBuoni(buoni)]) : voci);
+
 /** Dati effettivi di un mese: quelli personalizzati se esistono, altrimenti il Modello. */
 export function monthData(id, piano, mesi) {
   const d = mesi[id];
@@ -119,10 +123,10 @@ export function monthData(id, piano, mesi) {
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
-      voci: (d.voci || []).filter((v) => attivaNel(v, id)),
+      voci: conBuoni((d.voci || []).filter((v) => attivaNel(v, id) && !v.auto), round((d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num)) * N(piano.buoni_valore))),
     };
   }
-  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * N(piano.buoni_valore)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
+  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * N(piano.buoni_valore)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: conBuoni((piano.voci || []).filter((v) => attivaNel(v, id)), round(N(piano.buoni_num) * N(piano.buoni_valore))) };
 }
 
 export function calcMonth(m, piano) {

@@ -549,3 +549,8 @@ form.add input.sw:checked { background: var(--accent); }
 .field.buoni .bp-x { color: var(--muted); }
 .field.buoni .eur { margin-left: auto; }
 .field.buoni .bp-fisso { font-family: var(--f-num); font-size: 1.15rem; font-weight: 500; font-variant-numeric: tabular-nums; padding: 5px 0; }
+/* Voce automatica dei buoni pasto */
+.row.auto { color: var(--muted); }
+.row.auto .auto-n { padding: 5px 0; color: var(--fg); }
+.row.auto .auto-i { justify-content: flex-end; font-family: var(--f-num); padding-right: 0; color: var(--fg); }
+.row.auto .auto-lock { display: grid; place-items: center; color: var(--muted); }
