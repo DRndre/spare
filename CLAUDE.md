@@ -79,17 +79,17 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Ogni riga del Modello ha l'icona calendario per impostare/cambiare/togliere il periodo; etichetta azzurra
   "nov 2026 → ott 2027 · ancora N rate", grigia e riga sbiadita se finita o non iniziata. "Ti restano" e il totale
   Spese del Modello contano le spese attive nel mese di oggi (`meseRif()`), con "a <mese>" se ci sono spese a tempo.
-- **Buoni pasto**: `piani.buoni_num`/`buoni_valore`, `mesi.buoni_num` (null = come il Modello). Contano tra le entrate e nel
-  resto in tasca; "di cui X € in buoni" sotto Entrate nel riepilogo dell'anno. `piani.entrate_extra` non si usa più (le entrate
-  extra sono solo nei mesi). Nei mesi le spese a rate mostrano l'etichetta "Rata 3 di 6 · fino a apr 2027".
-  **Provate e annullate su richiesta di Andrea (29/10):** voce automatica "Spesa (buoni pasto)" e poi "borsellino" dei buoni
-  (spese segnate "con i buoni", buoni non usati che si accumulano). Problemi emersi: i buoni non si spendono sempre tutti
-  (si possono accumulare) e non solo in spesa (Edenred: Deliveroo, ristoranti). Andrea si era perso: non riproporre senza
-  che lo chieda, e nel caso partire da un'anteprima.
-  **Nuova proposta in anteprima** (branch `anteprima-buoni`, online in `anteprima/`): buoni **di lato**, fuori dal resto in tasca
-  (riga "Buoni pasto: X disponibili · usati · avanzano" sotto il resto); chip "Paga con i buoni" solo su spese di **Spesa** e
-  **Svago e uscite** (`CAT_BUONI`), anche nel modulo Nuova spesa; i buoni non usati si accumulano (`buoniAvanzati` in monthData);
-  le spese con i buoni non toccano mai il resto (niente "mancavano…": Andrea segna con i buoni solo ciò che paga davvero con Edenred); se "avanzano" va sotto zero il numero è rosso, senza frasi. Riepilogo dell'anno: Spese "più X con i buoni", riga Buoni pasto.
+- **Buoni pasto (di lato)**: `piani.buoni_num`/`buoni_valore` ("20 × 6,50 €"), `mesi.buoni_num` (null = come il Modello).
+  **Non** entrano nel resto in tasca: sotto il resto c'è la riga "Buoni pasto: X disponibili · usati Y · avanzano Z" (nel
+  Modello "+ X in buoni pasto · ne usi Y"). Le spese di **Spesa** e **Svago e uscite** (`CAT_BUONI` in calc.js) hanno il chip
+  "Paga con i buoni" / "Pagata con i buoni" (`v.buoni = true` in `voci`, nessuna colonna; anche interruttore nel modulo Nuova
+  spesa, visibile solo per quelle categorie): escono dai buoni e **non toccano mai il resto**. I buoni non usati si accumulano
+  (`buoniAvanzati` in monthData, da 0 dal primo mese); se "avanzano" va sotto zero il numero è rosso, senza frasi né blocchi
+  (scelta di Andrea: segna con i buoni solo ciò che paga davvero con Edenred). Riepilogo dell'anno: Entrate = solo soldi,
+  Spese "più X con i buoni", riga "Buoni pasto · Ricevuti · usati · avanzano". Le entrate extra sono solo nei mesi.
+  Nei mesi le spese a rate: "Rata 3 di 6 · fino a apr 2027".
+  Provate e tolte prima (non riproporre): voce automatica "Spesa (buoni pasto)"; borsellino con icona biglietto su tutte le
+  spese; frase "mancavano X €, pagati di tasca".
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
@@ -98,8 +98,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
   (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
   negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").
-  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo` (in `anteprima/`
-  ora c'è l'anteprima dei buoni pasto; per rimettere il Riepilogo: `git archive anteprima-riepilogo`). Scheda "Riepilogo" prima: Quello che hai (deposito + altri
+  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo` (non online: per rimetterla in `anteprima/` usare
+  `git archive anteprima-riepilogo`; va aggiornata ai buoni pasto di lato, che vanno tra "quello che hai"). Scheda "Riepilogo" prima: Quello che hai (deposito + altri
   investimenti, conto corrente escluso), Altri investimenti scritti a mano (nell'anteprima in localStorage; nell'app vera
   servirebbe una colonna jsonb), mese di oggi, anno in breve con top 3 categorie e grafico del resto, rate in corso, obiettivo.
   Decisioni di Andrea (d'accordo): dati veri da aggiornare ogni tanto, non solo previsioni; per ogni investimento **quanto
@@ -144,7 +144,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   risparmio, prelievo, extra (null = importo di 13ª/14ª dal Modello), voci.
 
 ## Regole di calcolo
-- Resto in tasca = stipendio + buoni pasto + entrate extra + 13ª/14ª − spese − risparmio − 13ª/14ª (se vanno nel deposito).
+- Resto in tasca = stipendio + entrate extra + 13ª/14ª − spese (tranne quelle "pagate con i buoni") − risparmio − 13ª/14ª (se vanno nel deposito).
+  Buoni che avanzano = buoni avanzati dai mesi prima + buoni del mese − spese pagate con i buoni.
 - "Senza fine": i mesi arrivano fino a dicembre dell'anno dopo quello di oggi.
 - Deposito: versamenti a inizio mese; interesse mensile = saldo × tasso ÷ 12, meno il 26% di tasse,
   meno il bollo annuo ÷ 12. È una stima.
