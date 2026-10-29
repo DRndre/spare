@@ -89,7 +89,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   **Nuova proposta in anteprima** (branch `anteprima-buoni`, online in `anteprima/`): buoni **di lato**, fuori dal resto in tasca
   (riga "Buoni pasto: X disponibili · usati · avanzano" sotto il resto); chip "Paga con i buoni" solo su spese di **Spesa** e
   **Svago e uscite** (`CAT_BUONI`), anche nel modulo Nuova spesa; i buoni non usati si accumulano (`buoniAvanzati` in monthData);
-  le spese con i buoni non toccano mai il resto (niente "mancavano…": Andrea segna con i buoni solo ciò che paga davvero con Edenred). Riepilogo dell'anno: Spese "più X con i buoni", riga Buoni pasto.
+  le spese con i buoni non toccano mai il resto (niente "mancavano…": Andrea segna con i buoni solo ciò che paga davvero con Edenred); se "avanzano" va sotto zero il numero è rosso, senza frasi. Riepilogo dell'anno: Spese "più X con i buoni", riga Buoni pasto.
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore

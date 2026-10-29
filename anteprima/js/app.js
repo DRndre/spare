@@ -149,7 +149,7 @@ const puoBuoni = (cat) => buoniAttivi() && CAT_BUONI.includes(ck(cat));
 function bpHtml(c, modello = false) {
   if (!buoniAttivi()) return "";
   if (modello) return `${icona("ticket", "currentColor", 14)}<span>+ <b>${eur(c.buoni)}</b> in buoni pasto${c.buoniUsati ? ` · ne usi <b>${eur(c.buoniUsati)}</b>` : ""}</span>`;
-  return `${icona("ticket", "currentColor", 14)}<span>Buoni pasto: <b>${eur(c.buoniDisp)}</b> disponibili · usati <b>${eur(c.buoniUsati)}</b> · avanzano <b>${eur(c.buoniAvanzo)}</b></span>`;
+  return `${icona("ticket", "currentColor", 14)}<span>Buoni pasto: <b>${eur(c.buoniDisp)}</b> disponibili · usati <b>${eur(c.buoniUsati)}</b> · avanzano <b${c.buoniAvanzo < 0 ? ' class="neg"' : ""}>${eur(c.buoniAvanzo)}</b></span>`;
 }
 const meseCorto = (id) => monthLabel(id).toLowerCase();
 /** Testo dell'etichetta di una spesa a tempo. */
@@ -664,7 +664,7 @@ function datiAnno(ms) {
 function buoniAnnoHtml(d) {
   if (!buoniAttivi() || !d.length) return "";
   const ric = round(d.reduce((t, x) => t + x.cc.buoni, 0)), us = round(d.reduce((t, x) => t + x.cc.buoniUsati, 0)), fine = d[d.length - 1].cc.buoniAvanzo;
-  return `<div class="yr-head yc-bp"><span class="ya-ic" style="--cc:var(--accent)">${icona("ticket", "var(--accent)", 15)}</span><span class="ya-n">Buoni pasto<small>Ricevuti ${eur0(ric)} · usati ${eur0(us)}</small></span><span class="ya-v">${eur0(fine)}</span><span class="ya-p">avanzano</span></div>`;
+  return `<div class="yr-head yc-bp"><span class="ya-ic" style="--cc:var(--accent)">${icona("ticket", "var(--accent)", 15)}</span><span class="ya-n">Buoni pasto<small>Ricevuti ${eur0(ric)} · usati ${eur0(us)}</small></span><span class="ya-v${fine < 0 ? " neg" : ""}">${eur0(fine)}</span><span class="ya-p">avanzano</span></div>`;
 }
 function tetto(v) { // valore "tondo" per la scala: 100, 200, 500, 1.000, 1.600, 2.000…
   if (v <= 0) return 100;
