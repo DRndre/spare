@@ -50,7 +50,7 @@ const T = () => usaDep()
   ? { tab: "Deposito", rispBreve: "Al conto deposito", prelHint: "Ripresi dal deposito", risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
   : { tab: "Risparmi", rispBreve: "Messo da parte", prelHint: "Ripresi dai risparmi", risp: "Risparmio del mese", prel: "Prelievo dai risparmi", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
 /** Modello vuoto (chi inserisce ogni mese a mano): le previsioni contano solo i mesi compilati. */
-const modelloVuoto = () => { const p = state.piano; return !N(p.stipendio) && !N(p.entrate_extra) && !N(p.risparmio) && !(p.voci || []).length; };
+const modelloVuoto = () => { const p = state.piano; return !N(p.stipendio) && !N(p.buoni_num) && !N(p.risparmio) && !(p.voci || []).length; };
 /** Simulazione dei risparmi: con il conto deposito ci sono gli interessi, senza no. */
 function simula(ms) {
   const dep = state.deposito;
@@ -304,6 +304,17 @@ function moneyField(label, value, onVal, { hint = "", cls = "", id, unit = "€"
   return f;
 }
 
+/** Campo con un numero intero (es. quanti buoni pasto). onVal(n, elementoHint). */
+function numField(label, value, onVal, { hint = "", id, unit = "" } = {}) {
+  const f = document.createElement("label"); f.className = "field"; f.htmlFor = id;
+  f.innerHTML = `<span class="label">${esc(label)}</span><span class="money"><input type="text" inputmode="numeric" autocomplete="off" id="${id}"><span class="eur">${esc(unit)}</span></span><span class="hint">${esc(hint)}</span>`;
+  const inp = f.querySelector("input"), h = f.querySelector(".hint");
+  inp.value = String(Math.round(N(value)));
+  inp.addEventListener("input", () => { inp.value = inp.value.replace(/\D/g, "").slice(0, 3); const n = Number(inp.value || 0); onVal(n, h); refresh(); });
+  inp.addEventListener("blur", () => { if (!inp.value) inp.value = "0"; });
+  return f;
+}
+
 function confirmInline(host, text, okLabel, onOk) {
   if (host.querySelector(".confirm")) return;
   const cf = document.createElement("div"); cf.className = "confirm";
@@ -313,7 +324,7 @@ function confirmInline(host, text, okLabel, onOk) {
   cf.append(no, si); host.appendChild(cf); si.focus();
 }
 
-function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, periodi = false } = {}) {
+function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, periodi = false, mese = null } = {}) {
   const voci = getVoci();
   // nel Modello il totale conta solo le spese attive questo mese (quelle a tempo finite o future no)
   const tot = eur(round(voci.filter((v) => !periodi || attivaNel(v, meseRif())).reduce((a, v) => a + N(v.importo), 0)));
@@ -373,7 +384,16 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
           const tag = document.createElement("button"); tag.type = "button"; tag.className = "per-tag"; tag.textContent = tp.t; tag.onclick = apriPer;
           r.appendChild(tag);
         }
-      } else r.append(del);
+      } else {
+        r.append(del);
+        if (mese && v.da && fineSpesa(v)) {
+          // in un mese: "Rata 3 di 6 · fino a apr 2027"
+          const [y1, m1] = v.da.split("-").map(Number), [y2, m2] = mese.split("-").map(Number), k = (y2 - y1) * 12 + (m2 - m1) + 1;
+          const tag = document.createElement("span"); tag.className = "per-tag ro";
+          tag.textContent = `Rata ${k} di ${v.rate} · fino a ${meseCorto(fineSpesa(v))}`;
+          r.classList.add("con-tag"); r.appendChild(tag);
+        }
+      }
       g.appendChild(r);
     });
     card.appendChild(g);
@@ -458,6 +478,7 @@ function secHead(titolo, totale = "", live = "") {
 
 function formula(m, c, extraNome) {
   let f = `<b>${eur(m.stipendio)}</b> stipendio`;
+  if (N(m.buoni)) f += ` + <b>${eur(m.buoni)}</b> buoni pasto`;
   if (N(m.entrate_extra)) f += ` + <b>${eur(m.entrate_extra)}</b> entrate extra`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
   return f + ` − spese <b>${eur(c.spese)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>`;
@@ -489,7 +510,7 @@ function fillBar(bar, leg, m, c) {
 function ensureMese(id) {
   if (!state.mesi[id]) {
     const t = monthData(id, state.piano, state.mesi);
-    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: t.entrate_extra, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
+    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
   }
   return state.mesi[id];
 }
@@ -538,7 +559,7 @@ function renderMesi(v) {
     cb.innerHTML = `${icona("copy", "currentColor", 15)} Copia dal mese prima`;
     const copia = () => {
       const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
-      state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: t.entrate_extra, risparmio: t.risparmio, prelievo: t.prelievo,
+      state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: t.buoni_num, risparmio: t.risparmio, prelievo: t.prelievo,
         extra: old ? old.extra : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
       saveMese(sel); render();
     };
@@ -555,7 +576,11 @@ function renderMesi(v) {
   v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
   const fe = document.createElement("div"); fe.className = "fields";
   fe.appendChild(moneyField("Stipendio", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
-  fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel }));
+  if (N(state.piano.buoni_valore) > 0) {
+    const vb = N(state.piano.buoni_valore);
+    fe.appendChild(numField("Buoni pasto", m.buoni_num, (n, h) => { ensureMese(sel).buoni_num = n; saveMese(sel); h.textContent = `× ${eur(vb)} = ${eur(round(n * vb))}`; }, { id: "m-buoni-" + sel, unit: "buoni", hint: `× ${eur(vb)} = ${eur(m.buoni)}` }));
+  }
+  fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Solo questo mese" }));
   if (ex) fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
   v.appendChild(fe);
 
@@ -565,7 +590,7 @@ function renderMesi(v) {
   fr.appendChild(moneyField("Prelievo", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
   v.appendChild(fr);
 
-  vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-", { titoloFuori: true });
+  vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-", { titoloFuori: true, mese: sel });
 
   // Il tuo anno: grafico a barre + tabella completa a richiesta
   v.appendChild(secHead("Il tuo anno"));
@@ -616,7 +641,7 @@ function statsAnno(d) {
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
   // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
-  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0);
+  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), buoniA = round(d.reduce((a, x) => a + N(x.cc.buoni), 0));
   const perCat = {};
   d.forEach((x) => monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo); }));
   const parte = d.reduce((a, x) => a + x.parte, 0), resto = d.reduce((a, x) => a + x.resto, 0);
@@ -627,7 +652,7 @@ function chartHtml(d) {
   const seg = righe.map((r) => ({ c: r.c, v: r.v, n: r.n })).concat(parte > 0 ? [{ c: "var(--c-risp)", v: parte, n: T().leg }] : []);
   const bar = seg.map((x) => `<span style="flex:0 0 ${(x.v / base) * 100}%;background:${x.c}" title="${esc(x.n)}: ${eur(x.v)}"></span>`).join("");
   const riga = (ic, col, nome, v, extra = "") => `<div class="ya-row${extra}"><span class="ya-ic" style="--cc:${col}">${ic}</span><span class="ya-n">${nome}</span><span class="ya-v">${eur0(v)}</span><span class="ya-p">${pct(v)}%</span></div>`;
-  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b></div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
+  return `<div class="ya-head"><div><small>Entrate</small><b data-k="ya-ent" data-n="${entrate}" data-f="eur0">${eur0(entrate)}</b>${buoniA ? `<span class="ya-sub">di cui ${eur0(buoniA)} in buoni</span>` : ""}</div><div><small>Spese</small><b data-k="ya-spe" data-n="${spese}" data-f="eur0">${eur0(spese)}</b></div><div><small>${usaDep() ? "Al deposito" : "Da parte"}</small><b class="pos" data-k="ya-dep" data-n="${parte}" data-f="eur0">${eur0(parte)}</b></div></div>
     <div class="bar ya-bar" role="img" aria-label="Ripartizione delle entrate dell'anno">${bar}</div>
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
@@ -855,7 +880,7 @@ function renderModello(v) {
   v.insertAdjacentHTML("beforeend", `<p class="hint flush mod-intro">I mesi che non hai personalizzato seguono il Modello: cambi qui, cambiano tutti.</p>`);
 
   // Resto in tasca
-  const m = { stipendio: N(p.stipendio), entrate_extra: N(p.entrate_extra), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
+  const m = { stipendio: N(p.stipendio), entrate_extra: 0, buoni: round(N(p.buoni_num) * N(p.buoni_valore)), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
   const c = calcMonth(m, p);
   // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
   const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
@@ -867,8 +892,16 @@ function renderModello(v) {
   v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
-  fs.appendChild(moneyField("Entrate extra", N(p.entrate_extra), (n) => { p.entrate_extra = n; savePiano(); }, { id: "t-entr", hint: "0 se non ne hai" }));
   v.appendChild(fs);
+  // Buoni pasto (o altro benefit fisso): numero al mese × valore. Le entrate extra si scrivono solo nei mesi.
+  const fb = document.createElement("div"); fb.className = "fields";
+  const totB = () => `= ${eur(round(N(p.buoni_num) * N(p.buoni_valore)))} al mese`;
+  let hv;
+  fb.appendChild(numField("Buoni pasto al mese", N(p.buoni_num), (n) => { p.buoni_num = n; savePiano(); if (hv) hv.textContent = totB(); }, { id: "t-buoni", unit: "buoni", hint: "Nei mesi con più o meno giorni lo cambi lì" }));
+  const fvb = moneyField("Valore di un buono", N(p.buoni_valore), (n) => { p.buoni_valore = n; savePiano(); hv.textContent = totB(); }, { id: "t-buoniv", hint: totB() });
+  hv = fvb.querySelector(".hint"); fb.appendChild(fvb);
+  v.appendChild(fb);
+  v.insertAdjacentHTML("beforeend", '<p class="hint flush mod-nota">Le entrate che non arrivano tutti i mesi (rimborsi, extra) scrivile solo nel mese, nella scheda Mesi.</p>');
 
   // Mensilità: 12, 13 o 14, con importo e mese di 13ª e 14ª
   const nm = N(p.mensilita) || 13;
@@ -988,7 +1021,7 @@ function anima(v) {
 }
 window.addEventListener("resize", () => pillola(document.querySelector(".tabs"), "tabs"));
 const currentMonth = () => (view === "modello"
-  ? { stipendio: N(state.piano.stipendio), entrate_extra: N(state.piano.entrate_extra), risparmio: N(state.piano.risparmio), voci: vociModello(), prelievo: 0, extra: 0 }
+  ? { stipendio: N(state.piano.stipendio), entrate_extra: 0, buoni: round(N(state.piano.buoni_num) * N(state.piano.buoni_valore)), risparmio: N(state.piano.risparmio), voci: vociModello(), prelievo: 0, extra: 0 }
   : monthData(sel, state.piano, state.mesi));
 function updateGroupSums() {
   const voci = currentMonth().voci;

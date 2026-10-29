@@ -7,7 +7,9 @@ const MNL = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Lugl
 
 export const DEFAULT_PIANO = {
   stipendio: 0,
-  entrate_extra: 0, // altre entrate mensili più o meno fisse
+  entrate_extra: 0, // non più usato nel Modello: le entrate extra si scrivono solo nei mesi
+  buoni_num: 0, // buoni pasto al mese (numero)
+  buoni_valore: 0, // valore di un buono pasto in €
   risparmio: 0,
   soglia: 0, // 0 = nessuna soglia: avviso solo se il resto va sotto zero
   tredicesima: 0,
@@ -111,23 +113,26 @@ export function monthData(id, piano, mesi) {
     return {
       custom: true,
       stipendio: N(d.stipendio),
-      entrate_extra: d.entrate_extra == null ? N(piano.entrate_extra) : N(d.entrate_extra),
+      entrate_extra: N(d.entrate_extra), // solo nel mese (null = 0)
+      buoni_num: d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num),
+      buoni: round((d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num)) * N(piano.buoni_valore)),
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
       voci: (d.voci || []).filter((v) => attivaNel(v, id)),
     };
   }
-  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: N(piano.entrate_extra), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
+  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * N(piano.buoni_valore)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
 }
 
 export function calcMonth(m, piano) {
   const spese = round(m.voci.reduce((a, v) => a + N(v.importo), 0));
   const extraDep = piano.extra_al_deposito ? N(m.extra) : 0;
   const toDep = round(N(m.risparmio) + extraDep);
-  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + N(m.extra));
+  const buoni = round(N(m.buoni));
+  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + buoni + N(m.extra));
   const resto = round(entrate - spese - toDep);
-  return { spese, toDep, entrate, resto, extraDep };
+  return { spese, toDep, entrate, resto, extraDep, buoni };
 }
 
 export function statoResto(resto, soglia) {

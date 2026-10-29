@@ -114,3 +114,15 @@ create policy "codice se attivo" on public.mesi as restrictive for all to authen
 -- Investimenti e saldi scritti a mano, per il futuro Riepilogo:
 -- [{id, nome, tipo ("investimento" | "conto"), versato, valore, aggiornato "AAAA-MM-GG"}]
 alter table public.piani add column if not exists investimenti jsonb not null default '[]'::jsonb;
+
+-- Buoni pasto (benefit fisso): nel Modello numero al mese × valore di un buono; nei mesi il numero (null = come il Modello).
+-- Le "entrate extra" ora si scrivono solo nei singoli mesi: quelle del Modello diventano buoni pasto.
+alter table public.piani add column if not exists buoni_num numeric not null default 0;
+alter table public.piani add column if not exists buoni_valore numeric not null default 0;
+alter table public.mesi add column if not exists buoni_num numeric;
+-- nei mesi personalizzati tolgo le entrate extra che erano solo la copia di quelle del Modello
+update public.mesi m set entrate_extra = null
+  from public.piani p
+  where m.user_id = p.user_id and p.entrate_extra > 0 and p.buoni_valore = 0 and m.entrate_extra = p.entrate_extra;
+update public.piani set buoni_num = 1, buoni_valore = entrate_extra, entrate_extra = 0
+  where entrate_extra > 0 and buoni_valore = 0;

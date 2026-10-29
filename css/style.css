@@ -536,3 +536,8 @@ form.add .per-conf { order: 5; display: flex; flex-wrap: wrap; gap: 8px; align-i
 form.add .per-conf > span { flex-basis: 100%; }
 form.add input.sw { width: 51px; height: 31px; padding: 0; border: 0; border-radius: 999px; background: var(--seg-bg); }
 form.add input.sw:checked { background: var(--accent); }
+/* Buoni pasto e rate nei mesi */
+.ya-sub { display: block; font-size: .72rem; color: var(--muted); font-weight: 500; margin-top: 2px; }
+.per-tag.ro { cursor: default; }
+.row.con-tag { padding-bottom: 4px; }
+.mod-nota { margin-top: -6px; }

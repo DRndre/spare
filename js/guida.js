@@ -62,7 +62,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
   // copia di lavoro
   const w = {
     mese_inizio: primaVolta ? oggi : p0.mese_inizio,
-    stipendio: N(p0.stipendio), entrate_extra: N(p0.entrate_extra),
+    stipendio: N(p0.stipendio), buoni_num: N(p0.buoni_num), buoni_valore: N(p0.buoni_valore),
     mensilita: N(p0.mensilita) || 13, tredicesima: N(p0.tredicesima), quattordicesima: N(p0.quattordicesima),
     mese_13: N(p0.mese_13) || 12, mese_14: N(p0.mese_14) || 6,
     risparmio: N(p0.risparmio), saldo_iniziale: N(d0.saldo_iniziale), extra_al_deposito: p0.extra_al_deposito !== false,
@@ -86,7 +86,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     return out;
   }
   function pianoProva() {
-    return { ...p0, stipendio: w.stipendio, entrate_extra: w.entrate_extra, risparmio: w.risparmio, mensilita: w.mensilita,
+    return { ...p0, stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali() };
   }
@@ -104,8 +104,12 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
         b.appendChild(testo("Partiamo da quanto entra ogni mese. Puoi cambiare tutto anche dopo, nella scheda <b>Modello</b>."));
         b.appendChild(griglia(
           campo("Stipendio mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
-          campo("Entrate extra", w.entrate_extra, (n) => (w.entrate_extra = n), { id: "w-entr", hint: "Seconde entrate più o meno fisse (vuoto se non ne hai)" }),
         ));
+        b.appendChild(testo("Ricevi buoni pasto? Scrivi quanti in un mese tipo e quanto vale uno (vuoto se non ne hai)."));
+        const nb = campo("Buoni pasto al mese", w.buoni_num, (n) => (w.buoni_num = Math.round(n)), { id: "w-buoni", unit: "buoni" });
+        { const ib = nb.querySelector("input"); ib.inputMode = "numeric"; ib.placeholder = "0"; ib.value = w.buoni_num ? String(w.buoni_num) : "";
+          ib.addEventListener("blur", () => { const n = Math.round(parseNum(ib.value)); ib.value = n > 0 ? String(n) : ""; }); }
+        b.appendChild(griglia(nb, campo("Valore di un buono", w.buoni_valore, (n) => (w.buoni_valore = n), { id: "w-buoniv" })));
       }
       b.appendChild(griglia(scelta("Da che mese partiamo?", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Di solito il mese in corso" })));
     }
@@ -184,7 +188,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     }
     if (passo === 4 && !w.manuale) {
       const pp = pianoProva();
-      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: pp.entrate_extra, risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
+      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: 0, buoni: round(N(pp.buoni_num) * N(pp.buoni_valore)), risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
       b.insertAdjacentHTML("beforeend", `<div class="hero wiz-hero"><div class="label">Ogni mese ti restano in tasca</div><div class="big${c.resto < 0 ? " neg" : ""}">${eur(c.resto)}</div>
         <div class="formula"><b>${eur(c.entrate)}</b> di entrate − <b>${eur(c.spese)}</b> di spese (${pp.voci.length}) − <b>${eur(c.toDep)}</b> messi da parte</div></div>`);
       if (c.resto < 0) b.appendChild(testo("Le spese superano le entrate: torna indietro e controlla le cifre, oppure riduci il risparmio.", "note"));
@@ -212,8 +216,8 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
   function salva() {
     const p = state.piano, d = state.deposito;
-    if (w.manuale) Object.assign(w, { stipendio: 0, entrate_extra: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
-    Object.assign(p, { stipendio: w.stipendio, entrate_extra: w.entrate_extra, risparmio: w.risparmio, mensilita: w.mensilita,
+    if (w.manuale) Object.assign(w, { stipendio: 0, buoni_num: 0, buoni_valore: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
+    Object.assign(p, { stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, entrate_extra: 0, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali(), mese_inizio: w.mese_inizio });
     if (p.mese_fine < p.mese_inizio) p.senza_fine = true;

@@ -37,8 +37,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   ovunque, file in `fonts/inter.woff2` (niente Google Fonts). Blu `--accent` per tutta l'app,
   arancio `--ing` solo per tredicesima/quattordicesima.
 - **Scheda Mesi** (ordine): anni + mesi (pulsanti con solo il nome; pallino e testo rossi solo nei mesi in negativo, anche in tabella), nome del mese ("Segue il Modello" / "personalizzato · Ripristina"),
-  sezioni con titolo piccolo grigio e totale a destra (`secHead`): *Resto in tasca*, *Entrate* (Stipendio, Entrate extra,
-  13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
+  sezioni con titolo piccolo grigio e totale a destra (`secHead`): *Resto in tasca*, *Entrate* (Stipendio, Buoni pasto
+  (numero, dal Modello; solo se il valore del buono > 0), Entrate extra (solo quel mese, parte da 0), 13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
   poi blocchi separati: *Al deposito* (verde) e *Rimasto in tasca* (grigio) con Mese migliore / Mese peggiore
@@ -51,7 +51,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Senza deposito (*Risparmi*) stessa struttura: *Messo da parte*, *Obiettivo*, *Impostazioni*, *Il tuo anno* (Messo da parte / Prelievi).
 - **Scheda Modello** (ordine): titolo "Il mese tipo" (a destra quanti mesi personalizzati), riga piccola
   "Ti restano X € al mese" con barra sottile (niente riquadro grande: quello è in Mesi), *Entrate* (Stipendio, Entrate extra),
-  *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
+  *Buoni pasto* (numero al mese × valore di un buono; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
   *Risparmio* (riga a tutta larghezza), *Spese*, *Impostazioni* (Dal mese / Fino a, interruttore "Uso un conto deposito",
   interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
   spegnendolo la cifra si cancella).
@@ -79,6 +79,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Ogni riga del Modello ha l'icona calendario per impostare/cambiare/togliere il periodo; etichetta azzurra
   "nov 2026 → ott 2027 · ancora N rate", grigia e riga sbiadita se finita o non iniziata. "Ti restano" e il totale
   Spese del Modello contano le spese attive nel mese di oggi (`meseRif()`), con "a <mese>" se ci sono spese a tempo.
+- **Buoni pasto**: `piani.buoni_num`/`buoni_valore`, `mesi.buoni_num` (null = come il Modello). Contano tra le entrate e nel
+  resto in tasca (pagano spese già in elenco); "di cui X € in buoni" sotto Entrate nel riepilogo dell'anno. `piani.entrate_extra`
+  non si usa più (le entrate extra sono solo nei mesi). Prima della query 10 l'app tratta le vecchie entrate extra del Modello
+  come 1 buono (`colBuoni`). Nei mesi le spese a rate mostrano l'etichetta "Rata 3 di 6 · fino a apr 2027".
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
@@ -129,11 +133,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **depositi** (una riga per utente): saldo_iniziale, obiettivo (0 = nessuno), obiettivo_nome, tasse (26), bollo (0,2), periodi
   (jsonb `[{id, da: "AAAA-MM", tasso, nome}]`: ogni tasso vale dal suo mese fino al successivo).
   Le colonne `tasso_promo`, `tasso_base`, `inizio_promo`, `mesi_promo` sono della prima versione e non si usano più.
-- **mesi** (solo i mesi personalizzati; gli altri seguono il Modello): stipendio, entrate_extra (null = come il Modello),
+- **mesi** (solo i mesi personalizzati; gli altri seguono il Modello): stipendio, entrate_extra (solo del mese; null = 0), buoni_num (null = come il Modello),
   risparmio, prelievo, extra (null = importo di 13ª/14ª dal Modello), voci.
 
 ## Regole di calcolo
-- Resto in tasca = stipendio + entrate extra + 13ª/14ª − spese − risparmio − 13ª/14ª (se vanno nel deposito).
+- Resto in tasca = stipendio + buoni pasto + entrate extra + 13ª/14ª − spese − risparmio − 13ª/14ª (se vanno nel deposito).
 - "Senza fine": i mesi arrivano fino a dicembre dell'anno dopo quello di oggi.
 - Deposito: versamenti a inizio mese; interesse mensile = saldo × tasso ÷ 12, meno il 26% di tasse,
   meno il bollo annuo ÷ 12. È una stima.
@@ -154,6 +158,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 8. Funzione `public.ha_verifica()` (security definer: `auth.mfa_factors` non è leggibile dagli utenti) e policy restrittiva
    "codice se attivo" su `piani`, `depositi`, `mesi`. (Un primo tentativo che leggeva direttamente `auth.mfa_factors` aveva bloccato l'app.)
 9. `piani.investimenti` jsonb (predisposizione per il Riepilogo).
+10. Buoni pasto: `piani.buoni_num`, `piani.buoni_valore`, `mesi.buoni_num`; entrate extra del Modello spostate nei buoni — *da confermare che Andrea l'abbia eseguita*.
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.
