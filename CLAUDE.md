@@ -87,6 +87,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
   (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
   negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").
+  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo`, online in
+  `anteprima/` su main finché Andrea non dice di toglierla. Scheda "Riepilogo" prima: Quello che hai (deposito + altri
+  investimenti, conto corrente escluso), Altri investimenti scritti a mano (nell'anteprima in localStorage; nell'app vera
+  servirebbe una colonna jsonb), mese di oggi, anno in breve con top 3 categorie e grafico del resto, rate in corso, obiettivo.
 - `js/categorie.js` — 17 categorie di base (Casa, Auto e trasporti, Abbonamenti, Cura personale, Spesa, Salute,
   Svago e uscite, Animali, Viaggi, Rate e prestiti, Regali, Figli, Sport, Abbigliamento, Formazione, Tasse, Altro)
   con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria
