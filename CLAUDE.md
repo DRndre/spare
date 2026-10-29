@@ -36,7 +36,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - `css/style.css` — "stile iPhone": colori di sistema Apple come variabili, tema chiaro e scuro, carattere **Inter**
   ovunque, file in `fonts/inter.woff2` (niente Google Fonts). Blu `--accent` per tutta l'app,
   arancio `--ing` solo per tredicesima/quattordicesima.
-- **Scheda Mesi** (ordine): anni + mesi (pulsanti con solo il nome; pallino e testo rossi solo nei mesi in negativo, anche in tabella), nome del mese ("Segue il Modello" / "personalizzato · Ripristina"),
+- **Scheda Mesi** (ordine): anni + mesi (pulsanti con solo il nome; pallino e testo rossi solo nei mesi in negativo, anche in tabella), nome del mese ("Segue il Modello" / "personalizzato · Torna al Modello"),
   sezioni con titolo piccolo grigio e totale a destra (`secHead`): *Resto in tasca*, *Entrate* (Stipendio, Buoni pasto
   (numero, dal Modello; solo se il valore del buono > 0), Entrate extra (solo quel mese, parte da 0), 13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata

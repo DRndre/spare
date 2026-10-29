@@ -570,8 +570,8 @@ function renderMesi(v) {
   if (m.custom) {
     const box = document.createElement("div"); box.className = "mh-right";
     box.innerHTML = '<span class="tag custom">personalizzato</span>';
-    const rb = document.createElement("button"); rb.type = "button"; rb.className = "link"; rb.textContent = "Ripristina";
-    rb.onclick = () => confirmInline(tb, `Le modifiche di ${monthLabelLong(sel)} andranno perse.`, "Ripristina", async () => { await resetMese(sel); render(); });
+    const rb = document.createElement("button"); rb.type = "button"; rb.className = "link"; rb.textContent = "Torna al Modello";
+    rb.onclick = () => confirmInline(tb, `Le modifiche di ${monthLabelLong(sel)} andranno perse.`, "Torna al Modello", async () => { await resetMese(sel); render(); });
     box.appendChild(rb); tb.appendChild(box);
   } else tb.insertAdjacentHTML("beforeend", `<span class="mh-right hint">${modelloVuoto() ? "Da compilare" : "Segue il Modello"}</span>`);
   // Copia dal mese prima: entrate, risparmio, prelievo e spese (non la 13ª/14ª, che dipende dal mese)
