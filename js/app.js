@@ -935,16 +935,12 @@ function renderModello(v) {
   const tb = document.createElement("div"); tb.className = "toolbar month-head";
   tb.innerHTML = `<h2>Il mese tipo</h2><span class="mh-right hint">${nCustom ? `${nCustom} ${nCustom === 1 ? "mese personalizzato" : "mesi personalizzati"}` : "Nessun mese personalizzato"}</span>`;
   v.appendChild(tb);
-  v.insertAdjacentHTML("beforeend", `<p class="hint flush mod-intro">I mesi che non hai personalizzato seguono il Modello: cambi qui, cambiano tutti.</p>`);
+  v.insertAdjacentHTML("beforeend", `<p class="mod-spiega flush">Qui imposti le regole fisse: le entrate, le spese e il risparmio che si ripetono ogni mese.</p>
+    <p class="hint flush mod-intro">I mesi che non hai personalizzato seguono il Modello: cambi qui, cambiano tutti.</p>`);
 
-  // Resto in tasca
+  // Conti del mese tipo (servono per i totali delle sezioni)
   const m = { stipendio: N(p.stipendio), entrate_extra: 0, buoni: round(N(p.buoni_num) * N(p.buoni_valore)), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
   const c = calcMonth(m, p);
-  // Resto in tasca in piccolo: una riga e la barra sottile (il riquadro grande è in Mesi)
-  const rs = document.createElement("section"); rs.className = "hero mod-resto"; rs.setAttribute("aria-live", "polite");
-  rs.innerHTML = `<div class="mr-top">Ti restano <b class="${c.resto < 0 ? "neg" : ""}" data-live="resto" data-k="resto-modello" data-n="${c.resto}" data-f="eur">${eur(c.resto)}</b> ${(p.voci || []).some((x) => x.da) ? "a " + monthLabelLong(meseRif()).toLowerCase() : "al mese"}</div>${buoniAttivi() ? `<div class="hero-bp" data-live="bp">${bpHtml(c, true)}</div>` : ""}<div class="bar" data-live="bar" role="img" aria-label="Ripartizione delle entrate"></div><div data-live="legend" hidden></div>`;
-  fillBar(rs.querySelector('[data-live="bar"]'), rs.querySelector('[data-live="legend"]'), m, c);
-  v.appendChild(rs);
 
   // Entrate
   v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
