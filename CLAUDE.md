@@ -50,8 +50,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   *Il tuo anno* (anni, Versato / Interessi netti, grafico a barre verdi del saldo mese per mese, "Vedi la tabella completa").
   Senza deposito (*Risparmi*) stessa struttura: *Messo da parte*, *Obiettivo*, *Impostazioni*, *Il tuo anno* (Messo da parte / Prelievi).
 - **Scheda Modello** (ordine): titolo "Il mese tipo" (a destra quanti mesi personalizzati), riga piccola
-  "Ti restano X € al mese" con barra sottile (niente riquadro grande: quello è in Mesi), *Entrate* (Stipendio, Entrate extra),
-  *Buoni pasto* (numero al mese × valore di un buono; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
+  "Ti restano X € al mese" con barra sottile (niente riquadro grande: quello è in Mesi), *Entrate* (Stipendio e Buoni pasto affiancati;
+  Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
   *Risparmio* (riga a tutta larghezza), *Spese*, *Impostazioni* (Dal mese / Fino a, interruttore "Uso un conto deposito",
   interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
   spegnendolo la cifra si cancella).
