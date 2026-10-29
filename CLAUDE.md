@@ -149,7 +149,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 7. `piani.categorie`; spostate "Fondo conigli" → animali e "Klarna Multa" → rate (Modello e mesi).
 8. Funzione `public.ha_verifica()` (security definer: `auth.mfa_factors` non è leggibile dagli utenti) e policy restrittiva
    "codice se attivo" su `piani`, `depositi`, `mesi`. (Un primo tentativo che leggeva direttamente `auth.mfa_factors` aveva bloccato l'app.)
-9. `piani.investimenti` jsonb (predisposizione per il Riepilogo) — *da confermare che Andrea l'abbia eseguita*.
+9. `piani.investimenti` jsonb (predisposizione per il Riepilogo).
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.
