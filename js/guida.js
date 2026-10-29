@@ -61,7 +61,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
   const oggi = meseCorrente();
   // copia di lavoro
   const w = {
-    mese_inizio: primaVolta ? oggi : p0.mese_inizio,
+    mese_inizio: p0.mese_inizio || oggi, // al primo accesso lo sceglie nel benvenuto
     stipendio: N(p0.stipendio), buoni_num: N(p0.buoni_num), buoni_valore: N(p0.buoni_valore),
     mensilita: N(p0.mensilita) || 13, tredicesima: N(p0.tredicesima), quattordicesima: N(p0.quattordicesima),
     mese_13: N(p0.mese_13) || 12, mese_14: N(p0.mese_14) || 6,
@@ -111,7 +111,8 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
           ib.addEventListener("blur", () => { const n = Math.round(parseNum(ib.value)); ib.value = n > 0 ? String(n) : ""; }); }
         b.appendChild(griglia(nb, campo("Valore di un buono", w.buoni_valore, (n) => (w.buoni_valore = n), { id: "w-buoniv" })));
       }
-      b.appendChild(griglia(scelta("Da che mese partiamo?", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Di solito il mese in corso" })));
+      // il mese di partenza si sceglie nel benvenuto; riaprendo la guida dal menu si può cambiare qui
+      if (!primaVolta) b.appendChild(griglia(scelta("I tuoi conti partono da", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Un mese prima se vuoi segnare anche i mesi passati" })));
     }
     if (passo === 1) {
       b.appendChild(testo("Quante buste paga ricevi in un anno? Con 13 c'è la tredicesima, con 14 anche la quattordicesima."));
@@ -220,7 +221,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     Object.assign(p, { stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, entrate_extra: 0, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali(), mese_inizio: w.mese_inizio });
-    if (p.mese_fine < p.mese_inizio) p.senza_fine = true;
+    p.senza_fine = true; // i conti sono sempre senza fine
     d.saldo_iniziale = w.saldo_iniziale;
     if (w.usa_deposito && !haTassi && w.tasso > 0) d.periodi = [{ id: uid(), da: w.mese_inizio, tasso: w.tasso, nome: w.banca.trim() }];
     savePiano(); saveDeposito();

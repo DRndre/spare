@@ -76,7 +76,7 @@ function pianoFromRow(r) {
   if (r.senza_fine == null) p.senza_fine = false;
   if (r.usa_deposito == null) p.usa_deposito = true; // dati della prima versione: c'era sempre il deposito
   p.usa_deposito = !!p.usa_deposito;
-  p.senza_fine = !!p.senza_fine;
+  p.senza_fine = true; // niente più "Fino a": i conti si allungano sempre da soli
   return p;
 }
 function fixPeriodi(v) {

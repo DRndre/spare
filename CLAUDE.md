@@ -53,7 +53,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   titolo "Il mese tipo" (a destra quanti mesi personalizzati), frase "Qui imposti le regole fisse: le entrate, le spese e il
   risparmio che si ripetono ogni mese.", sotto in grigio "I mesi che non hai personalizzato seguono il Modello…", *Entrate* (Stipendio e Buoni pasto affiancati;
   Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
-  *Risparmio* (riga a tutta larghezza), *Spese*, *Impostazioni* (Dal mese / Fino a, interruttore "Uso un conto deposito",
+  *Risparmio* (riga a tutta larghezza + interruttore "Uso un conto deposito"), *Spese*, *Impostazioni* (solo
   interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
   spegnendolo la cifra si cancella).
 - Regole di design: scelte sì/no = **interruttore** stile iPhone (`switchRow`, classe `.sw`), anche nella configurazione guidata;
@@ -155,6 +155,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - Obiettivo (in Deposito e in Risparmi): barra di avanzamento sul saldo di oggi e mese in cui si raggiunge,
   proseguendo oltre la fine del periodo con il Modello (al massimo 50 anni).
 - Chi parte da zero: inizio = mese corrente, senza fine, 13 mensilità, deposito spento.
+- **Niente "Dal mese / Fino a" nel Modello**: i conti sono sempre senza fine (`pianoFromRow` e la guida forzano `senza_fine = true`).
+  Il mese di partenza si sceglie nel benvenuto (primo accesso: "I tuoi conti partono da", di base il mese in cui ti registri,
+  fino a 24 mesi prima); dopo si cambia solo riaprendo la configurazione guidata dal menu ☰ (primo passaggio).
 
 ## Modifiche al database già eseguite su Supabase (in ordine)
 1. Schema iniziale (`piani`, `depositi`, `mesi`, RLS).

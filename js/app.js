@@ -569,8 +569,14 @@ function ensureMese(id) {
 function renderOnboarding(v) {
   v.innerHTML = `<section class="card pad"><h2>Benvenuto</h2>
     <p>Spare ti dice quanto ti resta in tasca ogni mese e quanto metti da parte. Per iniziare rispondi a qualche domanda: ci vogliono un paio di minuti e puoi cambiare tutto anche dopo.</p>
+    <label class="field ob-da" for="ob-da"><span class="label">I tuoi conti partono da</span><select id="ob-da"></select><span class="hint">Di solito il mese in corso. Scegli un mese prima se vuoi segnare anche i mesi passati.</span></label>
     <div class="actions"><button class="btn primary" type="button" id="ob-zero">Inizia la configurazione</button><button class="btn" type="button" id="ob-import">Ho un backup da importare</button></div>
     <button class="link" type="button" id="ob-salta">Salta, configuro da solo</button></section>`;
+  // mese di partenza: di base quello in cui ti registri
+  const oggi = meseCorrente(), sd = $("ob-da");
+  if (!state.piano.mese_inizio || state.piano.mese_inizio > oggi) state.piano.mese_inizio = oggi;
+  sd.innerHTML = monthRange(addMonths(oggi, -24), oggi).reverse().map((id) => `<option value="${id}"${id === state.piano.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("");
+  sd.onchange = () => { state.piano.mese_inizio = sd.value; state.piano.senza_fine = true; };
   $("ob-import").onclick = () => $("importFile").click();
   $("ob-zero").onclick = () => guida(true);
   $("ob-salta").onclick = saltaGuida;
@@ -989,30 +995,13 @@ function renderModello(v) {
   // Risparmio
   v.appendChild(secHead("Risparmio", eur(c.toDep), "risparmio"));
   v.appendChild(moneyField(T().rispBreve, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp", cls: "riga", hint: "Ogni mese" }));
+  v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
 
   // Spese
   vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
 
-  // Impostazioni: periodo e avviso
+  // Impostazioni: avviso resto basso (il periodo non si sceglie qui: parte dalla registrazione ed è senza fine)
   v.appendChild(secHead("Impostazioni"));
-  const oggi = meseCorrente();
-  const opts = monthRange((Number(oggi.slice(0, 4)) - 5) + "-01", (Number(oggi.slice(0, 4)) + 10) + "-12");
-  if (!opts.includes(p.mese_inizio)) opts.unshift(p.mese_inizio);
-  const per = document.createElement("div"); per.className = "fields";
-  per.innerHTML = `<label class="field" for="t-da"><span class="label">Dal mese</span><select id="t-da">${opts.map((id) => `<option value="${id}"${id === p.mese_inizio ? " selected" : ""}>${monthLabel(id)}</option>`).join("")}</select><span class="hint">Il primo mese dei tuoi conti</span></label>
-    <label class="field" for="t-a"><span class="label">Fino a</span><select id="t-a"><option value="">Senza fine</option>${opts.filter((id) => id >= p.mese_inizio).map((id) => `<option value="${id}"${!p.senza_fine && id === p.mese_fine ? " selected" : ""}>${monthLabel(id)}</option>`).join("")}</select><span class="hint">${p.senza_fine ? `Si allunga da solo: ora fino a ${monthLabelLong(months().slice(-1)[0])}` : "Ultimo mese dei tuoi conti"}</span></label>`;
-  if (p.senza_fine) per.querySelector("#t-a").value = "";
-  per.querySelector("#t-da").onchange = (e) => {
-    const x = e.target.value;
-    if (p.senza_fine || x <= p.mese_fine) { p.mese_inizio = x; savePiano(); render(); } else e.target.value = p.mese_inizio;
-  };
-  per.querySelector("#t-a").onchange = (e) => {
-    const x = e.target.value;
-    if (!x) p.senza_fine = true; else { p.senza_fine = false; p.mese_fine = x; }
-    savePiano(); render();
-  };
-  v.appendChild(per);
-  v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
 
   // Avviso resto basso: interruttore; acceso chiede una cifra obbligatoria (soglia 0 = spento)
   const avvisoOn = N(p.soglia) > 0 || avvisoAperto;
