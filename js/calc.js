@@ -105,8 +105,8 @@ export const fineSpesa = (v) => (v && v.da && N(v.rate) >= 1 ? addMonths(v.da, N
 export const attivaNel = (v, id) => !v || !v.da || (id >= v.da && (!fineSpesa(v) || id <= fineSpesa(v)));
 
 /** Voce automatica: i buoni pasto si spendono in categoria Spesa (entrano ed escono con la stessa cifra). Non si salva. */
-export const voceBuoni = (importo) => ({ id: "__buoni", nome: "Spesa (buoni pasto)", importo: round(importo), cat: "spesa", auto: true });
-const conBuoni = (voci, buoni) => (buoni > 0 ? voci.concat([voceBuoni(buoni)]) : voci);
+// Buoni pasto = un borsellino a parte: entrano ogni mese, escono solo le spese segnate "con i buoni" (v.buoni = true).
+// Le spese con i buoni non toccano il resto in tasca; i buoni non usati si accumulano (saldoBuoni).
 
 /** Dati effettivi di un mese: quelli personalizzati se esistono, altrimenti il Modello. */
 export function monthData(id, piano, mesi) {
@@ -123,20 +123,22 @@ export function monthData(id, piano, mesi) {
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
-      voci: conBuoni((d.voci || []).filter((v) => attivaNel(v, id) && !v.auto), round((d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num)) * N(piano.buoni_valore))),
+      voci: (d.voci || []).filter((v) => attivaNel(v, id) && !v.auto),
     };
   }
-  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * N(piano.buoni_valore)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: conBuoni((piano.voci || []).filter((v) => attivaNel(v, id)), round(N(piano.buoni_num) * N(piano.buoni_valore))) };
+  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * N(piano.buoni_valore)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
 }
 
 export function calcMonth(m, piano) {
   const spese = round(m.voci.reduce((a, v) => a + N(v.importo), 0));
   const extraDep = piano.extra_al_deposito ? N(m.extra) : 0;
   const toDep = round(N(m.risparmio) + extraDep);
-  const buoni = round(N(m.buoni));
-  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + buoni + N(m.extra));
-  const resto = round(entrate - spese - toDep);
-  return { spese, toDep, entrate, resto, extraDep, buoni };
+  const buoni = round(N(m.buoni)); // buoni ricevuti nel mese (borsellino a parte)
+  const speseBuoni = round(m.voci.filter((v) => v.buoni).reduce((a, v) => a + N(v.importo), 0)); // pagate con i buoni
+  const speseSoldi = round(spese - speseBuoni);
+  const entrate = round(N(m.stipendio) + N(m.entrate_extra) + N(m.extra)); // solo soldi veri
+  const resto = round(entrate - speseSoldi - toDep);
+  return { spese, speseBuoni, speseSoldi, toDep, entrate, resto, extraDep, buoni };
 }
 
 export function statoResto(resto, soglia) {
@@ -203,4 +205,14 @@ export function simulaDeposito(months, piano, mesi, dep) {
     return { id, versato, prelievo, tasso, periodo, cambio, lordo, netto, bollo, saldo, extra: c.extraDep };
   });
   return { rows, totNetto, totBollo, totVersato, saldo };
+}
+
+/** Borsellino dei buoni pasto mese per mese: ricevuti, usati e da parte (accumulati dal primo mese). */
+export function saldoBuoni(ms, piano, mesi) {
+  let da = 0;
+  return ms.map((id) => {
+    const c = calcMonth(monthData(id, piano, mesi), piano);
+    da = round(da + c.buoni - c.speseBuoni);
+    return { id, ricevuti: c.buoni, usati: c.speseBuoni, daParte: da };
+  });
 }

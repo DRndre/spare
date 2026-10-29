@@ -79,15 +79,16 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Ogni riga del Modello ha l'icona calendario per impostare/cambiare/togliere il periodo; etichetta azzurra
   "nov 2026 → ott 2027 · ancora N rate", grigia e riga sbiadita se finita o non iniziata. "Ti restano" e il totale
   Spese del Modello contano le spese attive nel mese di oggi (`meseRif()`), con "a <mese>" se ci sono spese a tempo.
-- **Buoni pasto**: `piani.buoni_num`/`buoni_valore`, `mesi.buoni_num` (null = come il Modello). Contano tra le entrate e nel
-  resto in tasca (pagano spese già in elenco); "di cui X € in buoni" sotto Entrate nel riepilogo dell'anno. `piani.entrate_extra`
-  non si usa più (le entrate extra sono solo nei mesi). Prima della query 10 l'app tratta le vecchie entrate extra del Modello
-  come 1 buono (`colBuoni`). Nei mesi le spese a rate mostrano l'etichetta "Rata 3 di 6 · fino a apr 2027".
-  **Voce automatica "Spesa (buoni pasto)"** (categoria Spesa, `voceBuoni()` in calc.js, `auto: true`, id `__buoni`): aggiunta da
-  `monthData` (e nel Modello da `vociModello`/`conBuoniM`) con importo = buoni del mese; mai salvata (filtrata in `ensureMese`
-  e "Copia dal mese prima"); riga con lucchetto, non modificabile, si aggiorna mentre cambi il numero dei buoni. Così i buoni
-  entrano ed escono: il resto in tasca non cambia. Sotto Spese nel riepilogo dell'anno "di cui X € con i buoni".
-  Consiglio dato ad Andrea: l'eventuale altra voce della spesa al supermercato = solo la parte pagata in contanti.
+- **Buoni pasto = borsellino a parte**: `piani.buoni_num`/`buoni_valore`, `mesi.buoni_num` (null = come il Modello).
+  I buoni ricevuti **non** entrano nel resto in tasca; ogni spesa può essere segnata "pagata con i buoni" (`v.buoni = true` in
+  `voci`, nessuna colonna): non tocca il resto (`calcMonth`: `speseBuoni`, `speseSoldi`, `entrate` = solo soldi veri) ed esce dai
+  buoni. I buoni non usati si accumulano (`saldoBuoni(ms)` in calc.js, da 0 dal primo mese). Nel mese: riquadro "Buoni pasto ·
+  Ricevuti · usati · Da parte" (rosso "Mancano" se si usano più buoni di quelli che ci sono); nelle righe icona biglietto per
+  segnare "con i buoni" (nel Modello dentro il pannello opzioni "…" insieme a "Solo per un periodo") e chip "Con i buoni";
+  interruttore anche in "Nuova spesa". Riepilogo dell'anno: Entrate comprendono i buoni ("di cui X in buoni"), Spese "di cui X
+  con i buoni", riga "Buoni pasto · da parte". Usabili per qualsiasi cosa (spesa, Deliveroo, ristoranti). La voce automatica
+  "Spesa (buoni pasto)" è stata provata e tolta. Nel futuro Riepilogo i buoni da parte vanno tra "quello che hai".
+  `piani.entrate_extra` non si usa più (entrate extra solo nei mesi). Nei mesi le spese a rate: "Rata 3 di 6 · fino a apr 2027".
 - **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
@@ -142,7 +143,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   risparmio, prelievo, extra (null = importo di 13ª/14ª dal Modello), voci.
 
 ## Regole di calcolo
-- Resto in tasca = stipendio + buoni pasto + entrate extra + 13ª/14ª − spese − risparmio − 13ª/14ª (se vanno nel deposito).
+- Resto in tasca = stipendio + entrate extra + 13ª/14ª − spese pagate con soldi (non quelle "con i buoni") − risparmio − 13ª/14ª (se vanno nel deposito).
+  Buoni da parte = somma dei buoni ricevuti − spese con i buoni, dal primo mese.
 - "Senza fine": i mesi arrivano fino a dicembre dell'anno dopo quello di oggi.
 - Deposito: versamenti a inizio mese; interesse mensile = saldo × tasso ÷ 12, meno il 26% di tasse,
   meno il bollo annuo ÷ 12. È una stima.
