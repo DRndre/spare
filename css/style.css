@@ -541,3 +541,11 @@ form.add input.sw:checked { background: var(--accent); }
 .per-tag.ro { cursor: default; }
 .row.con-tag { padding-bottom: 4px; }
 .mod-nota { margin-top: -6px; }
+/* Buoni pasto: un solo riquadro con numero × valore */
+.field.buoni .bp-row { display: flex; align-items: center; gap: 4px; min-width: 0; flex-wrap: nowrap; }
+.field.buoni input[type=text] { margin: 0; padding: 5px 6px; }
+.field.buoni .bp-n { width: calc(3ch + 14px); flex: 0 0 auto; margin-left: -6px; }
+.field.buoni .bp-v { width: calc(5ch + 14px); flex: 0 0 auto; }
+.field.buoni .bp-x { color: var(--muted); }
+.field.buoni .eur { margin-left: auto; }
+.field.buoni .bp-fisso { font-family: var(--f-num); font-size: 1.15rem; font-weight: 500; font-variant-numeric: tabular-nums; padding: 5px 0; }

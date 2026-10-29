@@ -315,6 +315,28 @@ function numField(label, value, onVal, { hint = "", id, unit = "" } = {}) {
   return f;
 }
 
+/** Buoni pasto in un solo riquadro: [20] buoni × [6,50] € = 130,00 €. Senza onValore il valore è fisso (dal Modello). */
+function buoniField(num, valore, onNum, onValore, { id } = {}) {
+  const f = document.createElement("div"); f.className = "field buoni";
+  f.innerHTML = `<label class="label" for="${id}">Buoni pasto</label>
+    <div class="bp-row"><input type="text" inputmode="numeric" autocomplete="off" id="${id}" class="bp-n" aria-label="Numero di buoni"><span class="bp-x">×</span>
+    ${onValore ? `<input type="text" inputmode="decimal" autocomplete="off" id="${id}-v" class="bp-v" aria-label="Valore di un buono">` : `<span class="bp-fisso">${fmt.format(valore)}</span>`}<span class="eur">€</span></div>
+    <span class="hint"></span>`;
+  const ni = f.querySelector(".bp-n"), vi = f.querySelector(".bp-v"), h = f.querySelector(".hint");
+  let n = Math.round(N(num)), v = N(valore);
+  const tot = () => { h.textContent = v > 0 ? `${n} ${n === 1 ? "buono" : "buoni"} = ${eur(round(n * v))}` : "Numero × valore di un buono (0 se non ne ricevi)"; };
+  ni.value = String(n);
+  ni.addEventListener("input", () => { ni.value = ni.value.replace(/\D/g, "").slice(0, 3); n = Number(ni.value || 0); onNum(n); tot(); refresh(); });
+  ni.addEventListener("blur", () => { if (!ni.value) ni.value = "0"; });
+  if (vi) {
+    vi.value = fmt.format(v);
+    vi.addEventListener("input", () => { const x = parseNum(vi.value); if (!isNaN(x) && x >= 0) { v = round(x); onValore(v); tot(); refresh(); } });
+    vi.addEventListener("blur", () => { vi.value = fmt.format(v); });
+  }
+  tot();
+  return f;
+}
+
 function confirmInline(host, text, okLabel, onOk) {
   if (host.querySelector(".confirm")) return;
   const cf = document.createElement("div"); cf.className = "confirm";
@@ -578,7 +600,7 @@ function renderMesi(v) {
   fe.appendChild(moneyField("Stipendio", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
   if (N(state.piano.buoni_valore) > 0) {
     const vb = N(state.piano.buoni_valore);
-    fe.appendChild(numField("Buoni pasto", m.buoni_num, (n, h) => { ensureMese(sel).buoni_num = n; saveMese(sel); h.textContent = `× ${eur(vb)} = ${eur(round(n * vb))}`; }, { id: "m-buoni-" + sel, unit: "buoni", hint: `× ${eur(vb)} = ${eur(m.buoni)}` }));
+    fe.appendChild(buoniField(m.buoni_num, vb, (n) => { ensureMese(sel).buoni_num = n; saveMese(sel); }, null, { id: "m-buoni-" + sel }));
   }
   fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Solo questo mese" }));
   if (ex) fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
@@ -892,15 +914,9 @@ function renderModello(v) {
   v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
   const fs = document.createElement("div"); fs.className = "fields";
   fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
+  // Buoni pasto (o altro benefit fisso) accanto allo stipendio: numero al mese × valore di un buono
+  fs.appendChild(buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni" }));
   v.appendChild(fs);
-  // Buoni pasto (o altro benefit fisso): numero al mese × valore. Le entrate extra si scrivono solo nei mesi.
-  const fb = document.createElement("div"); fb.className = "fields";
-  const totB = () => `= ${eur(round(N(p.buoni_num) * N(p.buoni_valore)))} al mese`;
-  let hv;
-  fb.appendChild(numField("Buoni pasto al mese", N(p.buoni_num), (n) => { p.buoni_num = n; savePiano(); if (hv) hv.textContent = totB(); }, { id: "t-buoni", unit: "buoni", hint: "Nei mesi con più o meno giorni lo cambi lì" }));
-  const fvb = moneyField("Valore di un buono", N(p.buoni_valore), (n) => { p.buoni_valore = n; savePiano(); hv.textContent = totB(); }, { id: "t-buoniv", hint: totB() });
-  hv = fvb.querySelector(".hint"); fb.appendChild(fvb);
-  v.appendChild(fb);
   v.insertAdjacentHTML("beforeend", '<p class="hint flush mod-nota">Le entrate che non arrivano tutti i mesi (rimborsi, extra) scrivile solo nel mese, nella scheda Mesi.</p>');
 
   // Mensilità: 12, 13 o 14, con importo e mese di 13ª e 14ª
