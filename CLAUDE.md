@@ -91,6 +91,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   `anteprima/` su main finché Andrea non dice di toglierla. Scheda "Riepilogo" prima: Quello che hai (deposito + altri
   investimenti, conto corrente escluso), Altri investimenti scritti a mano (nell'anteprima in localStorage; nell'app vera
   servirebbe una colonna jsonb), mese di oggi, anno in breve con top 3 categorie e grafico del resto, rate in corso, obiettivo.
+  Decisioni di Andrea (d'accordo): dati veri da aggiornare ogni tanto, non solo previsioni; per ogni investimento **quanto
+  versato + quanto vale oggi + data di aggiornamento**; il conto corrente passa dal residuo del mese (farlo prima);
+  provarla sul telefono prima di decidere. **Già predisposto:** colonna `piani.investimenti` jsonb (query 9) e in store.js
+  `fixInvestimenti` / `state.piano.investimenti` `[{id, nome, tipo: "investimento"|"conto", versato, valore, aggiornato}]`,
+  salvata solo se la colonna esiste (`colInvestimenti`), compresa nel backup. Nessuna schermata ancora.
 - `js/categorie.js` — 17 categorie di base (Casa, Auto e trasporti, Abbonamenti, Cura personale, Spesa, Salute,
   Svago e uscite, Animali, Viaggi, Rate e prestiti, Regali, Figli, Sport, Abbigliamento, Formazione, Tasse, Altro)
   con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria
@@ -115,7 +120,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **piani** (una riga per utente, il "Modello" = mese tipo): stipendio, entrate_extra, risparmio,
   soglia (0 = nessun avviso), mensilita (12/13/14), tredicesima, quattordicesima, mese_13, mese_14 (1-12),
   extra_al_deposito, usa_deposito, mese_inizio, mese_fine, senza_fine, voci (jsonb `[{id, nome, importo, cat}]`),
-  categorie (jsonb `[{k, n, c, i}]`: categorie create dall'utente; chiave `c…`, colore esadecimale, nome icona).
+  categorie (jsonb `[{k, n, c, i}]`: categorie create dall'utente; chiave `c…`, colore esadecimale, nome icona),
+  investimenti (jsonb, vedi Riepilogo in sospeso).
 - **depositi** (una riga per utente): saldo_iniziale, obiettivo (0 = nessuno), obiettivo_nome, tasse (26), bollo (0,2), periodi
   (jsonb `[{id, da: "AAAA-MM", tasso, nome}]`: ogni tasso vale dal suo mese fino al successivo).
   Le colonne `tasso_promo`, `tasso_base`, `inizio_promo`, `mesi_promo` sono della prima versione e non si usano più.
@@ -143,6 +149,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 7. `piani.categorie`; spostate "Fondo conigli" → animali e "Klarna Multa" → rate (Modello e mesi).
 8. Funzione `public.ha_verifica()` (security definer: `auth.mfa_factors` non è leggibile dagli utenti) e policy restrittiva
    "codice se attivo" su `piani`, `depositi`, `mesi`. (Un primo tentativo che leggeva direttamente `auth.mfa_factors` aveva bloccato l'app.)
+9. `piani.investimenti` jsonb (predisposizione per il Riepilogo) — *da confermare che Andrea l'abbia eseguita*.
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.
