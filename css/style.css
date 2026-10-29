@@ -566,3 +566,4 @@ form.add input.sw:checked { background: var(--accent); }
 #yc-buoni .ya-p { font-size: .8rem; color: var(--muted); text-align: right; }
 #yc-buoni .ya-v { font-weight: 700; font-variant-numeric: tabular-nums; }
 .ya-head .ya-sub { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.hero-bp b.neg, #yc-buoni .ya-v.neg { color: var(--bad); }
