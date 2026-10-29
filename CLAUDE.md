@@ -163,7 +163,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 8. Funzione `public.ha_verifica()` (security definer: `auth.mfa_factors` non è leggibile dagli utenti) e policy restrittiva
    "codice se attivo" su `piani`, `depositi`, `mesi`. (Un primo tentativo che leggeva direttamente `auth.mfa_factors` aveva bloccato l'app.)
 9. `piani.investimenti` jsonb (predisposizione per il Riepilogo).
-10. Buoni pasto: `piani.buoni_num`, `piani.buoni_valore`, `mesi.buoni_num`; entrate extra del Modello spostate nei buoni — *da confermare che Andrea l'abbia eseguita*.
+10. Buoni pasto: `piani.buoni_num`, `piani.buoni_valore`, `mesi.buoni_num`; entrate extra del Modello spostate nei buoni.
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.
