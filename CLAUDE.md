@@ -95,7 +95,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   versato + quanto vale oggi + data di aggiornamento**; il conto corrente passa dal residuo del mese (farlo prima);
   provarla sul telefono prima di decidere. **Già predisposto:** colonna `piani.investimenti` jsonb (query 9) e in store.js
   `fixInvestimenti` / `state.piano.investimenti` `[{id, nome, tipo: "investimento"|"conto", versato, valore, aggiornato}]`,
-  salvata solo se la colonna esiste (`colInvestimenti`), compresa nel backup. Nessuna schermata ancora.
+  salvata solo se la colonna esiste (`colInvestimenti`), compresa nel backup, con `storico: [{data, versato, valore}]`
+  (un punto a ogni aggiornamento, per il grafico nel tempo). Nessuna schermata ancora.
+  **Stile voluto: come Moneyfarm** — valore totale grande, versato totale, guadagno in € e %, grafico nel tempo
+  "valore" contro "versato" (deposito dalla simulazione mese per mese, investimenti dallo storico), scelta del periodo
+  (1 anno / tutto), composizione per prodotto in € e %. Rendimenti TW/MW e confronti con altri fondi: no.
 - `js/categorie.js` — 17 categorie di base (Casa, Auto e trasporti, Abbonamenti, Cura personale, Spesa, Salute,
   Svago e uscite, Animali, Viaggi, Rate e prestiti, Regali, Figli, Sport, Abbigliamento, Formazione, Tasse, Altro)
   con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria

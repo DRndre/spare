@@ -39,13 +39,18 @@ function fixCategorie(v) {
 
 /** Investimenti e saldi scritti a mano (per il futuro Riepilogo): [{id, nome, tipo, versato, valore, aggiornato}].
  *  tipo: "investimento" (ETF, azioni, buoni…) o "conto" (es. conto corrente); versato = quanto ci hai messo
- *  (0 = non indicato); aggiornato = "AAAA-MM-GG" del valore. */
+ *  (0 = non indicato); aggiornato = "AAAA-MM-GG" del valore; storico = [{data, versato, valore}] per il grafico. */
 export function fixInvestimenti(v) {
   return Array.isArray(v)
     ? v.filter((x) => x && String(x.nome || "").trim()).map((x) => ({
       id: String(x.id || uid()), nome: String(x.nome).trim().slice(0, 60), tipo: x.tipo === "conto" ? "conto" : "investimento",
       versato: Math.max(0, N(x.versato)), valore: Math.max(0, N(x.valore)),
       aggiornato: /^\d{4}-\d{2}-\d{2}$/.test(String(x.aggiornato || "")) ? String(x.aggiornato) : "",
+      // storico dei valori (per il grafico "andamento nel tempo"): un punto ogni volta che aggiorni il valore
+      storico: (Array.isArray(x.storico) ? x.storico : [])
+        .filter((h) => h && /^\d{4}-\d{2}-\d{2}$/.test(String(h.data || "")))
+        .map((h) => ({ data: String(h.data), versato: Math.max(0, N(h.versato)), valore: Math.max(0, N(h.valore)) }))
+        .sort((a, b) => a.data.localeCompare(b.data)),
     }))
     : [];
 }
