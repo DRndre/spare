@@ -758,7 +758,7 @@ function statsAnno(d) {
   const coda = riportoAttivo() ? `<div class="yc-fine"><span>In tasca a fine ${MESI_NOMI[Number(d[d.length - 1].id.slice(5)) - 1].toLowerCase()}<small>Contando quello che passa da un mese all'altro</small></span><b class="${fine < 0 ? "bad" : ""}">${eur0(fine)}</b></div>` : "";
   if (Math.abs(sp(peggio) - sp(meglio)) < 0.005)
     return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: spendi <b>${eur0(sp(meglio))}</b> al mese.</span></div>`;
-  return head + box(meglio, "Mese migliore", "trending-down", "best") + box(peggio, "Mese peggiore", "trending-up", "worst");
+  return head + box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
 }
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
