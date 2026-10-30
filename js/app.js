@@ -1173,8 +1173,8 @@ function renderRiepilogo(v) {
 
   // Composizione per prodotto
   const parti = [{ id: "dep", n: dep ? "Conto deposito" : "Risparmi", val: ult.dep, ver: ult.depVers, c: "var(--c-risp)", note: "Stima dai tuoi conti" }]
-    .concat(riportoAttivo() ? [{ id: "tasca", n: "In tasca", val: ult.tasca, ver: ult.tasca, c: "var(--accent)", note: `Resto a fine ${monthLabelLong(oggi).toLowerCase()}` }] : [])
-    .concat(buoniAttivi() ? [{ id: "bp", n: "Buoni pasto", val: ult.bp, ver: ult.bp, c: "#5AC8FA", note: "Quelli che ti avanzano" }] : [])
+    .concat(riportoAttivo() ? [{ id: "tasca", n: "In tasca", val: ult.tasca, ver: 0, c: "var(--accent)", note: `Resto a fine ${monthLabelLong(oggi).toLowerCase()}` }] : [])
+    .concat(buoniAttivi() ? [{ id: "bp", n: "Buoni pasto", val: ult.bp, ver: 0, c: "#5AC8FA", note: "Quelli che ti avanzano" }] : [])
     .concat(inv.map((x, i) => { const p = puntoAl(x, oggi) || { valore: 0, versato: 0 }; return { id: x.id, n: x.nome, val: p.valore, ver: p.versato, c: PALETTE[(i * 3) % PALETTE.length], note: x.aggiornato ? "Aggiornato il " + dataCorta(x.aggiornato) : "" }; }));
   const base = parti.reduce((a, x) => a + Math.max(0, x.val), 0) || 1;
   v.appendChild(secHead("Composizione"));
