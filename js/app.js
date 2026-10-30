@@ -5,7 +5,7 @@ import {
   mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI,
 } from "./calc.js";
 import {
-  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData,
+  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep,
 } from "./store.js";
 import { LOGO } from "./logo.js";
 import { categorie, catInfo, badge, icona } from "./categorie.js";
@@ -557,10 +557,17 @@ function fillBar(bar, leg, m, c) {
 }
 
 /* ---------- Mesi personalizzati ---------- */
+// Testi sotto 13ª/14ª e risparmio: cambiano mentre scrivi quanta 13ª/14ª va al deposito
+function hintExtra(m, c) {
+  if (c.extraDep <= 0) return "Resta in tasca";
+  if (c.extraDep >= N(m.extra)) return T().va;
+  return `${eur(c.extraDep)} ${usaDep() ? "al deposito" : "da parte"}, ${eur(round(N(m.extra) - c.extraDep))} in tasca`;
+}
+const hintRisp = (c, ex) => c.extraDep ? `+ ${eur(c.extraDep)} di ${ex?.corto || "extra"}` : "";
 function ensureMese(id) {
   if (!state.mesi[id]) {
     const t = monthData(id, state.piano, state.mesi);
-    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, voci: t.voci.map((v) => ({ ...v })) };
+    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, extra_dep: null, voci: t.voci.map((v) => ({ ...v })) };
   }
   return state.mesi[id];
 }
@@ -616,7 +623,7 @@ function renderMesi(v) {
     const copia = () => {
       const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
       state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: t.buoni_num, risparmio: t.risparmio, prelievo: t.prelievo,
-        extra: old ? old.extra : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
+        extra: old ? old.extra : null, extra_dep: old ? old.extra_dep ?? null : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
       saveMese(sel); render();
     };
     cb.onclick = () => (m.custom
@@ -637,14 +644,22 @@ function renderMesi(v) {
     fe.appendChild(buoniField(m.buoni_num, vb, (n) => { ensureMese(sel).buoni_num = n; saveMese(sel); }, null, { id: "m-buoni-" + sel }));
   }
   fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Solo questo mese" }));
-  if (ex) fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: state.piano.extra_al_deposito ? T().va : "Resta in tasca" }));
+  if (ex) {
+    fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: hintExtra(m, c) }));
+  }
   v.appendChild(fe);
 
   v.appendChild(secHead("Risparmio", eur(round(c.toDep - N(m.prelievo))), "risparmio"));
   const fr = document.createElement("div"); fr.className = "fields";
-  fr.appendChild(moneyField(T().rispBreve, m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel, hint: c.extraDep ? `+ ${eur(c.extraDep)} di ${ex?.corto || "extra"}` : "" }));
+  fr.appendChild(moneyField(T().rispBreve, m.risparmio, (n) => { ensureMese(sel).risparmio = n; saveMese(sel); }, { id: "m-risp-" + sel, hint: hintRisp(c, ex) }));
   fr.appendChild(moneyField("Prelievo", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
   v.appendChild(fr);
+  // Quanta 13ª/14ª va al deposito in questo mese (di base tutta o niente, come nel Modello)
+  if (ex && N(m.extra) > 0 && haExtraDep()) {
+    const quota = moneyField(`${ex.corto || ex.nome} ${usaDep() ? "al deposito" : "da parte"}`, c.extraDep, (n) => { ensureMese(sel).extra_dep = n; saveMese(sel); },
+      { id: "m-exdep-" + sel, cls: "riga extra-dep", hint: `Su ${eur(m.extra)}: il resto rimane in tasca` });
+    v.appendChild(quota);
+  }
 
   vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-", { titoloFuori: true, mese: sel });
 
@@ -944,6 +959,17 @@ function renderModello(v) {
   v.insertAdjacentHTML("beforeend", `<p class="mod-spiega flush">Qui imposti le regole fisse: le entrate, le spese e il risparmio che si ripetono ogni mese.</p>
     <p class="hint flush mod-intro">I mesi che non hai personalizzato seguono il Modello: cambi qui, cambiano tutti.</p>`);
 
+  // Mese di partenza: la prima cosa del Modello (di base il mese della registrazione)
+  {
+    const oggi = meseCorrente();
+    const opts = monthRange(addMonths(oggi, -60), addMonths(oggi, 12));
+    if (!opts.includes(p.mese_inizio)) opts.unshift(p.mese_inizio);
+    const fp = document.createElement("label"); fp.className = "field riga partenza"; fp.htmlFor = "t-da";
+    fp.innerHTML = `<span class="label">I tuoi conti partono da</span><span class="hint">${p.mese_inizio === oggi ? "Il mese in corso" : p.mese_inizio < oggi ? "Comprende anche i mesi passati" : "Inizierà più avanti"}</span><select id="t-da">${opts.map((id) => `<option value="${id}"${id === p.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select>`;
+    fp.querySelector("select").onchange = (e) => { p.mese_inizio = e.target.value; p.senza_fine = true; savePiano(); render(); };
+    v.appendChild(fp);
+  }
+
   // Conti del mese tipo (servono per i totali delle sezioni)
   const m = { stipendio: N(p.stipendio), entrate_extra: 0, buoni: round(N(p.buoni_num) * N(p.buoni_valore)), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
   const c = calcMonth(m, p);
@@ -1000,8 +1026,8 @@ function renderModello(v) {
   // Spese
   vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
 
-  // Impostazioni: avviso resto basso (il periodo non si sceglie qui: parte dalla registrazione ed è senza fine)
-  v.appendChild(secHead("Impostazioni"));
+  // Altre impostazioni: avviso resto basso (il mese di partenza è in cima; i conti sono sempre senza fine)
+  v.appendChild(secHead("Altre impostazioni"));
 
   // Avviso resto basso: interruttore; acceso chiede una cifra obbligatoria (soglia 0 = spento)
   const avvisoOn = N(p.soglia) > 0 || avvisoAperto;
@@ -1087,6 +1113,8 @@ function refresh() {
   if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
   updateGroupSums();
   if (view === "mesi") {
+    const ex = extraInfo(sel, state.piano), setH = (id, t) => { const h = $(id)?.closest(".field")?.querySelector(".hint"); if (h) h.textContent = t; };
+    if (ex) { setH("m-extra-" + sel, hintExtra(m, c)); setH("m-risp-" + sel, hintRisp(c, ex)); }
     const chip = $("chip-" + sel);
     if (chip) { chip.querySelector(".pin").dataset.k = statoResto(c.resto, state.piano.soglia); }
     const ms = months().filter((id) => id.startsWith(sel.slice(0, 4)));

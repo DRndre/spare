@@ -126,3 +126,6 @@ update public.mesi m set entrate_extra = null
   where m.user_id = p.user_id and p.entrate_extra > 0 and p.buoni_valore = 0 and m.entrate_extra = p.entrate_extra;
 update public.piani set buoni_num = 1, buoni_valore = entrate_extra, entrate_extra = 0
   where entrate_extra > 0 and buoni_valore = 0;
+
+-- 11. Quanta 13ª/14ª va al deposito in un mese (null = come il Modello: tutta o niente)
+alter table public.mesi add column if not exists extra_dep numeric;

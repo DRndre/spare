@@ -50,10 +50,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   *Il tuo anno* (anni, Versato / Interessi netti, grafico a barre verdi del saldo mese per mese, "Vedi la tabella completa").
   Senza deposito (*Risparmi*) stessa struttura: *Messo da parte*, *Obiettivo*, *Impostazioni*, *Il tuo anno* (Messo da parte / Prelievi).
 - **Scheda Modello** (ordine; il Modello serve solo a impostare le regole fisse, quindi **niente riquadro "Ti restano"**):
-  titolo "Il mese tipo" (a destra quanti mesi personalizzati), frase "Qui imposti le regole fisse: le entrate, le spese e il
+  titolo "Il mese tipo" (a destra quanti mesi personalizzati), riga "I tuoi conti partono da" (sotto le frasi, prima di Entrate), frase "Qui imposti le regole fisse: le entrate, le spese e il
   risparmio che si ripetono ogni mese.", sotto in grigio "I mesi che non hai personalizzato seguono il Modello…", *Entrate* (Stipendio e Buoni pasto affiancati;
   Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
-  *Risparmio* (riga a tutta larghezza + interruttore "Uso un conto deposito"), *Spese*, *Impostazioni* (solo
+  *Risparmio* (riga a tutta larghezza + interruttore "Uso un conto deposito"), *Spese*, *Altre impostazioni* (solo
   interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
   spegnendolo la cifra si cancella).
 - Regole di design: scelte sì/no = **interruttore** stile iPhone (`switchRow`, classe `.sw`), anche nella configurazione guidata;
@@ -142,7 +142,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   (jsonb `[{id, da: "AAAA-MM", tasso, nome}]`: ogni tasso vale dal suo mese fino al successivo).
   Le colonne `tasso_promo`, `tasso_base`, `inizio_promo`, `mesi_promo` sono della prima versione e non si usano più.
 - **mesi** (solo i mesi personalizzati; gli altri seguono il Modello): stipendio, entrate_extra (solo del mese; null = 0), buoni_num (null = come il Modello),
-  risparmio, prelievo, extra (null = importo di 13ª/14ª dal Modello), voci.
+  risparmio, prelievo, extra (null = importo di 13ª/14ª dal Modello), extra_dep (quanta 13ª/14ª al deposito; null = come il Modello), voci.
 
 ## Regole di calcolo
 - Resto in tasca = stipendio + entrate extra + 13ª/14ª − spese (tranne quelle "pagate con i buoni") − risparmio − 13ª/14ª (se vanno nel deposito).
@@ -157,7 +157,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - Chi parte da zero: inizio = mese corrente, senza fine, 13 mensilità, deposito spento.
 - **Niente "Dal mese / Fino a" nel Modello**: i conti sono sempre senza fine (`pianoFromRow` e la guida forzano `senza_fine = true`).
   Il mese di partenza si sceglie nel benvenuto (primo accesso: "I tuoi conti partono da", di base il mese in cui ti registri,
-  fino a 24 mesi prima); dopo si cambia solo riaprendo la configurazione guidata dal menu ☰ (primo passaggio).
+  fino a 24 mesi prima) e si vede/cambia **in cima al Modello** (riga "I tuoi conti partono da"). Non è nella configurazione guidata (scelta di Andrea).
+- **13ª/14ª in parte al deposito** (solo nei Mesi): nel mese della 13ª/14ª, sotto Risparmio, riga "13ª al deposito" con la cifra
+  (`mesi.extra_dep`, null = come il Modello: tutta se "13ª e 14ª al deposito" è acceso, se no niente; al massimo tutta).
+  Il Modello resta tutto sì / tutto no. Il campo compare solo se la colonna esiste (`haExtraDep()`, query 11).
 
 ## Modifiche al database già eseguite su Supabase (in ordine)
 1. Schema iniziale (`piani`, `depositi`, `mesi`, RLS).
@@ -171,6 +174,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
    "codice se attivo" su `piani`, `depositi`, `mesi`. (Un primo tentativo che leggeva direttamente `auth.mfa_factors` aveva bloccato l'app.)
 9. `piani.investimenti` jsonb (predisposizione per il Riepilogo).
 10. Buoni pasto: `piani.buoni_num`, `piani.buoni_valore`, `mesi.buoni_num`; entrate extra del Modello spostate nei buoni.
+11. `mesi.extra_dep` (13ª/14ª in parte al deposito). **Da eseguire** (finché manca, il campo non compare).
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.

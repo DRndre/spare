@@ -140,6 +140,7 @@ function meseBase(id, piano, mesi) {
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
+      extra_dep: !ex || d.extra_dep == null ? null : N(d.extra_dep), // null = come il Modello (tutta o niente)
       voci: (d.voci || []).filter((v) => attivaNel(v, id)),
     };
   }
@@ -148,7 +149,8 @@ function meseBase(id, piano, mesi) {
 
 export function calcMonth(m, piano) {
   const spese = round(m.voci.reduce((a, v) => a + N(v.importo), 0));
-  const extraDep = piano.extra_al_deposito ? N(m.extra) : 0;
+  // 13ª/14ª al deposito: la cifra scelta nel mese (al massimo tutta), se no come dice il Modello
+  const extraDep = m.extra_dep != null ? Math.min(N(m.extra_dep), N(m.extra)) : piano.extra_al_deposito ? N(m.extra) : 0;
   const toDep = round(N(m.risparmio) + extraDep);
   // Buoni pasto di lato: non entrano nel resto in tasca. Le spese "pagate con i buoni" escono dai buoni disponibili
   // (avanzati + ricevuti) e non toccano mai il resto.

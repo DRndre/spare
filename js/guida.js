@@ -97,7 +97,6 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     b.insertAdjacentHTML("beforeend", `<div class="steps" aria-label="Passaggio ${pos + 1} di ${el.length}">${el.map((x, i) => `<span class="${i === pos ? "on" : i < pos ? "done" : ""}"></span>`).join("")}</div>
       <h3 class="step-title">${pos + 1}. ${passo === 0 && w.manuale ? "Da dove partiamo" : PASSI[passo]}</h3>`);
     if (passo === 0) {
-      const opts = monthRange((Number(oggi.slice(0, 4)) - 2) + "-01", (Number(oggi.slice(0, 4)) + 2) + "-12").map((id) => [id, monthLabelLong(id)]);
       if (primaVolta) b.appendChild(spunta("Preferisco inserire ogni mese a mano", w.manuale, (v) => { w.manuale = v; disegna(); },
         w.manuale ? "Niente mese tipo: compili ogni mese nella scheda Mesi. Puoi cambiare idea quando vuoi." : "Senza un mese tipo: compili ogni mese da te."));
       if (!w.manuale) {
@@ -111,8 +110,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
           ib.addEventListener("blur", () => { const n = Math.round(parseNum(ib.value)); ib.value = n > 0 ? String(n) : ""; }); }
         b.appendChild(griglia(nb, campo("Valore di un buono", w.buoni_valore, (n) => (w.buoni_valore = n), { id: "w-buoniv" })));
       }
-      // il mese di partenza si sceglie nel benvenuto; riaprendo la guida dal menu si può cambiare qui
-      if (!primaVolta) b.appendChild(griglia(scelta("I tuoi conti partono da", w.mese_inizio, opts, (x) => (w.mese_inizio = x), { id: "w-inizio", hint: "Un mese prima se vuoi segnare anche i mesi passati" })));
+      // il mese di partenza si sceglie nel benvenuto e si cambia in cima al Modello
     }
     if (passo === 1) {
       b.appendChild(testo("Quante buste paga ricevi in un anno? Con 13 c'è la tredicesima, con 14 anche la quattordicesima."));

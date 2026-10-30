@@ -568,3 +568,8 @@ form.add input.sw:checked { background: var(--accent); }
 .ya-head .ya-sub { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .hero-bp b.neg, #yc-buoni .ya-v.neg { color: var(--bad); }
 .mod-spiega { font-size: .95rem; color: var(--fg); margin-top: -6px; }
+
+/* Mese di partenza in cima al Modello */
+.field.riga > select { grid-column: 2; grid-row: 1 / 3; width: auto; margin: 0; font: inherit; }
+.field.partenza { margin-bottom: 8px; }
+.field.extra-dep { margin-top: 12px; }

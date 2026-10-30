@@ -59,6 +59,8 @@ export function fixInvestimenti(v) {
 let colInvestimenti = false;
 // Le colonne dei buoni pasto esistono? (query 10) Prima della query uso le vecchie entrate extra del Modello come buoni.
 let colBuoni = false;
+let colExtraDep = false; // mesi.extra_dep (query 11): quanta 13ª/14ª va al deposito in quel mese
+export const haExtraDep = () => colExtraDep;
 
 function pianoFromRow(r) {
   const p = { ...DEFAULT_PIANO };
@@ -97,7 +99,7 @@ function depositoFromRow(r) {
 }
 const depositoRow = (d) => ({ saldo_iniziale: N(d.saldo_iniziale), periodi: fixPeriodi(d.periodi), obiettivo: N(d.obiettivo), obiettivo_nome: String(d.obiettivo_nome || ""), tasse: N(d.tasse), bollo: N(d.bollo) });
 function meseFromRow(r) {
-  return { stipendio: N(r.stipendio), entrate_extra: r.entrate_extra == null ? null : N(r.entrate_extra), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), buoni_num: r.buoni_num == null ? null : N(r.buoni_num), voci: fixVoci(r.voci) };
+  return { stipendio: N(r.stipendio), entrate_extra: r.entrate_extra == null ? null : N(r.entrate_extra), risparmio: N(r.risparmio), prelievo: N(r.prelievo), extra: r.extra == null ? null : N(r.extra), extra_dep: r.extra_dep == null ? null : N(r.extra_dep), buoni_num: r.buoni_num == null ? null : N(r.buoni_num), voci: fixVoci(r.voci) };
 }
 
 /** Piano per chi parte da zero: inizia dal mese corrente e non ha fine. */
@@ -115,6 +117,7 @@ export async function loadAll() {
     sb.from("mesi").select("*").eq("user_id", uidUser),
   ]);
   for (const r of [p, d, m]) if (r.error) throw r.error;
+  try { const r = await sb.from("mesi").select("extra_dep").eq("user_id", uidUser).limit(1); colExtraDep = !r.error; } catch { colExtraDep = false; }
   // Non sovrascrivere ciò che l'utente sta modificando in questo momento
   if (p.data && "investimenti" in p.data) colInvestimenti = true;
   if (p.data && "buoni_valore" in p.data) colBuoni = true;
@@ -188,6 +191,7 @@ export function saveMese(id) {
       stipendio: N(m.stipendio), entrate_extra: m.entrate_extra == null ? null : N(m.entrate_extra), risparmio: N(m.risparmio), prelievo: N(m.prelievo),
       extra: m.extra == null ? null : N(m.extra), voci: cleanVoci(m.voci), updated_at: now(),
       ...(colBuoni ? { buoni_num: m.buoni_num == null ? null : N(m.buoni_num) } : {}),
+      ...(colExtraDep ? { extra_dep: m.extra_dep == null ? null : N(m.extra_dep) } : {}),
     });
   });
 }
@@ -219,7 +223,7 @@ export async function importData(json) {
   if (r2.error) throw r2.error;
   const r3 = await sb.from("mesi").delete().eq("user_id", u);
   if (r3.error) throw r3.error;
-  const rows = Object.entries(state.mesi).map(([id, { buoni_num: bn, ...m }]) => ({ user_id: u, mese: id, ...m, voci: cleanVoci(m.voci), updated_at: t, ...(colBuoni ? { buoni_num: bn == null ? null : N(bn) } : {}) }));
+  const rows = Object.entries(state.mesi).map(([id, { buoni_num: bn, extra_dep: ed, ...m }]) => ({ user_id: u, mese: id, ...m, voci: cleanVoci(m.voci), updated_at: t, ...(colBuoni ? { buoni_num: bn == null ? null : N(bn) } : {}), ...(colExtraDep ? { extra_dep: ed == null ? null : N(ed) } : {}) }));
   if (rows.length) { const r4 = await sb.from("mesi").insert(rows); if (r4.error) throw r4.error; }
   status("saved", "Salvato");
 }
