@@ -1012,7 +1012,9 @@ function renderModello(v) {
 
   // Interruttore del Modello: spento = ogni mese si compila a mano (le cifre del Modello restano, grigie)
   const modOn = modelloOn(p);
-  if (haModello()) v.appendChild(switchRow("t-usamod", "Uso il Modello", modOn ? "I mesi seguono il mese tipo qui sotto" : "Spento: compili ogni mese a mano nella scheda Mesi", modOn, (x) => { p.usa_modello = x; savePiano(); render(); }));
+  if (haModello()) v.appendChild(switchRow("t-usamod", "Usa il Modello", modOn ? "I mesi seguono il mese tipo qui sotto" : "Spento: compili ogni mese a mano nella scheda Mesi", modOn, (x) => { p.usa_modello = x; savePiano(); render(); }));
+  // Modello spento: il conto deposito resta attivo, subito sotto
+  if (!modOn) v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
   const vv = document.createElement("div"); vv.className = "mod-corpo" + (modOn ? "" : " spento");
   if (!modOn) vv.inert = true;
   v.appendChild(vv);
@@ -1076,7 +1078,6 @@ function renderModello(v) {
 
   // Altre impostazioni: avviso resto basso (il mese di partenza è in cima; i conti sono sempre senza fine)
   v.appendChild(secHead("Altre impostazioni"));
-  if (!modOn) v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
   if (haRiporto()) v.appendChild(switchRow("t-riporto", "Porta il resto al mese dopo", p.riporto ? "Quello che ti avanza passa al mese dopo, in Entrate" : "Ogni mese riparte da zero", !!p.riporto, (x) => { p.riporto = x; savePiano(); render(); }));
 
   // Avviso resto basso: interruttore; acceso chiede una cifra obbligatoria (soglia 0 = spento)

@@ -93,9 +93,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Nei mesi le spese a rate: "Rata 3 di 6 · fino a apr 2027".
   Provate e tolte prima (non riproporre): voce automatica "Spesa (buoni pasto)"; borsellino con icona biglietto su tutte le
   spese; frase "mancavano X €, pagati di tasca".
-- **Modello spento** (`piani.usa_modello`, query 13; interruttore "Uso il Modello" sotto "I tuoi conti partono da"): tutto il
+- **Modello spento** (`piani.usa_modello`, query 13; interruttore "Usa il Modello" sotto "I tuoi conti partono da"): tutto il
   Modello (Entrate, Mensilità, Risparmio, Spese) resta visibile ma grigio e bloccato (`.mod-corpo.spento`, `inert`), cifre tenute;
-  restano attivi mese di partenza e *Altre impostazioni* (dove compare "Uso un conto deposito"). `modelloOn()` in calc.js:
+  restano attivi mese di partenza, "Uso un conto deposito" (subito sotto "Usa il Modello") e *Altre impostazioni*. `modelloOn()` in calc.js:
   mesi non personalizzati vuoti, niente 13ª/14ª automatica (`extraInfo` null: si scrivono come entrate extra), niente buoni.
   Scelta di Andrea: "tutto spento tranne le impostazioni". Gli interruttori compaiono solo se la colonna esiste (`haModello()`).
 - **Ogni mese a mano**: in Mesi il link
