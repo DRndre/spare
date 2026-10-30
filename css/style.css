@@ -589,3 +589,56 @@ form.add input.sw:checked { background: var(--accent); }
 .field.buoni input.sw:checked { background: var(--accent); }
 .field.buoni.off .bp-row { opacity: .4; }
 .field.buoni.off input[type=text] { background: transparent; }
+/* Riepilogo (stile Moneyfarm) */
+.rp-hero { display: flex; flex-direction: column; gap: 8px; }
+.rp-gain { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: .92rem; color: var(--muted); }
+.rp-gain b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.rp-gain .pos, .rp-gain .pos b { color: var(--good); }
+.rp-gain .neg, .rp-gain .neg b { color: var(--bad); }
+.rp-and { display: flex; flex-direction: column; gap: 10px; }
+.rp-and-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.seg.rp-range button { border: 0; background: transparent; font: inherit; font-size: .85rem; font-weight: 500; padding: 5px 12px; border-radius: 7px; color: var(--seg-fg); cursor: pointer; }
+.seg.rp-range button[aria-pressed="true"] { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 600; }
+.rp-leg { display: flex; gap: 14px; font-size: .8rem; color: var(--muted); }
+.rp-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-leg i { width: 14px; height: 0; border-top: 3px solid var(--accent); display: inline-block; border-radius: 2px; }
+.rp-leg i.l-ver { border-top: 2px dashed var(--muted); }
+.rp-tip { font-size: .82rem; color: var(--muted); min-height: 1.2em; }
+.rp-tip b { color: var(--fg); }
+.rp-tip .pos { color: var(--good); } .rp-tip .neg { color: var(--bad); }
+.rp-graf { touch-action: pan-y; cursor: crosshair; }
+.rp-plot { position: relative; height: 180px; }
+.rp-plot svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.rp-area { fill: var(--accent-soft); }
+.rp-lval { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
+.rp-lver { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.rp-max { position: absolute; right: 0; top: -16px; font-style: normal; font-size: .7rem; color: var(--muted); }
+.rp-cur { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--muted); opacity: .6; pointer-events: none; }
+.rp-xl { position: relative; height: 16px; font-size: .7rem; color: var(--muted); margin-top: 4px; }
+.rp-xl span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.rp-xl span:first-child { transform: none; } .rp-xl span:last-child:not(:first-child) { transform: translateX(-100%); }
+.rp-comp { display: flex; flex-direction: column; gap: 2px; }
+.rp-comp > .bar { margin-bottom: 8px; }
+.rp-prod { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 44px; gap: 10px; align-items: center; padding: 10px 4px; border: 0; border-top: 1px solid var(--line); background: transparent; font: inherit; color: inherit; text-align: left; width: 100%; border-radius: 8px; }
+button.rp-prod { cursor: pointer; }
+.rp-prod > i { width: 10px; height: 10px; border-radius: 3px; }
+.rp-pn { display: flex; flex-direction: column; font-weight: 500; min-width: 0; }
+.rp-pn small, .rp-pv small { font-weight: 400; font-size: .76rem; color: var(--muted); }
+.rp-pv { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rp-pv small.pos { color: var(--good); } .rp-pv small.neg { color: var(--bad); }
+.rp-pp { text-align: right; color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.rp-comp .add-open { margin: 10px 0 0; width: 100%; }
+.rp-comp form.add { margin: 10px 0 0; }
+form.add.inv { grid-template-columns: 1fr 1fr; }
+form.add.inv > .per-f { order: 1; }
+.rp-edit { margin: 0 0 6px; }
+.rp-nota { margin-top: 8px; }
+.rp-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rp-tile { background: var(--surface); border: 0; border-radius: 14px; padding: 12px 14px; text-align: left; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-tile small { color: var(--muted); font-size: .72rem; font-weight: 600; }
+.rp-tile b { font-size: 1.2rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-tile b.neg { color: var(--bad); }
+@media (max-width: 560px) { .rp-tile b { font-size: 1.05rem; } }
+.rp-rate { display: flex; flex-direction: column; gap: 4px; }
+.rp-rate .ya-p { width: auto; white-space: nowrap; }
+.goal .rp-vai { display: block; margin-left: auto; margin-top: 8px; }
