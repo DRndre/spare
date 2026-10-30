@@ -52,7 +52,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **Scheda Modello** (ordine; il Modello serve solo a impostare le regole fisse, quindi **niente riquadro "Ti restano"**):
   titolo "Il mese tipo" (a destra quanti mesi personalizzati), riga "I tuoi conti partono da" (sotto le frasi, prima di Entrate), frase "Qui imposti le regole fisse: le entrate, le spese e il
   risparmio che si ripetono ogni mese.", sotto in grigio "I mesi che non hai personalizzato seguono il Modello…", *Entrate* (Stipendio e Buoni pasto affiancati;
-  Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
+  Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`, sotto l'interruttore "Ricevo i buoni pasto" (spento = buoni a 0,
+  niente riquadro, Stipendio a tutta larghezza; c'è anche nel primo passaggio della guida); niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
   *Risparmio* (riga a tutta larghezza + interruttore "Uso un conto deposito"), *Spese*, *Altre impostazioni* (solo
   interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
   spegnendolo la cifra si cancella).

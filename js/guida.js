@@ -62,7 +62,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
   // copia di lavoro
   const w = {
     mese_inizio: p0.mese_inizio || oggi, // al primo accesso lo sceglie nel benvenuto
-    stipendio: N(p0.stipendio), buoni_num: N(p0.buoni_num), buoni_valore: N(p0.buoni_valore),
+    stipendio: N(p0.stipendio), buoni_num: N(p0.buoni_num), buoni_valore: N(p0.buoni_valore), conBuoni: N(p0.buoni_valore) > 0,
     mensilita: N(p0.mensilita) || 13, tredicesima: N(p0.tredicesima), quattordicesima: N(p0.quattordicesima),
     mese_13: N(p0.mese_13) || 12, mese_14: N(p0.mese_14) || 6,
     risparmio: N(p0.risparmio), saldo_iniziale: N(d0.saldo_iniziale), extra_al_deposito: p0.extra_al_deposito !== false,
@@ -86,7 +86,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
     return out;
   }
   function pianoProva() {
-    return { ...p0, stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, risparmio: w.risparmio, mensilita: w.mensilita,
+    return { ...p0, stipendio: w.stipendio, buoni_num: w.conBuoni ? w.buoni_num : 0, buoni_valore: w.conBuoni ? w.buoni_valore : 0, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali() };
   }
@@ -104,11 +104,13 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
         b.appendChild(griglia(
           campo("Stipendio mensile", w.stipendio, (n) => (w.stipendio = n), { id: "w-stip", hint: "Quello che ti arriva sul conto" }),
         ));
-        b.appendChild(testo("Ricevi buoni pasto? Scrivi quanti in un mese tipo e quanto vale uno (vuoto se non ne hai)."));
+        b.appendChild(spunta("Ricevo i buoni pasto", w.conBuoni, (v) => { w.conBuoni = v; disegna(); }, w.conBuoni ? "Scrivi quanti ne ricevi in un mese tipo e quanto vale uno." : "Se non li ricevi, lascialo spento."));
+        if (w.conBuoni) {
         const nb = campo("Buoni pasto al mese", w.buoni_num, (n) => (w.buoni_num = Math.round(n)), { id: "w-buoni", unit: "buoni" });
         { const ib = nb.querySelector("input"); ib.inputMode = "numeric"; ib.placeholder = "0"; ib.value = w.buoni_num ? String(w.buoni_num) : "";
           ib.addEventListener("blur", () => { const n = Math.round(parseNum(ib.value)); ib.value = n > 0 ? String(n) : ""; }); }
         b.appendChild(griglia(nb, campo("Valore di un buono", w.buoni_valore, (n) => (w.buoni_valore = n), { id: "w-buoniv" })));
+        }
       }
       // il mese di partenza si sceglie nel benvenuto e si cambia in cima al Modello
     }
@@ -204,6 +206,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
   function salva() {
     const p = state.piano, d = state.deposito;
+    if (!w.conBuoni) Object.assign(w, { buoni_num: 0, buoni_valore: 0 });
     if (w.manuale) Object.assign(w, { stipendio: 0, buoni_num: 0, buoni_valore: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
     Object.assign(p, { stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, entrate_extra: 0, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,

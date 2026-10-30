@@ -144,6 +144,7 @@ function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ?
 const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
 /** Buoni pasto attivi (valore del buono impostato nel Modello) e spese che si possono pagare con i buoni. */
 const buoniAttivi = () => N(state.piano.buoni_valore) > 0;
+let buoniAperti = false; // interruttore "Ricevo i buoni pasto" acceso ma cifre non ancora scritte
 const puoBuoni = (cat) => buoniAttivi() && CAT_BUONI.includes(ck(cat));
 /** Riga dei buoni pasto sotto il resto in tasca: disponibili, usati, avanzano (o quanto è uscito di tasca). */
 function bpHtml(c, modello = false) {
@@ -1012,11 +1013,17 @@ function renderModello(v) {
 
   // Entrate
   v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
+  // Buoni pasto con interruttore: spento = niente riquadro (e niente buoni in nessun mese)
+  const conBuoniM = N(p.buoni_valore) > 0 || buoniAperti;
   const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
-  // Buoni pasto (o altro benefit fisso) accanto allo stipendio: numero al mese × valore di un buono
-  fs.appendChild(buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni" }));
-  v.appendChild(fs);
+  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip", cls: conBuoniM ? "" : "riga" }));
+  if (conBuoniM) fs.appendChild(buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni" }));
+  v.appendChild(conBuoniM ? fs : fs.firstChild);
+  v.appendChild(switchRow("t-conbuoni", "Ricevo i buoni pasto", conBuoniM ? "Quanti ne ricevi al mese e quanto vale uno" : "Spento: niente buoni pasto nei mesi", conBuoniM, (x) => {
+    buoniAperti = x;
+    if (!x) { p.buoni_num = 0; p.buoni_valore = 0; savePiano(); }
+    render();
+  }));
   v.insertAdjacentHTML("beforeend", '<p class="hint flush mod-nota">Le entrate che non arrivano tutti i mesi (rimborsi, extra) scrivile solo nel mese, nella scheda Mesi.</p>');
 
   // Mensilità: 12, 13 o 14, con importo e mese di 13ª e 14ª
