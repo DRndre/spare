@@ -96,16 +96,22 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
   "Preferisco inserire ogni mese a mano" (salta le spese fisse, Modello vuoto); con il Modello vuoto (`modelloVuoto()`)
   i mesi dicono "Da compilare" e il Deposito "Stima solo sui mesi che hai compilato".
-- **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password; **residuo del mese precedente**
-  (idea proposta: riga "Dal mese prima" automatica ma correggibile con la cifra vera, interruttore nel Modello,
-  negativo che toglie dal mese dopo, riepilogo dell'anno per singolo mese + "In tasca a fine anno").
+- **Dal mese prima** (resto che passa al mese dopo, `piani.riporto` acceso di base + `piani.residui` jsonb `{"AAAA-MM": euro}`,
+  query 12; UI solo se la colonna esiste, `haRiporto()`): `dalMesePrima` in calc.js parte da 0 (o dalla cifra scritta) nel
+  primo mese e porta avanti il resto, anche negativo. Le cifre a mano **non** personalizzano il mese (stanno nel piano).
+  In Mesi primo campo di *Entrate* "Dal mese prima" (accetta il meno; hint "Automatico: resto di <mese>" / "Cifra vera,
+  scritta da te · Torna all'automatico"; primo mese "scrivi quanto hai sul conto"); il totale Entrate lo comprende.
+  `calcMonth`: `resto` = con il riporto (numero grande, pallini rossi), `restoMese` = solo il mese (riepilogo e tabella
+  dell'anno, mese migliore/peggiore), più riga "In tasca a fine <mese>". Interruttore "Porta il resto al mese dopo" in
+  *Altre impostazioni* del Modello. Spiegato in Come funziona.
+- **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password.
   **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo` (non online: per rimetterla in `anteprima/` usare
   `git archive anteprima-riepilogo`; va aggiornata ai buoni pasto di lato, che vanno tra "quello che hai"). Scheda "Riepilogo" prima: Quello che hai (deposito + altri
   investimenti, conto corrente escluso), Altri investimenti scritti a mano (nell'anteprima in localStorage; nell'app vera
   servirebbe una colonna jsonb), mese di oggi, anno in breve con top 3 categorie e grafico del resto, rate in corso, obiettivo.
   Decisioni di Andrea (d'accordo): dati veri da aggiornare ogni tanto, non solo previsioni; per ogni investimento **quanto
   versato + quanto vale oggi + data di aggiornamento**; il conto corrente passa dal residuo del mese (farlo prima);
-  provarla sul telefono prima di decidere. **Già predisposto:** colonna `piani.investimenti` jsonb (query 9) e in store.js
+  provarla sul telefono prima di decidere (il residuo del mese ora c'è: "Dal mese prima"). **Già predisposto:** colonna `piani.investimenti` jsonb (query 9) e in store.js
   `fixInvestimenti` / `state.piano.investimenti` `[{id, nome, tipo: "investimento"|"conto", versato, valore, aggiornato}]`,
   salvata solo se la colonna esiste (`colInvestimenti`), compresa nel backup, con `storico: [{data, versato, valore}]`
   (un punto a ogni aggiornamento, per il grafico nel tempo). Nessuna schermata ancora.
@@ -175,6 +181,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 9. `piani.investimenti` jsonb (predisposizione per il Riepilogo).
 10. Buoni pasto: `piani.buoni_num`, `piani.buoni_valore`, `mesi.buoni_num`; entrate extra del Modello spostate nei buoni.
 11. `mesi.extra_dep` (13ª/14ª in parte al deposito). **Da eseguire** (finché manca, il campo non compare).
+12. `piani.riporto`, `piani.residui` (Dal mese prima). **Da eseguire** (finché manca, la funzione non compare).
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.

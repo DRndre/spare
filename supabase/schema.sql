@@ -129,3 +129,7 @@ update public.piani set buoni_num = 1, buoni_valore = entrate_extra, entrate_ext
 
 -- 11. Quanta 13ª/14ª va al deposito in un mese (null = come il Modello: tutta o niente)
 alter table public.mesi add column if not exists extra_dep numeric;
+
+-- 12. Resto che passa al mese dopo: interruttore e cifre vere scritte a mano ({"AAAA-MM": euro})
+alter table public.piani add column if not exists riporto boolean not null default true;
+alter table public.piani add column if not exists residui jsonb not null default '{}'::jsonb;

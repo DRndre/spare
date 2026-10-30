@@ -5,7 +5,7 @@ import {
   mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI,
 } from "./calc.js";
 import {
-  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep,
+  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep, haRiporto,
 } from "./store.js";
 import { LOGO } from "./logo.js";
 import { categorie, catInfo, badge, icona } from "./categorie.js";
@@ -301,15 +301,17 @@ document.addEventListener("visibilitychange", async () => {
 });
 
 /* ---------- Componenti ---------- */
-function moneyField(label, value, onVal, { hint = "", cls = "", id, unit = "€" } = {}) {
+function moneyField(label, value, onVal, { hint = "", cls = "", id, unit = "€", neg = false } = {}) {
   const f = document.createElement("label");
   f.className = "field" + (cls ? " " + cls : "");
   f.htmlFor = id;
   f.innerHTML = `<span class="label">${esc(label)}</span><span class="money"><input type="text" inputmode="decimal" autocomplete="off" id="${id}"><span class="eur">${unit}</span></span>${hint ? `<span class="hint">${esc(hint)}</span>` : ""}`;
   const inp = f.querySelector("input");
   inp.value = fmt.format(value);
-  inp.addEventListener("input", () => { const n = parseNum(inp.value); if (!isNaN(n) && n >= 0) { onVal(round(n)); refresh(); } });
-  inp.addEventListener("blur", () => { const n = parseNum(inp.value); inp.value = fmt.format(isNaN(n) ? value : round(n)); });
+  inp.addEventListener("input", () => { const n = leggi(inp.value); if (!isNaN(n) && (neg || n >= 0)) { onVal(round(n)); refresh(); } });
+  inp.addEventListener("blur", () => { const n = leggi(inp.value); inp.value = fmt.format(isNaN(n) ? value : round(n)); });
+  // con neg: accetta anche il meno davanti (es. −50)
+  function leggi(t) { if (!neg) return parseNum(t); const meno = /^\s*[-−]/.test(t); const n = parseNum(t.replace(/^\s*[-−]/, "")); return meno ? -n : n; }
   return f;
 }
 
@@ -525,7 +527,8 @@ function secHead(titolo, totale = "", live = "") {
 }
 
 function formula(m, c, extraNome) {
-  let f = `<b>${eur(m.stipendio)}</b> stipendio`;
+  let f = c.dalPrima ? `<b>${eur(c.dalPrima)}</b> dal mese prima + ` : "";
+  f += `<b>${eur(m.stipendio)}</b> stipendio`;
   if (N(m.entrate_extra)) f += ` + <b>${eur(m.entrate_extra)}</b> entrate extra`;
   if (m.extra) f += ` + <b>${eur(m.extra)}</b> ${(extraNome || "extra").toLowerCase()}`;
   return f + ` − spese <b>${eur(c.speseSoldi)}</b> − ${T().formula} <b>${eur(c.toDep)}</b>` + (c.buoniUsati ? ` <span class="f-bp">(più ${eur(c.buoniUsati)} pagati con i buoni)</span>` : "");
@@ -546,7 +549,7 @@ function fillBar(bar, leg, m, c) {
   const quota = (v) => N(v.importo) * (v.buoni && CAT_BUONI.includes(ck(v.cat)) ? 1 - fb : 1);
   const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k).reduce((a, v) => a + quota(v), 0) })).filter((p) => p.v > 0);
   if (c.toDep > 0) parts.push({ n: T().leg, c: "--c-risp", v: c.toDep });
-  const base = Math.max(c.entrate, parts.reduce((a, p) => a + p.v, 0)) || 1;
+  const base = Math.max(c.entrate + Math.max(0, N(c.dalPrima)), parts.reduce((a, p) => a + p.v, 0)) || 1;
   bar.innerHTML = ""; leg.innerHTML = "";
   parts.forEach((p) => { const s = document.createElement("span"); s.style.flex = `0 0 ${(p.v / base) * 100}%`; s.style.background = colore(p.c); s.title = p.n + ": " + eur(p.v); bar.appendChild(s); });
   parts.concat(c.resto > 0 ? [{ n: "Resto", c: "--c-resto", v: c.resto }] : []).forEach((p) => {
@@ -560,6 +563,30 @@ function fillBar(bar, leg, m, c) {
 function mesiPartenza() {
   const oggi = meseCorrente();
   return monthRange((Number(oggi.slice(0, 4)) - 2) + "-01", addMonths(oggi, 1));
+}
+
+/* ---------- Dal mese prima (resto che passa al mese dopo) ---------- */
+const riportoAttivo = () => haRiporto() && state.piano.riporto;
+function hintDalPrima(id, m) {
+  const primo = id === state.piano.mese_inizio;
+  if (m.dalPrimaMano) return primo ? "Quanto avevi sul conto a inizio mese" : "Cifra vera, scritta da te";
+  return primo ? "Primo mese: scrivi quanto hai sul conto" : `Automatico: resto di ${monthLabelLong(addMonths(id, -1)).toLowerCase()}`;
+}
+/** Campo "Dal mese prima": di base automatico, se lo scrivi diventa la cifra vera (e i mesi dopo ripartono da lì). */
+function campoDalPrima(id, m) {
+  const f = moneyField("Dal mese prima", m.dalPrima, (n) => {
+    state.piano.residui = { ...(state.piano.residui || {}), [id]: n }; savePiano();
+    const h = f.querySelector(".hint"); if (h) h.firstChild.textContent = hintDalPrima(id, { dalPrimaMano: true });
+    if (!f.querySelector(".link")) h.appendChild(torna());
+  }, { id: "m-dp-" + id, hint: hintDalPrima(id, m), neg: true, cls: "dal-prima" });
+  function torna() {
+    const b = document.createElement("button"); b.type = "button"; b.className = "link"; b.textContent = " · Torna all'automatico";
+    b.onclick = (e) => { e.preventDefault(); const r = { ...(state.piano.residui || {}) }; delete r[id]; state.piano.residui = r; savePiano(); render(); };
+    return b;
+  }
+  const h = f.querySelector(".hint");
+  if (h) { h.textContent = ""; h.appendChild(document.createTextNode(hintDalPrima(id, m))); if (m.dalPrimaMano) h.appendChild(torna()); }
+  return f;
 }
 
 /* ---------- Mesi personalizzati ---------- */
@@ -642,8 +669,9 @@ function renderMesi(v) {
   v.appendChild(secHead("Resto in tasca"));
   v.appendChild(hero(m, c, ex?.nome, { conTitolo: true }));
 
-  v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
+  v.appendChild(secHead("Entrate", eur(round(c.entrate + c.dalPrima)), "entrate"));
   const fe = document.createElement("div"); fe.className = "fields";
+  if (riportoAttivo()) fe.appendChild(campoDalPrima(sel, m));
   fe.appendChild(moneyField("Stipendio", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
   if (N(state.piano.buoni_valore) > 0) {
     const vb = N(state.piano.buoni_valore);
@@ -684,7 +712,7 @@ let tutteCat = false;  // elenco completo delle categorie dell'anno
 function datiAnno(ms) {
   return ms.map((id) => {
     const md = monthData(id, state.piano, state.mesi), cc = calcMonth(md, state.piano);
-    return { id, resto: cc.resto, parte: Math.max(0, round(cc.toDep - N(md.prelievo))), cc, ex: extraInfo(id, state.piano) };
+    return { id, resto: cc.restoMese, fine: cc.resto, parte: Math.max(0, round(cc.toDep - N(md.prelievo))), cc, ex: extraInfo(id, state.piano) };
   });
 }
 /** Buoni pasto nell'anno: ricevuti, usati e quanti ne avanzano alla fine. */
@@ -718,9 +746,11 @@ function statsAnno(d) {
   const p = entrate > 0 ? Math.round((resto / entrate) * 100) : 0;
   const box = (x, tit, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b class="${x.resto < 0 ? "bad" : ""}">${eur0(x.resto)}</b><span>${MESI_NOMI[Number(x.id.slice(5)) - 1]} ›</span></button>`;
   const head = `<div class="yr-head"><span class="ya-ic" style="--cc:var(--muted)">${icona("wallet", "var(--muted)", 15)}</span><span class="ya-n">Rimasto in tasca</span><span class="ya-v${resto < 0 ? " neg" : ""}">${eur0(resto)}</span><span class="ya-p">${p}%</span></div>`;
+  const fine = d[d.length - 1].fine;
+  const coda = riportoAttivo() ? `<div class="yc-fine"><span>In tasca a fine ${MESI_NOMI[Number(d[d.length - 1].id.slice(5)) - 1].toLowerCase()}<small>Contando quello che passa da un mese all'altro</small></span><b class="${fine < 0 ? "bad" : ""}">${eur0(fine)}</b></div>` : "";
   if (Math.abs(piu.resto - meno.resto) < 0.005)
-    return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ti restano <b>${eur0(piu.resto)}</b> al mese.</span></div>`;
-  return head + box(piu, "Mese migliore", "trending-up", "best") + box(meno, "Mese peggiore", "trending-down", "worst");
+    return head + coda + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ti restano <b>${eur0(piu.resto)}</b> al mese.</span></div>`;
+  return head + box(piu, "Mese migliore", "trending-up", "best") + box(meno, "Mese peggiore", "trending-down", "worst") + coda;
 }
 const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
 function chartHtml(d) {
@@ -748,8 +778,8 @@ function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };
   let html = `<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>${T().col}</th><th>Resto</th></tr></thead><tbody>`;
   d.forEach(({ id, cc, ex }) => {
-    t.e += cc.entrate; t.s += cc.speseSoldi; t.d += cc.toDep; t.r += cc.resto;
-    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.speseSoldi)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.resto < 0 ? "neg" : ""}">${fmt.format(cc.resto)}</td></tr>`;
+    t.e += cc.entrate; t.s += cc.speseSoldi; t.d += cc.toDep; t.r += cc.restoMese;
+    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.speseSoldi)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.restoMese < 0 ? "neg" : ""}">${fmt.format(cc.restoMese)}</td></tr>`;
   });
   return html + `</tbody><tfoot><tr><td>Totale ${anno}</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
 }
@@ -1034,6 +1064,7 @@ function renderModello(v) {
 
   // Altre impostazioni: avviso resto basso (il mese di partenza è in cima; i conti sono sempre senza fine)
   v.appendChild(secHead("Altre impostazioni"));
+  if (haRiporto()) v.appendChild(switchRow("t-riporto", "Porta il resto al mese dopo", p.riporto ? "Quello che ti avanza passa al mese dopo, in Entrate" : "Ogni mese riparte da zero", !!p.riporto, (x) => { p.riporto = x; savePiano(); render(); }));
 
   // Avviso resto basso: interruttore; acceso chiede una cifra obbligatoria (soglia 0 = spento)
   const avvisoOn = N(p.soglia) > 0 || avvisoAperto;
@@ -1115,7 +1146,7 @@ function refresh() {
   if (q("formula")) q("formula").innerHTML = formula(m, c, view === "mesi" ? extraInfo(sel, state.piano)?.nome : "");
   if (q("bar")) fillBar(q("bar"), q("legend"), m, c);
   if (q("spese")) q("spese").textContent = eur(c.spese);
-  if (q("entrate")) q("entrate").textContent = eur(c.entrate);
+  if (q("entrate")) q("entrate").textContent = eur(round(c.entrate + N(c.dalPrima)));
   if (q("risparmio")) q("risparmio").textContent = eur(round(c.toDep - N(m.prelievo)));
   updateGroupSums();
   if (view === "mesi") {

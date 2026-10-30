@@ -24,6 +24,8 @@ export const DEFAULT_PIANO = {
   senza_fine: true, // true = i mesi si allungano da soli fino a dicembre dell'anno dopo
   voci: [],
   categorie: [], // categorie create dall'utente: [{k, n, c, i}]
+  riporto: true, // il resto in tasca passa al mese dopo ("Dal mese prima")
+  residui: {}, // cifre vere scritte a mano: { "AAAA-MM": euro con cui parte quel mese }
 };
 
 /** Mese di oggi in formato "AAAA-MM". */
@@ -114,7 +116,23 @@ const conBuoni = (voci) => round(voci.filter((v) => v.buoni && CAT_BUONI.include
 export function monthData(id, piano, mesi) {
   const m = meseBase(id, piano, mesi);
   m.buoniAvanzati = buoniAvanzatiPrima(id, piano, mesi);
+  const dp = dalMesePrima(id, piano, mesi);
+  m.dalPrima = dp.v; m.dalPrimaMano = dp.mano;
   return m;
+}
+/** Con cosa parte il mese: il resto in tasca del mese prima (anche negativo), o la cifra vera scritta a mano. */
+function dalMesePrima(id, piano, mesi) {
+  if (!piano.riporto) return { v: 0, mano: false };
+  const res = piano.residui || {};
+  let r = 0;
+  for (const x of monthRange(piano.mese_inizio, id)) {
+    if (x in res) r = N(res[x]);
+    if (x >= id) return { v: round(r), mano: x in res };
+    const b = meseBase(x, piano, mesi);
+    b.buoniAvanzati = 0; // i buoni non toccano il resto
+    r = calcMonth({ ...b, dalPrima: r }, piano).resto;
+  }
+  return { v: 0, mano: false };
 }
 function buoniAvanzatiPrima(id, piano, mesi) {
   if (!(N(piano.buoni_valore) > 0)) return 0;
@@ -161,8 +179,10 @@ export function calcMonth(m, piano) {
   const buoniAvanzo = round(buoniDisp - buoniUsati);
   const speseSoldi = round(spese - buoniUsati);
   const entrate = round(N(m.stipendio) + N(m.entrate_extra) + N(m.extra)); // solo soldi veri
-  const resto = round(entrate - speseSoldi - toDep);
-  return { spese, speseSoldi, toDep, entrate, resto, extraDep, buoni, buoniDisp, speseBuoni, buoniUsati, buoniAvanzo };
+  const restoMese = round(entrate - speseSoldi - toDep); // solo quello che succede nel mese
+  const dalPrima = round(N(m.dalPrima));
+  const resto = round(restoMese + dalPrima); // quanto hai davvero in tasca a fine mese
+  return { spese, speseSoldi, toDep, entrate, resto, restoMese, dalPrima, extraDep, buoni, buoniDisp, speseBuoni, buoniUsati, buoniAvanzo };
 }
 
 export function statoResto(resto, soglia) {

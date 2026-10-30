@@ -573,3 +573,10 @@ form.add input.sw:checked { background: var(--accent); }
 .field.riga > select { grid-column: 2; grid-row: 1 / 3; width: auto; margin: 0; font: inherit; }
 .field.partenza { margin-bottom: 8px; }
 .field.extra-dep { margin-top: 12px; }
+
+/* Dal mese prima */
+.field.dal-prima .hint .link { font-size: inherit; padding: 0; }
+.yc-stats > .yc-fine { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; background: none; border-radius: 0; padding: 10px 2px 2px; }
+.yc-stats > .yc-fine > span { display: flex; flex-direction: column; font-size: .9rem; font-weight: 600; color: var(--fg); }
+.yc-stats > .yc-fine small { font-weight: 400; }
+.yc-fine b.bad { color: var(--bad); }
