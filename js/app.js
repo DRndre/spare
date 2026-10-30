@@ -2,10 +2,10 @@
 import {
   N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
-  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI,
+  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI, modelloOn, valBuono,
 } from "./calc.js";
 import {
-  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep, haRiporto,
+  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep, haRiporto, haModello,
 } from "./store.js";
 import { LOGO } from "./logo.js";
 import { categorie, catInfo, badge, icona } from "./categorie.js";
@@ -50,7 +50,7 @@ const T = () => usaDep()
   ? { tab: "Deposito", rispBreve: "Al conto deposito", prelHint: "Ripresi dal deposito", risp: "Risparmio al conto deposito", prel: "Prelievo dal conto deposito", va: "Va nel conto deposito", formula: "al deposito", leg: "Conto Deposito", col: "Al deposito", dove: "nel conto deposito" }
   : { tab: "Risparmi", rispBreve: "Messo da parte", prelHint: "Ripresi dai risparmi", risp: "Risparmio del mese", prel: "Prelievo dai risparmi", va: "Va nei risparmi", formula: "messo da parte", leg: "Risparmio", col: "Da parte", dove: "da parte" };
 /** Modello vuoto (chi inserisce ogni mese a mano): le previsioni contano solo i mesi compilati. */
-const modelloVuoto = () => { const p = state.piano; return !N(p.stipendio) && !N(p.buoni_num) && !N(p.risparmio) && !(p.voci || []).length; };
+const modelloVuoto = () => { const p = state.piano; return !modelloOn(p) || !N(p.stipendio) && !N(p.buoni_num) && !N(p.risparmio) && !(p.voci || []).length; };
 /** Simulazione dei risparmi: con il conto deposito ci sono gli interessi, senza no. */
 function simula(ms) {
   const dep = state.deposito;
@@ -143,8 +143,7 @@ function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ?
 /** Spese del Modello attive nel mese di riferimento (quelle a tempo finite o non iniziate non contano). */
 const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
 /** Buoni pasto attivi (valore del buono impostato nel Modello) e spese che si possono pagare con i buoni. */
-const buoniAttivi = () => N(state.piano.buoni_valore) > 0;
-let buoniAperti = false; // interruttore "Ricevo i buoni pasto" acceso ma cifre non ancora scritte
+const buoniAttivi = () => valBuono(state.piano) > 0;
 const puoBuoni = (cat) => buoniAttivi() && CAT_BUONI.includes(ck(cat));
 /** Riga dei buoni pasto sotto il resto in tasca: disponibili, usati, avanzano (o quanto è uscito di tasca). */
 function bpHtml(c, modello = false) {
@@ -328,9 +327,9 @@ function numField(label, value, onVal, { hint = "", id, unit = "" } = {}) {
 }
 
 /** Buoni pasto in un solo riquadro: [20] buoni × [6,50] € = 130,00 €. Senza onValore il valore è fisso (dal Modello). */
-function buoniField(num, valore, onNum, onValore, { id } = {}) {
-  const f = document.createElement("div"); f.className = "field buoni";
-  f.innerHTML = `<label class="label" for="${id}">Buoni pasto</label>
+function buoniField(num, valore, onNum, onValore, { id, acceso, onAcceso } = {}) {
+  const f = document.createElement("div"); f.className = "field buoni" + (acceso === false ? " off" : "");
+  f.innerHTML = `<div class="bp-top"><label class="label" for="${id}">Buoni pasto</label>${onAcceso ? `<input type="checkbox" role="switch" class="sw sw-mini" id="${id}-on" aria-label="Ricevo i buoni pasto"${acceso ? " checked" : ""}>` : ""}</div>
     <div class="bp-row"><input type="text" inputmode="numeric" autocomplete="off" id="${id}" class="bp-n" aria-label="Numero di buoni"><span class="bp-x">×</span>
     ${onValore ? `<input type="text" inputmode="decimal" autocomplete="off" id="${id}-v" class="bp-v" aria-label="Valore di un buono">` : `<span class="bp-fisso">${fmt.format(valore)}</span>`}<span class="eur">€</span></div>
     <span class="hint"></span>`;
@@ -346,6 +345,10 @@ function buoniField(num, valore, onNum, onValore, { id } = {}) {
     vi.addEventListener("blur", () => { vi.value = fmt.format(v); });
   }
   tot();
+  if (onAcceso) {
+    f.querySelector(".sw").onchange = (e) => onAcceso(e.target.checked);
+    if (acceso === false) { ni.disabled = true; if (vi) vi.disabled = true; h.textContent = "Spento: niente buoni pasto nei mesi"; }
+  }
   return f;
 }
 
@@ -674,8 +677,8 @@ function renderMesi(v) {
   const fe = document.createElement("div"); fe.className = "fields";
   if (riportoAttivo()) fe.appendChild(campoDalPrima(sel, m));
   fe.appendChild(moneyField("Stipendio", m.stipendio, (n) => { ensureMese(sel).stipendio = n; saveMese(sel); }, { id: "m-stip-" + sel }));
-  if (N(state.piano.buoni_valore) > 0) {
-    const vb = N(state.piano.buoni_valore);
+  if (buoniAttivi()) {
+    const vb = valBuono(state.piano);
     fe.appendChild(buoniField(m.buoni_num, vb, (n) => { ensureMese(sel).buoni_num = n; saveMese(sel); }, null, { id: "m-buoni-" + sel }));
   }
   fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Solo questo mese" }));
@@ -1007,28 +1010,30 @@ function renderModello(v) {
     v.appendChild(fp);
   }
 
+  // Interruttore del Modello: spento = ogni mese si compila a mano (le cifre del Modello restano, grigie)
+  const modOn = modelloOn(p);
+  if (haModello()) v.appendChild(switchRow("t-usamod", "Uso il Modello", modOn ? "I mesi seguono il mese tipo qui sotto" : "Spento: compili ogni mese a mano nella scheda Mesi", modOn, (x) => { p.usa_modello = x; savePiano(); render(); }));
+  const vv = document.createElement("div"); vv.className = "mod-corpo" + (modOn ? "" : " spento");
+  if (!modOn) vv.inert = true;
+  v.appendChild(vv);
+
   // Conti del mese tipo (servono per i totali delle sezioni)
-  const m = { stipendio: N(p.stipendio), entrate_extra: 0, buoni: round(N(p.buoni_num) * N(p.buoni_valore)), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
+  const m = { stipendio: N(p.stipendio), entrate_extra: 0, buoni: round(N(p.buoni_num) * (p.buoni_on === false ? 0 : N(p.buoni_valore))), risparmio: N(p.risparmio), voci: vociModello(), prelievo: 0, extra: 0 };
   const c = calcMonth(m, p);
 
   // Entrate
-  v.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
-  // Buoni pasto con interruttore: spento = niente riquadro (e niente buoni in nessun mese)
-  const conBuoniM = N(p.buoni_valore) > 0 || buoniAperti;
+  vv.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
+  // Buoni pasto: il riquadro resta, con il suo interruttore; spento si "spegne" (cifre tenute, niente buoni nei mesi)
   const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip", cls: conBuoniM ? "" : "riga" }));
-  if (conBuoniM) fs.appendChild(buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni" }));
-  v.appendChild(conBuoniM ? fs : fs.firstChild);
-  v.appendChild(switchRow("t-conbuoni", "Ricevo i buoni pasto", conBuoniM ? "Quanti ne ricevi al mese e quanto vale uno" : "Spento: niente buoni pasto nei mesi", conBuoniM, (x) => {
-    buoniAperti = x;
-    if (!x) { p.buoni_num = 0; p.buoni_valore = 0; savePiano(); }
-    render();
-  }));
-  v.insertAdjacentHTML("beforeend", '<p class="hint flush mod-nota">Le entrate che non arrivano tutti i mesi (rimborsi, extra) scrivile solo nel mese, nella scheda Mesi.</p>');
+  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
+  fs.appendChild(buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni",
+    ...(haModello() ? { acceso: p.buoni_on !== false, onAcceso: (x) => { p.buoni_on = x; savePiano(); render(); } } : {}) }));
+  vv.appendChild(fs);
+  vv.insertAdjacentHTML("beforeend", '<p class="hint flush mod-nota">Le entrate che non arrivano tutti i mesi (rimborsi, extra) scrivile solo nel mese, nella scheda Mesi.</p>');
 
   // Mensilità: 12, 13 o 14, con importo e mese di 13ª e 14ª
   const nm = N(p.mensilita) || 13;
-  v.appendChild(secHead("Mensilità"));
+  vv.appendChild(secHead("Mensilità"));
   const rm = document.createElement("div"); rm.className = "field riga seg-row";
   rm.innerHTML = `<span class="label">Buste paga in un anno</span><span class="hint">${nm === 12 ? "Senza tredicesima" : nm === 13 ? "Con la tredicesima" : "Con tredicesima e quattordicesima"}</span>`;
   const sg = document.createElement("div"); sg.className = "seg mens"; sg.setAttribute("role", "group"); sg.setAttribute("aria-label", "Mensilità");
@@ -1037,7 +1042,7 @@ function renderModello(v) {
     b.onclick = () => { if (k !== nm) { p.mensilita = k; savePiano(); render(); } };
     sg.appendChild(b);
   });
-  rm.appendChild(sg); v.appendChild(rm);
+  rm.appendChild(sg); vv.appendChild(rm);
   const sel12 = (id, label, value, opts, onCh, hint = "") => {
     const f = document.createElement("label"); f.className = "field"; f.htmlFor = id;
     f.innerHTML = `<span class="label">${label}</span><select id="${id}">${opts.map(([v2, t]) => `<option value="${v2}"${String(v2) === String(value) ? " selected" : ""}>${t}</option>`).join("")}</select>${hint ? `<span class="hint">${hint}</span>` : ""}`;
@@ -1053,24 +1058,25 @@ function renderModello(v) {
       fx.appendChild(moneyField("Quattordicesima", N(p.quattordicesima), (n) => { p.quattordicesima = n; savePiano(); }, { id: "t-14", cls: "extra", hint: "Dalla busta paga" }));
       fx.appendChild(sel12("t-m14", "Mese", p.mese_14, mesiOpt(p.mese_13), (x) => { p.mese_14 = Number(x); savePiano(); render(); }, "Spesso giugno o luglio"));
     }
-    v.appendChild(fx);
+    vv.appendChild(fx);
     const nomiMesi = nm >= 14 ? `${MESI_NOMI[p.mese_13 - 1].toLowerCase()} e ${MESI_NOMI[p.mese_14 - 1].toLowerCase()}` : MESI_NOMI[p.mese_13 - 1].toLowerCase();
     const chi = nm >= 14 ? "13ª e 14ª" : "Tredicesima";
-    v.appendChild(switchRow("t-extradep", `${chi} ${usaDep() ? "al deposito" : "da parte"}`,
+    vv.appendChild(switchRow("t-extradep", `${chi} ${usaDep() ? "al deposito" : "da parte"}`,
       p.extra_al_deposito ? `${nm >= 14 ? "Vanno" : "Va"} ${T().dove} a ${nomiMesi}` : `${nm >= 14 ? "Restano" : "Resta"} in tasca a ${nomiMesi}`,
       p.extra_al_deposito, (x) => { p.extra_al_deposito = x; savePiano(); render(); }));
   }
 
   // Risparmio
-  v.appendChild(secHead("Risparmio", eur(c.toDep), "risparmio"));
-  v.appendChild(moneyField(T().rispBreve, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp", cls: "riga", hint: "Ogni mese" }));
-  v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
+  vv.appendChild(secHead("Risparmio", eur(c.toDep), "risparmio"));
+  vv.appendChild(moneyField(T().rispBreve, N(p.risparmio), (n) => { p.risparmio = n; savePiano(); }, { id: "t-risp", cls: "riga", hint: "Ogni mese" }));
+  if (modOn) vv.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
 
   // Spese
-  vociEditor(v, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
+  vociEditor(vv, () => p.voci, (fn) => { fn(p.voci); savePiano(); }, "t-", { titoloFuori: true, periodi: true });
 
   // Altre impostazioni: avviso resto basso (il mese di partenza è in cima; i conti sono sempre senza fine)
   v.appendChild(secHead("Altre impostazioni"));
+  if (!modOn) v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
   if (haRiporto()) v.appendChild(switchRow("t-riporto", "Porta il resto al mese dopo", p.riporto ? "Quello che ti avanza passa al mese dopo, in Entrate" : "Ogni mese riparte da zero", !!p.riporto, (x) => { p.riporto = x; savePiano(); render(); }));
 
   // Avviso resto basso: interruttore; acceso chiede una cifra obbligatoria (soglia 0 = spento)
@@ -1128,7 +1134,7 @@ function anima(v) {
 }
 window.addEventListener("resize", () => pillola(document.querySelector(".tabs"), "tabs"));
 const currentMonth = () => (view === "modello"
-  ? { stipendio: N(state.piano.stipendio), entrate_extra: 0, buoni: round(N(state.piano.buoni_num) * N(state.piano.buoni_valore)), risparmio: N(state.piano.risparmio), voci: vociModello(), prelievo: 0, extra: 0 }
+  ? { stipendio: N(state.piano.stipendio), entrate_extra: 0, buoni: round(N(state.piano.buoni_num) * valBuono(state.piano)), risparmio: N(state.piano.risparmio), voci: vociModello(), prelievo: 0, extra: 0 }
   : monthData(sel, state.piano, state.mesi));
 function updateGroupSums() {
   const voci = currentMonth().voci;

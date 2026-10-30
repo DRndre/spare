@@ -25,6 +25,8 @@ export const DEFAULT_PIANO = {
   voci: [],
   categorie: [], // categorie create dall'utente: [{k, n, c, i}]
   riporto: true, // il resto in tasca passa al mese dopo ("Dal mese prima")
+  buoni_on: true, // interruttore dei buoni pasto (spento = niente buoni, ma le cifre restano)
+  usa_modello: true, // spento = niente mese tipo: ogni mese si compila a mano
   residui: {}, // cifre vere scritte a mano: { "AAAA-MM": euro con cui parte quel mese }
 };
 
@@ -94,7 +96,12 @@ export const monthLabelLong = (id) => { const [y, m] = id.split("-"); return MNL
 export const addMonths = (id, n) => { let [y, m] = id.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + String(m).padStart(2, "0"); };
 
 /** Mensilità extra del mese, secondo mensilità e mesi scelti nel Modello. */
+/** Il Modello è acceso? (spento = i mesi non personalizzati sono vuoti, niente 13ª/14ª automatica) */
+export const modelloOn = (piano) => piano.usa_modello !== false;
+/** Valore di un buono che conta davvero: 0 se i buoni (o il Modello) sono spenti. */
+export const valBuono = (piano) => (!modelloOn(piano) || piano.buoni_on === false ? 0 : N(piano.buoni_valore));
 export function extraInfo(id, piano) {
+  if (!modelloOn(piano)) return null;
   const m = Number(id.slice(5, 7)), n = N(piano.mensilita) || 13;
   if (n >= 13 && m === (N(piano.mese_13) || 12)) return { nome: "Tredicesima", corto: "13ª", importo: N(piano.tredicesima) };
   if (n >= 14 && m === (N(piano.mese_14) || 6)) return { nome: "Quattordicesima", corto: "14ª", importo: N(piano.quattordicesima) };
@@ -135,7 +142,7 @@ function dalMesePrima(id, piano, mesi) {
   return { v: 0, mano: false };
 }
 function buoniAvanzatiPrima(id, piano, mesi) {
-  if (!(N(piano.buoni_valore) > 0)) return 0;
+  if (!(valBuono(piano) > 0)) return 0;
   let av = 0;
   for (const x of monthRange(piano.mese_inizio, id)) {
     if (x >= id) break;
@@ -154,7 +161,7 @@ function meseBase(id, piano, mesi) {
       stipendio: N(d.stipendio),
       entrate_extra: N(d.entrate_extra), // solo nel mese (null = 0)
       buoni_num: d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num),
-      buoni: round((d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num)) * N(piano.buoni_valore)),
+      buoni: round((d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num)) * valBuono(piano)),
       risparmio: N(d.risparmio),
       prelievo: N(d.prelievo),
       extra: !ex ? 0 : d.extra == null ? exDefault : N(d.extra),
@@ -162,7 +169,8 @@ function meseBase(id, piano, mesi) {
       voci: (d.voci || []).filter((v) => attivaNel(v, id)),
     };
   }
-  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * N(piano.buoni_valore)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
+  if (!modelloOn(piano)) return { custom: false, stipendio: 0, entrate_extra: 0, buoni_num: 0, buoni: 0, risparmio: 0, prelievo: 0, extra: 0, voci: [] };
+  return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * valBuono(piano)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
 }
 
 export function calcMonth(m, piano) {

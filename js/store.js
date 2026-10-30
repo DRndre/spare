@@ -59,6 +59,8 @@ export function fixInvestimenti(v) {
 let colInvestimenti = false;
 // Le colonne dei buoni pasto esistono? (query 10) Prima della query uso le vecchie entrate extra del Modello come buoni.
 let colBuoni = false;
+let colModello = false; // piani.buoni_on / piani.usa_modello (query 13)
+export const haModello = () => colModello;
 let colRiporto = false; // piani.riporto / piani.residui (query 12)
 export const haRiporto = () => colRiporto;
 let colExtraDep = false; // mesi.extra_dep (query 11): quanta 13ª/14ª va al deposito in quel mese
@@ -76,6 +78,8 @@ function pianoFromRow(r) {
   p.categorie = fixCategorie(r.categorie);
   p.investimenti = fixInvestimenti(r.investimenti);
   p.riporto = r.riporto == null ? true : !!r.riporto;
+  p.buoni_on = r.buoni_on == null ? true : !!r.buoni_on;
+  p.usa_modello = r.usa_modello == null ? true : !!r.usa_modello;
   p.residui = fixResidui(r.residui);
   if (!("buoni_valore" in r) && N(r.entrate_extra) > 0) { p.buoni_num = 1; p.buoni_valore = N(r.entrate_extra); }
   ["buoni_num", "buoni_valore", "stipendio", "entrate_extra", "risparmio", "soglia", "tredicesima", "quattordicesima", "mensilita", "mese_13", "mese_14"].forEach((k) => (p[k] = N(p[k])));
@@ -131,6 +135,7 @@ export async function loadAll() {
   if (p.data && "investimenti" in p.data) colInvestimenti = true;
   if (p.data && "buoni_valore" in p.data) colBuoni = true;
   if (p.data && "residui" in p.data) colRiporto = true;
+  if (p.data && "usa_modello" in p.data) colModello = true;
   if (!busy("piano")) state.piano = p.data ? pianoFromRow(p.data) : pianoNuovo();
   if (!busy("deposito")) state.deposito = d.data ? depositoFromRow(d.data) : { ...DEFAULT_DEPOSITO, periodi: [] };
   const next = {};
@@ -185,6 +190,7 @@ export function savePiano() {
       ...(colInvestimenti ? { investimenti: fixInvestimenti(p.investimenti) } : {}),
       ...(colBuoni ? { buoni_num: N(p.buoni_num), buoni_valore: N(p.buoni_valore) } : {}),
       ...(colRiporto ? { riporto: !!p.riporto, residui: fixResidui(p.residui) } : {}),
+      ...(colModello ? { buoni_on: p.buoni_on !== false, usa_modello: p.usa_modello !== false } : {}),
     });
   });
 }
@@ -227,8 +233,8 @@ export async function importData(json) {
   state.mesi = {};
   Object.entries(json.mesi || {}).forEach(([id, r]) => { if (/^\d{4}-\d{2}$/.test(id)) state.mesi[id] = meseFromRow(r); });
   const u = state.user.id, t = now(), p = state.piano, d = state.deposito;
-  const { investimenti, buoni_num, buoni_valore, riporto, residui, ...pBase } = p;
-  const r1 = await sb.from("piani").upsert({ user_id: u, ...pBase, voci: cleanVoci(p.voci), updated_at: t, ...(colInvestimenti ? { investimenti: fixInvestimenti(investimenti) } : {}), ...(colBuoni ? { buoni_num: N(buoni_num), buoni_valore: N(buoni_valore) } : {}), ...(colRiporto ? { riporto: !!riporto, residui: fixResidui(residui) } : {}) });
+  const { investimenti, buoni_num, buoni_valore, riporto, residui, buoni_on, usa_modello, ...pBase } = p;
+  const r1 = await sb.from("piani").upsert({ user_id: u, ...pBase, voci: cleanVoci(p.voci), updated_at: t, ...(colInvestimenti ? { investimenti: fixInvestimenti(investimenti) } : {}), ...(colBuoni ? { buoni_num: N(buoni_num), buoni_valore: N(buoni_valore) } : {}), ...(colRiporto ? { riporto: !!riporto, residui: fixResidui(residui) } : {}), ...(colModello ? { buoni_on: buoni_on !== false, usa_modello: usa_modello !== false } : {}) });
   if (r1.error) throw r1.error;
   const r2 = await sb.from("depositi").upsert({ user_id: u, ...depositoRow(d), updated_at: t });
   if (r2.error) throw r2.error;

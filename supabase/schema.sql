@@ -133,3 +133,7 @@ alter table public.mesi add column if not exists extra_dep numeric;
 -- 12. Resto che passa al mese dopo: interruttore e cifre vere scritte a mano ({"AAAA-MM": euro})
 alter table public.piani add column if not exists riporto boolean not null default true;
 alter table public.piani add column if not exists residui jsonb not null default '{}'::jsonb;
+
+-- 13. Interruttori: buoni pasto e Modello (spenti = le cifre restano ma non contano)
+alter table public.piani add column if not exists buoni_on boolean not null default true;
+alter table public.piani add column if not exists usa_modello boolean not null default true;

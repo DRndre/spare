@@ -206,8 +206,10 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
   function salva() {
     const p = state.piano, d = state.deposito;
-    if (!w.conBuoni) Object.assign(w, { buoni_num: 0, buoni_valore: 0 });
-    if (w.manuale) Object.assign(w, { stipendio: 0, buoni_num: 0, buoni_valore: 0, risparmio: 0, esistenti: [], nuove: {}, altre: [] });
+    p.buoni_on = !!w.conBuoni; // spento: le cifre restano, ma niente buoni
+    // "Ogni mese a mano" spegne il Modello senza cancellare niente (si riaccende nel Modello)
+    if (w.manuale) { p.usa_modello = false; Object.assign(w, { stipendio: N(p0.stipendio), buoni_num: N(p0.buoni_num), buoni_valore: N(p0.buoni_valore), risparmio: N(p0.risparmio), esistenti: [...(p0.voci || [])], nuove: {}, altre: [] }); }
+    else p.usa_modello = true;
     Object.assign(p, { stipendio: w.stipendio, buoni_num: w.buoni_num, buoni_valore: w.buoni_valore, entrate_extra: 0, risparmio: w.risparmio, mensilita: w.mensilita,
       tredicesima: w.tredicesima, quattordicesima: w.quattordicesima, mese_13: w.mese_13, mese_14: w.mese_14,
       extra_al_deposito: w.extra_al_deposito, usa_deposito: w.usa_deposito, voci: vociFinali(), mese_inizio: w.mese_inizio });
@@ -223,7 +225,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
 
 /* ---------- Come funziona ---------- */
 const AIUTO = [
-  ["Il Modello", "È il tuo <b>mese tipo</b>: stipendio, spese fisse e risparmio. Tutti i mesi lo seguono, finché non ne cambi uno. Se modifichi il Modello, cambiano tutti i mesi che non hai personalizzato. Preferisci fare tutto a mano? Lascia il Modello vuoto e compila ogni mese nella scheda Mesi: con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente."],
+  ["Il Modello", "È il tuo <b>mese tipo</b>: stipendio, spese fisse e risparmio. Tutti i mesi lo seguono, finché non ne cambi uno. Se modifichi il Modello, cambiano tutti i mesi che non hai personalizzato. Preferisci fare tutto a mano? Nel Modello spegni <b>Uso il Modello</b> e compila ogni mese nella scheda Mesi: con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente."],
   ["La scheda Mesi", "Qui vedi un mese alla volta. Se in un mese hai una spesa in più o uno stipendio diverso, cambialo lì: quel mese diventa <b>personalizzato</b> e gli altri non cambiano. Con <b>Torna al Modello</b> il mese torna a seguire il Modello. In alto scegli l'anno."],
   ["Resto in tasca", "È quello che ti rimane: <b>entrate</b> (stipendio, entrate extra, 13ª e 14ª) <b>meno spese meno risparmio</b>. Se va sotto zero diventa rosso. Nel Modello puoi mettere una soglia per avere un avviso quando scende sotto una cifra."],
   ["Dal mese prima", "Quello che ti avanza in un mese passa da solo al mese dopo, nella riga <b>Dal mese prima</b> delle Entrate (anche se è negativo, così toglie dal mese dopo). Le spese vere non sono mai uguali a quelle previste: a inizio mese guarda il conto e, se non torna, scrivi la cifra vera; i mesi dopo ripartono da lì. Nel primo mese scrivi quanto hai sul conto. Non ti serve? Spegnilo nel Modello, in <b>Altre impostazioni</b>."],

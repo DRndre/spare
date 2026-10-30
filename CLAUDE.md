@@ -52,8 +52,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **Scheda Modello** (ordine; il Modello serve solo a impostare le regole fisse, quindi **niente riquadro "Ti restano"**):
   titolo "Il mese tipo" (a destra quanti mesi personalizzati), riga "I tuoi conti partono da" (sotto le frasi, prima di Entrate), frase "Qui imposti le regole fisse: le entrate, le spese e il
   risparmio che si ripetono ogni mese.", sotto in grigio "I mesi che non hai personalizzato seguono il Modello…", *Entrate* (Stipendio e Buoni pasto affiancati;
-  Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`, sotto l'interruttore "Ricevo i buoni pasto" (spento = buoni a 0,
-  niente riquadro, Stipendio a tutta larghezza; c'è anche nel primo passaggio della guida); niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
+  Buoni pasto in un solo riquadro "20 × 6,50 €" con `buoniField`, con un piccolo interruttore accanto al titolo (`piani.buoni_on`,
+  query 13): spento il riquadro resta ma grigio, cifre tenute, nei mesi i buoni spariscono (`valBuono()` in calc.js = 0);
+  nella guida interruttore "Ricevo i buoni pasto" nel primo passaggio; niente più "Entrate extra" nel Modello), *Mensilità* (pulsanti 12/13/14, riquadri arancio 13ª/14ª con il mese, interruttore "13ª e 14ª al deposito"),
   *Risparmio* (riga a tutta larghezza + interruttore "Uso un conto deposito"), *Spese*, *Altre impostazioni* (solo
   interruttore "Avviso resto basso": spento = soglia 0; acceso chiede "Avvisami sotto", cifra obbligatoria, messaggio rosso;
   spegnendolo la cifra si cancella).
@@ -92,10 +93,16 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Nei mesi le spese a rate: "Rata 3 di 6 · fino a apr 2027".
   Provate e tolte prima (non riproporre): voce automatica "Spesa (buoni pasto)"; borsellino con icona biglietto su tutte le
   spese; frase "mancavano X €, pagati di tasca".
-- **Ogni mese a mano** (niente "spegni il Modello", perché il Modello regge le previsioni): in Mesi il link
+- **Modello spento** (`piani.usa_modello`, query 13; interruttore "Uso il Modello" sotto "I tuoi conti partono da"): tutto il
+  Modello (Entrate, Mensilità, Risparmio, Spese) resta visibile ma grigio e bloccato (`.mod-corpo.spento`, `inert`), cifre tenute;
+  restano attivi mese di partenza e *Altre impostazioni* (dove compare "Uso un conto deposito"). `modelloOn()` in calc.js:
+  mesi non personalizzati vuoti, niente 13ª/14ª automatica (`extraInfo` null: si scrivono come entrate extra), niente buoni.
+  Scelta di Andrea: "tutto spento tranne le impostazioni". Gli interruttori compaiono solo se la colonna esiste (`haModello()`).
+- **Ogni mese a mano**: in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede
   conferma; non c'è nel primo mese); nella configurazione guidata, solo al primo accesso, interruttore
-  "Preferisco inserire ogni mese a mano" (salta le spese fisse, Modello vuoto); con il Modello vuoto (`modelloVuoto()`)
+  "Preferisco inserire ogni mese a mano" (salta le spese fisse, **spegne il Modello** senza cancellare niente; finire la guida
+  normalmente lo riaccende); con il Modello vuoto o spento (`modelloVuoto()`)
   i mesi dicono "Da compilare" e il Deposito "Stima solo sui mesi che hai compilato".
 - **Dal mese prima** (resto che passa al mese dopo, `piani.riporto` acceso di base + `piani.residui` jsonb `{"AAAA-MM": euro}`,
   query 12; UI solo se la colonna esiste, `haRiporto()`): `dalMesePrima` in calc.js parte da 0 (o dalla cifra scritta) nel
@@ -183,6 +190,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 10. Buoni pasto: `piani.buoni_num`, `piani.buoni_valore`, `mesi.buoni_num`; entrate extra del Modello spostate nei buoni.
 11. `mesi.extra_dep` (13ª/14ª in parte al deposito). **Da eseguire** (finché manca, il campo non compare).
 12. `piani.riporto`, `piani.residui` (Dal mese prima). **Da eseguire** (finché manca, la funzione non compare).
+13. `piani.buoni_on`, `piani.usa_modello` (interruttori di buoni pasto e Modello). **Da eseguire**.
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.

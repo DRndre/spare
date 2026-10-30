@@ -580,3 +580,12 @@ form.add input.sw:checked { background: var(--accent); }
 .yc-stats > .yc-fine > span { display: flex; flex-direction: column; font-size: .9rem; font-weight: 600; color: var(--fg); }
 .yc-stats > .yc-fine small { font-weight: 400; }
 .yc-fine b.bad { color: var(--bad); }
+
+/* Modello spento e buoni pasto spenti */
+.mod-corpo { display: flex; flex-direction: column; gap: 18px; }
+.mod-corpo.spento { opacity: .4; filter: grayscale(1); user-select: none; }
+.bp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.field.buoni input.sw { width: 51px; height: 31px; padding: 0; border: 0; border-radius: 999px; background: var(--seg-bg); margin: -8px 0 -4px; transform: scale(.8); transform-origin: right center; }
+.field.buoni input.sw:checked { background: var(--accent); }
+.field.buoni.off .bp-row { opacity: .4; }
+.field.buoni.off input[type=text] { background: transparent; }
