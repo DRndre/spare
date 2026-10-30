@@ -113,8 +113,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   dell'anno, mese migliore/peggiore), più riga "In tasca a fine <mese>". Interruttore "Porta il resto al mese dopo" in
   *Altre impostazioni* del Modello. Spiegato in Come funziona.
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password.
-  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch `anteprima-riepilogo` (non online: per rimetterla in `anteprima/` usare
-  `git archive anteprima-riepilogo`; va aggiornata ai buoni pasto di lato, che vanno tra "quello che hai"). Scheda "Riepilogo" prima: Quello che hai (deposito + altri
+  **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch **`anteprima-riepilogo-2`** (= main del 30/10/2026 +
+  riepilogo; il vecchio `anteprima-riepilogo` è superato), **online in `anteprima/`** (copia con `git archive anteprima-riepilogo-2
+  index.html css js fonts icons`, senza manifest né service worker, noindex, bollino arancio). Composizione: deposito/risparmi,
+  "In tasca" (resto con il riporto, se acceso), "Buoni pasto" (quelli che avanzano), investimenti; i primi tre senza guadagno. Scheda "Riepilogo" prima: Quello che hai (deposito + altri
   investimenti, conto corrente escluso), Altri investimenti scritti a mano (nell'anteprima in localStorage; nell'app vera
   servirebbe una colonna jsonb), mese di oggi, anno in breve con top 3 categorie e grafico del resto, rate in corso, obiettivo.
   Decisioni di Andrea (d'accordo): dati veri da aggiornare ogni tanto, non solo previsioni; per ogni investimento **quanto
