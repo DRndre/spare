@@ -157,7 +157,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - Chi parte da zero: inizio = mese corrente, senza fine, 13 mensilità, deposito spento.
 - **Niente "Dal mese / Fino a" nel Modello**: i conti sono sempre senza fine (`pianoFromRow` e la guida forzano `senza_fine = true`).
   Il mese di partenza si sceglie nel benvenuto (primo accesso: "I tuoi conti partono da", di base il mese in cui ti registri,
-  fino a 24 mesi prima) e si vede/cambia **in cima al Modello** (riga "I tuoi conti partono da"). Non è nella configurazione guidata (scelta di Andrea).
+  da gennaio di 2 anni fa fino al mese prossimo, `mesiPartenza()`, uguale anche nel Modello) e si vede/cambia **in cima al Modello** (riga "I tuoi conti partono da"). Non è nella configurazione guidata (scelta di Andrea).
 - **13ª/14ª in parte al deposito** (solo nei Mesi): nel mese della 13ª/14ª, sotto Risparmio, riga "13ª al deposito" con la cifra
   (`mesi.extra_dep`, null = come il Modello: tutta se "13ª e 14ª al deposito" è acceso, se no niente; al massimo tutta).
   Il Modello resta tutto sì / tutto no. Il campo compare solo se la colonna esiste (`haExtraDep()`, query 11).

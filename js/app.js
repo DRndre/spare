@@ -556,6 +556,12 @@ function fillBar(bar, leg, m, c) {
   });
 }
 
+/** Mesi tra cui scegliere la partenza: da gennaio di 2 anni fa fino al mese prossimo (uguale nel benvenuto e nel Modello). */
+function mesiPartenza() {
+  const oggi = meseCorrente();
+  return monthRange((Number(oggi.slice(0, 4)) - 2) + "-01", addMonths(oggi, 1));
+}
+
 /* ---------- Mesi personalizzati ---------- */
 // Testi sotto 13ª/14ª e risparmio: cambiano mentre scrivi quanta 13ª/14ª va al deposito
 function hintExtra(m, c) {
@@ -582,7 +588,7 @@ function renderOnboarding(v) {
   // mese di partenza: di base quello in cui ti registri
   const oggi = meseCorrente(), sd = $("ob-da");
   if (!state.piano.mese_inizio || state.piano.mese_inizio > oggi) state.piano.mese_inizio = oggi;
-  sd.innerHTML = monthRange(addMonths(oggi, -24), oggi).reverse().map((id) => `<option value="${id}"${id === state.piano.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("");
+  sd.innerHTML = mesiPartenza().reverse().map((id) => `<option value="${id}"${id === state.piano.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("");
   sd.onchange = () => { state.piano.mese_inizio = sd.value; state.piano.senza_fine = true; };
   $("ob-import").onclick = () => $("importFile").click();
   $("ob-zero").onclick = () => guida(true);
@@ -962,7 +968,7 @@ function renderModello(v) {
   // Mese di partenza: la prima cosa del Modello (di base il mese della registrazione)
   {
     const oggi = meseCorrente();
-    const opts = monthRange(addMonths(oggi, -60), addMonths(oggi, 12));
+    const opts = mesiPartenza();
     if (!opts.includes(p.mese_inizio)) opts.unshift(p.mese_inizio);
     const fp = document.createElement("label"); fp.className = "field riga partenza"; fp.htmlFor = "t-da";
     fp.innerHTML = `<span class="label">I tuoi conti partono da</span><span class="hint">${p.mese_inizio === oggi ? "Il mese in corso" : p.mese_inizio < oggi ? "Comprende anche i mesi passati" : "Inizierà più avanti"}</span><select id="t-da">${opts.map((id) => `<option value="${id}"${id === p.mese_inizio ? " selected" : ""}>${monthLabelLong(id)}</option>`).join("")}</select>`;
