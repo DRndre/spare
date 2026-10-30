@@ -1,4 +1,4 @@
-// Configurazione guidata (5 passaggi) e pagina "Come funziona".
+// Configurazione guidata (4 passaggi) e pagina "Come funziona".
 // La guida lavora su una copia dei dati: salva solo quando si preme "Fine".
 import { N, round, fmt, eur, parseNum, uid, calcMonth, meseCorrente, monthRange, monthLabelLong, MESI_NOMI } from "./calc.js";
 import { categorie } from "./categorie.js";
@@ -74,9 +74,9 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
   };
   const haTassi = (d0.periodi || []).length > 0;
   let passo = 0;
-  const PASSI = ["Le tue entrate", "Mensilità", "Spese fisse", "Risparmi", "Riepilogo"];
+  const PASSI = ["Le tue entrate", "Mensilità", "Spese fisse", "Risparmi"]; // niente riepilogo: "Fine" porta nella scheda Mesi
   // passaggi da mostrare: chi inserisce ogni mese a mano salta le spese fisse
-  const elenco = () => (w.manuale ? [0, 1, 3, 4] : [0, 1, 2, 3, 4]);
+  const elenco = () => (w.manuale ? [0, 1, 3] : [0, 1, 2, 3]);
   const f = apriFoglio("Configurazione guidata", () => onCancel && onCancel());
 
   function vociFinali() {
@@ -182,20 +182,8 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
         }
       }
     }
-    if (passo === 4 && w.manuale) {
-      b.appendChild(testo("Hai scelto di inserire <b>ogni mese a mano</b>.<br>Nella scheda <b>Mesi</b> apri un mese e scrivi entrate, spese e risparmio. Con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente.<br>Se poi vuoi un mese tipo da far seguire a tutti i mesi, lo trovi nella scheda <b>Modello</b>."));
-    }
-    if (passo === 4 && !w.manuale) {
-      const pp = pianoProva();
-      const c = calcMonth({ stipendio: pp.stipendio, entrate_extra: 0, buoni: round(N(pp.buoni_num) * N(pp.buoni_valore)), risparmio: pp.risparmio, voci: pp.voci, prelievo: 0, extra: 0 }, pp);
-      b.insertAdjacentHTML("beforeend", `<div class="hero wiz-hero"><div class="label">Ogni mese ti restano in tasca</div><div class="big${c.resto < 0 ? " neg" : ""}">${eur(c.resto)}</div>
-        <div class="formula"><b>${eur(c.entrate)}</b> di entrate − <b>${eur(c.spese)}</b> di spese (${pp.voci.length}) − <b>${eur(c.toDep)}</b> messi da parte</div></div>`);
-      if (c.resto < 0) b.appendChild(testo("Le spese superano le entrate: torna indietro e controlla le cifre, oppure riduci il risparmio.", "note"));
-      const righe = [];
-      if (w.mensilita >= 13) righe.push(`Tredicesima a ${MESI_NOMI[w.mese_13 - 1].toLowerCase()}${w.mensilita >= 14 ? `, quattordicesima a ${MESI_NOMI[w.mese_14 - 1].toLowerCase()}` : ""}${w.extra_al_deposito ? ": vanno nei risparmi" : ": restano in tasca"}.`);
-      righe.push(w.usa_deposito ? "Scheda <b>Deposito</b>: risparmi con gli interessi del conto." : "Scheda <b>Risparmi</b>: quanto metti da parte, mese per mese.");
-      righe.push("Nella scheda <b>Mesi</b> puoi cambiare un singolo mese (una spesa in più, uno stipendio diverso) senza toccare gli altri.");
-      b.appendChild(testo(righe.join("<br>")));
+    if (passo === 3 && w.manuale) {
+      b.appendChild(testo("Hai scelto di inserire <b>ogni mese a mano</b>: nella scheda <b>Mesi</b> apri un mese e scrivi entrate, spese e risparmio. Con <b>Copia dal mese prima</b> riparti dai numeri del mese precedente.", "note"));
     }
     // pulsanti
     f.foot.innerHTML = "";
@@ -207,8 +195,9 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
       indietro.textContent = "Indietro"; indietro.disabled = passo === 0; indietro.onclick = () => { const el = elenco(); passo = el[el.indexOf(passo) - 1]; disegna(); f.body.scrollTop = 0; };
     }
     const avanti = document.createElement("button"); avanti.type = "button"; avanti.className = "btn primary";
-    avanti.textContent = passo === PASSI.length - 1 ? "Fine" : "Avanti";
-    avanti.onclick = () => { if (passo < PASSI.length - 1) { const el = elenco(); passo = el[el.indexOf(passo) + 1]; disegna(); f.body.scrollTop = 0; } else salva(); };
+    const ultimo = passo === elenco().slice(-1)[0];
+    avanti.textContent = ultimo ? "Fine" : "Avanti";
+    avanti.onclick = () => { if (!ultimo) { const el = elenco(); passo = el[el.indexOf(passo) + 1]; disegna(); f.body.scrollTop = 0; } else salva(); };
     f.foot.append(indietro, avanti);
     f.body.querySelector("input:not([disabled]), select")?.focus({ preventScroll: true });
   }

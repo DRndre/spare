@@ -117,8 +117,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria
   sconosciuta o eliminata conta come "Altro". `js/categorie-ui.js`: menu ☰ → Categorie (crea, modifica, elimina:
   le spese di una categoria eliminata passano in Altro); "Nuova categoria" anche da "+ Aggiungi una spesa".
-- `js/guida.js` — **Configurazione guidata** in 5 passaggi (entrate, mensilità, spese fisse con esempi da spuntare,
-  risparmi/deposito, riepilogo): parte al primo accesso ("Inizia la configurazione") e si riapre dal menu ☰
+- `js/guida.js` — **Configurazione guidata** in 4 passaggi (entrate, mensilità, spese fisse con esempi da spuntare,
+  risparmi/deposito; niente riepilogo: "Fine" porta nella scheda Mesi sul mese di oggi; tolto su richiesta di Andrea): parte al primo accesso ("Inizia la configurazione") e si riapre dal menu ☰
   senza cancellare le spese già presenti. Si può saltare ("Salta" nel primo passaggio o "Salta, configuro da solo"
   nel benvenuto): si va al Modello vuoto. Contiene anche la pagina **Come funziona** (menu ☰).
 - Tema: menu ☰ → Automatico / Chiaro / Scuro, salvato **per dispositivo** in `localStorage` ("spare-tema"),
