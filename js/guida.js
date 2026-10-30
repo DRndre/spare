@@ -127,7 +127,7 @@ export function apriGuida({ state, savePiano, saveDeposito, primaVolta, onDone, 
       if (w.mensilita >= 13) b.appendChild(testo("Non sai la cifra esatta? Metti più o meno uno stipendio: la correggi quando arriva la busta paga."));
     }
     if (passo === 2) {
-      b.appendChild(testo("Spunta le spese che hai e scrivi quanto costano <b>al mese</b>. Se una spesa arriva ogni tanto, dividila: ad esempio un bollo da 232 € l'anno diventa 19,33 € al mese."));
+      b.appendChild(testo("Spunta le spese che hai e scrivi quanto costano <b>al mese</b>. Se adesso non hai le cifre sotto mano, lascia pure vuoto: potrai aggiungerle quando vuoi nel Modello."));
       if (w.esistenti.length) b.appendChild(testo(`Hai già <b>${w.esistenti.length} spese</b> nel Modello (totale ${eur(w.esistenti.reduce((a, v) => a + N(v.importo), 0))}): restano come sono. Qui puoi aggiungerne altre.`, "note"));
       const nomiEsistenti = new Set(w.esistenti.map((v) => v.nome.toLowerCase()));
       ESEMPI.forEach((gr) => {
