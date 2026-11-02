@@ -651,6 +651,41 @@ function campoDalPrima(id, m) {
   return f;
 }
 
+/* ---------- 13ª/14ª al deposito nel mese: Tutta / Una parte / Niente ---------- */
+let exParte = null; // mese in cui è appena stata scelta "Una parte"
+function sceltaExtraDep(id, m, ex) {
+  const tot = N(m.extra), mod = !!state.piano.extra_al_deposito, dove = usaDep() ? "al deposito" : "da parte";
+  const ed = m.extra_dep;
+  const modo = ed == null ? (mod ? "tutta" : "niente") : ed >= tot && exParte !== id ? "tutta" : ed <= 0 && exParte !== id ? "niente" : "parte";
+  const metti = (v) => { ensureMese(id).extra_dep = v; saveMese(id); };
+  const box = document.createElement("div"); box.className = "card ex-dep";
+  const r = document.createElement("div"); r.className = "field riga seg-row";
+  const q = modo === "parte" ? Math.min(N(ed), tot) : 0;
+  const hint = modo === "tutta" ? `Tutti i ${eur(tot)} vanno ${dove}` : modo === "niente" ? `Restano tutti in tasca (${eur(tot)})` : `${eur(q)} ${dove}, ${eur(round(tot - q))} restano in tasca`;
+  r.innerHTML = `<span class="label">${esc(ex.corto || ex.nome)} ${dove}</span><span class="hint" id="exd-h-${id}">${hint}</span>`;
+  const sg = document.createElement("div"); sg.className = "seg mens exd"; sg.setAttribute("role", "group"); sg.setAttribute("aria-label", `Quanta ${ex.corto} ${dove}`);
+  [["tutta", "Tutta"], ["parte", "Una parte"], ["niente", "Niente"]].forEach(([k, t]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String(k === modo));
+    b.onclick = () => {
+      if (k === modo) return;
+      if (k === "tutta") { exParte = null; metti(mod ? null : tot); }
+      else if (k === "niente") { exParte = null; metti(mod ? 0 : null); }
+      else { exParte = id; metti(round(tot / 2)); }
+      render(); if (k === "parte") $("m-exdep-" + id)?.focus({ preventScroll: true });
+    };
+    sg.appendChild(b);
+  });
+  r.appendChild(sg); box.appendChild(r);
+  if (modo === "parte") {
+    const f = moneyField("Quanta?", q, (n) => {
+      metti(Math.min(n, tot));
+      const h = $("exd-h-" + id), x = Math.min(n, tot); if (h) h.textContent = `${eur(x)} ${dove}, ${eur(round(tot - x))} restano in tasca`;
+    }, { id: "m-exdep-" + id, cls: "riga", hint: `Su ${eur(tot)}` });
+    box.appendChild(f);
+  }
+  return box;
+}
+
 /* ---------- Mesi personalizzati ---------- */
 // Testi sotto 13ª/14ª e risparmio: cambiano mentre scrivi quanta 13ª/14ª va al deposito
 function hintExtra(m, c) {
@@ -753,11 +788,8 @@ function renderMesi(v) {
   fr.appendChild(moneyField("Prelievo", m.prelievo, (n) => { ensureMese(sel).prelievo = n; saveMese(sel); }, { id: "m-prel-" + sel, hint: T().prelHint }));
   v.appendChild(fr);
   // Quanta 13ª/14ª va al deposito in questo mese (di base tutta o niente, come nel Modello)
-  if (ex && N(m.extra) > 0 && haExtraDep()) {
-    const quota = moneyField(`${ex.corto || ex.nome} ${usaDep() ? "al deposito" : "da parte"}`, c.extraDep, (n) => { ensureMese(sel).extra_dep = n; saveMese(sel); },
-      { id: "m-exdep-" + sel, cls: "riga extra-dep", hint: `Su ${eur(m.extra)}: il resto rimane in tasca` });
-    v.appendChild(quota);
-  }
+  // Tre scelte (Tutta / Una parte / Niente): di base quella del Modello; la cifra si scrive solo con "Una parte"
+  if (ex && N(m.extra) > 0 && haExtraDep()) v.appendChild(sceltaExtraDep(sel, m, ex));
 
   vociEditor(v, () => monthData(sel, state.piano, state.mesi).voci, (fn) => { fn(ensureMese(sel).voci); saveMese(sel); }, "m" + sel + "-", { titoloFuori: true, mese: sel });
 
