@@ -10,6 +10,7 @@ import {
 import { LOGO } from "./logo.js";
 import { categorie, catInfo, badge, icona, tipiEntrata } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
+import { creaXlsx, scarica } from "./xlsx.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
 import { apriSicurezza, serveCodice, mostraCodice } from "./sicurezza.js";
@@ -880,21 +881,43 @@ function entrateAnnoHtml(d, riga) {
   if (!righe.length) return "";
   return `<div class="ya-ent"><div class="ya-ent-tit">Entrate extra</div>${righe.map((t) => riga(icona(t.i, t.c, 15), t.c, esc(t.n), per[t.k])).join("")}</div>`;
 }
-function tabellaAnno(d, anno) {
-  // Dal mese prima + Entrate − Uscite − Messo da parte = Resto (a fine mese). Uscite = solo spese pagate con i soldi.
-  // Nel totale "Dal mese prima" è la cifra di inizio anno e "Resto" quella di fine anno (sommarle conterebbe gli stessi soldi più volte).
-  const rip = riportoAttivo(), f = (n) => fmt.format(round(n));
-  let t = { e: 0, s: 0, d: 0 };
-  let html = `<table><thead><tr><th>Mese</th>${rip ? "<th>Dal mese prima</th>" : ""}<th>Entrate</th><th>Uscite</th><th>Messo da parte</th><th>Resto</th></tr></thead><tbody>`;
-  d.forEach(({ id, cc, ex }) => {
-    t.e += cc.entrate; t.s += cc.speseSoldi; t.d += cc.toDep;
-    const r = rip ? cc.resto : cc.restoMese;
-    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td>${rip ? `<td class="${cc.dalPrima < 0 ? "neg" : ""}">${f(cc.dalPrima)}</td>` : ""}<td>${f(cc.entrate)}</td><td>${f(cc.speseSoldi)}</td><td>${f(cc.toDep)}</td><td class="${r < 0 ? "neg" : ""}">${f(r)}</td></tr>`;
+/** Righe della tabella dell'anno: il conto del mese colonna per colonna.
+ *  Dal mese prima + Stipendio + 13ª/14ª + Entrate extra = Entrate; Entrate − Uscite − Messo da parte = Resto.
+ *  Nel totale "Dal mese prima" è la cifra di inizio anno e "Resto" quella di fine anno (sommarle conterebbe gli stessi soldi più volte). */
+function righeAnno(d) {
+  const rip = riportoAttivo();
+  const righe = d.map(({ id, cc, ex }) => {
+    const md = monthData(id, state.piano, state.mesi);
+    const dp = rip ? cc.dalPrima : 0, st = N(md.stipendio), xt = N(md.extra), ee = N(md.entrate_extra);
+    return { id, ex, dp, st, xt, ee, ent: round(dp + st + xt + ee), usc: cc.speseSoldi, dep: cc.toDep, resto: rip ? cc.resto : cc.restoMese, pin: statoResto(cc.resto, state.piano.soglia) };
   });
-  const inizio = d.length ? d[0].cc.dalPrima : 0;
-  const fine = !d.length ? 0 : rip ? d[d.length - 1].cc.resto : d.reduce((a, x) => a + x.cc.restoMese, 0);
-  return html + `</tbody><tfoot><tr><td>Totale ${anno}</td>${rip ? `<td title="Con quanto hai iniziato l'anno">${f(inizio)}</td>` : ""}<td>${f(t.e)}</td><td>${f(t.s)}</td><td>${f(t.d)}</td><td class="${fine < 0 ? "neg" : ""}" title="${rip ? "Quanto hai a fine anno" : "Somma degli avanzi dei mesi"}">${f(fine)}</td></tr></tfoot></table>`
-    + (rip ? `<p class="hint flush tbl-nota">Nel totale, "Dal mese prima" è la cifra di inizio anno e "Resto" quella di fine anno.</p>` : "");
+  const sum = (k) => round(righe.reduce((a, r) => a + r[k], 0));
+  const inizio = righe.length ? righe[0].dp : 0;
+  const tot = { dp: inizio, st: sum("st"), xt: sum("xt"), ee: sum("ee"), usc: sum("usc"), dep: sum("dep"),
+    resto: !righe.length ? 0 : rip ? righe[righe.length - 1].resto : sum("resto") };
+  tot.ent = round(tot.dp + tot.st + tot.xt + tot.ee);
+  const cols = [...(rip ? [["dp", "Dal mese prima", ""]] : []), ["st", "Stipendio", "+"], ["xt", "13ª / 14ª", "+"], ["ee", "Entrate extra", "+"], ["ent", "Entrate", "="], ["usc", "Uscite", "−"], ["dep", "Messo da parte", "−"], ["resto", "Resto", "="]];
+  if (!rip) cols[0][2] = "";
+  return { righe, tot, cols, rip };
+}
+function tabellaAnno(d, anno) {
+  const { righe, tot, cols, rip } = righeAnno(d), f = (n) => fmt.format(round(n));
+  const cella = (k, v) => `<td class="${["ent", "resto"].includes(k) ? "tot-c" : ""}${v < 0 ? " neg" : ""}">${f(v)}</td>`;
+  let html = `<table class="t-anno"><thead><tr><th>Mese</th>${cols.map(([k, n, seg]) => `<th>${seg ? `<i class="seg-op">${seg}</i>` : ""}${n}</th>`).join("")}</tr></thead><tbody>`;
+  righe.forEach((r) => {
+    html += `<tr class="click${r.id === sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><td><span class="pin" data-k="${r.pin}"></span>${monthLabel(r.id)}${r.ex ? ` <span class="tag">${r.ex.corto}</span>` : ""}</td>${cols.map(([k]) => cella(k, r[k])).join("")}</tr>`;
+  });
+  html += `</tbody><tfoot><tr><td>Totale ${anno}</td>${cols.map(([k]) => cella(k, tot[k])).join("")}</tr></tfoot></table>`;
+  return html + `<div class="tbl-foot">${rip ? `<p class="hint flush tbl-nota">Nel totale, "Dal mese prima" è la cifra di inizio anno e "Resto" quella di fine anno.</p>` : ""}<button type="button" class="link" id="yc-xlsx">${icona("receipt", "currentColor", 15)} Scarica in Excel</button></div>`;
+}
+/** Scarica la tabella dell'anno come file Excel. */
+function esportaAnno(d, anno) {
+  const { righe, tot, cols } = righeAnno(d);
+  const testa = ["Mese", ...cols.map(([, n, seg]) => (seg ? seg + " " : "") + n)];
+  const dati = righe.map((r) => [monthLabelLong(r.id) + (r.ex ? " (" + r.ex.corto + ")" : ""), ...cols.map(([k]) => r[k])]);
+  const fondo = ["Totale " + anno, ...cols.map(([k]) => tot[k])];
+  const blob = creaXlsx([testa, ...dati, fondo], { foglio: "Spare " + anno, grassetto: [0, dati.length + 1], larghezze: [18, ...cols.map(() => 15)] });
+  scarica(blob, `Spare ${anno}.xlsx`);
 }
 function apriMese(id) { sel = id; chartSel = id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 function wireYear(ms, anno) {
@@ -903,6 +926,7 @@ function wireYear(ms, anno) {
     const low = e.target.closest("[data-open]"); if (low) { apriMese(low.dataset.open); return; }
     if (e.target.closest("#ya-more")) { tutteCat = !tutteCat; $("yc-chart").innerHTML = chartHtml(datiAnno(ms), anno); return; }
     if (e.target.closest("#yc-toggle")) { showTable = !showTable; card.innerHTML = yearCardHtml(ms, anno); return; }
+    if (e.target.closest("#yc-xlsx")) { esportaAnno(datiAnno(ms), anno); return; }
     const tr = e.target.closest("tr[data-id]"); if (tr) apriMese(tr.dataset.id);
   };
   card.onkeydown = (e) => { const tr = e.target.closest("tr[data-id]"); if (tr && e.key === "Enter") apriMese(tr.dataset.id); };

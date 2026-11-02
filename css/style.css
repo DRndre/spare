@@ -612,3 +612,11 @@ form.add input.sw:checked { background: var(--accent); }
 .card.ex-dep .field + .field { border-top: 1px solid var(--line); }
 .seg.exd button { min-width: 0; padding: 6px 12px; }
 @media (max-width: 560px) { .card.ex-dep .seg-row { grid-template-columns: 1fr; } .card.ex-dep .seg-row > .seg { grid-column: 1; grid-row: 3; margin-top: 8px; justify-self: stretch; } .seg.exd button { flex: 1; } }
+
+/* Tabella dell'anno come un conto: segni + − = davanti ai titoli, colonne Entrate e Resto in evidenza */
+.t-anno .seg-op { font-style: normal; color: var(--muted); margin-right: 3px; font-weight: 700; }
+.t-anno td.tot-c { font-weight: 600; }
+.t-anno th { white-space: nowrap; }
+.tbl-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px 4px; }
+.tbl-foot .tbl-nota { margin: 0; }
+.tbl-foot .link { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
