@@ -47,7 +47,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   poi blocchi separati: *Al deposito* (verde) e riquadro grigio senza titolo (niente "Rimasto in tasca" né "Spese mese per mese") con due coppie Mese migliore / Mese peggiore:
   sopra titoletto **Entrate** (migliore = entrato di più, soldi nuovi senza "Dal mese prima" né buoni, con etichetta 13ª/14ª; "entrati a <mese>"),
   sotto **Spese** (migliore = speso meno, tutte le spese anche con i buoni; "spesi a <mese>"); frecce verde su / arancio giù;
-  aprono il mese; se tutti uguali una riga sola) (niente spesa media né "In tasca a fine <mese>": tolte da Andrea). Niente percentuali in più. Nei riepiloghi dell'anno (Mesi e Deposito) **cifre con i centesimi** (`eur0` ora = `eur`; prima arrotondate, Andrea ha cambiato idea).
+  aprono il mese; a pari merito "entrati a giugno e dicembre" (2 mesi) o "entrati in 10 mesi" e si apre il primo; se tutti uguali una riga sola) (niente spesa media né "In tasca a fine <mese>": tolte da Andrea). Niente percentuali in più. Nei riepiloghi dell'anno (Mesi e Deposito) **cifre con i centesimi** (`eur0` ora = `eur`; prima arrotondate, Andrea ha cambiato idea).
   "Vedi la tabella completa" apre la tabella, letta come un conto (`righeAnno`): Mese | Dal mese prima (solo con il riporto) | + Stipendio |
   + 13ª/14ª | + Entrate extra | = Entrate | − Uscite (solo spese pagate con i soldi) | − Messo da parte (`toDep`) | = Resto. Nel totale
   "Dal mese prima" = cifra di inizio anno e "Resto" = fine anno (non sommati, se no gli stessi soldi contano più volte).

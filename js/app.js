@@ -843,7 +843,10 @@ function statsAnno(d) {
     const max = d.reduce((m, x) => (v(x) > v(m) ? x : m), d[0]), min = d.reduce((m, x) => (v(x) < v(m) ? x : m), d[0]);
     const [meglio, peggio] = piuMeglio ? [max, min] : [min, max];
     const tag = (x) => (piuMeglio && x.ex ? ` <span class="tag">${x.ex.corto}</span>` : ""); // 13ª/14ª: solo per le entrate
-    const box = (x, t, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${t}</small><b>${eur0(v(x))}</b><span>${verbo} a ${nomeM(x)}${tag(x)} ›</span></button>`;
+    // a pari merito con altri mesi: "entrati in 10 mesi" (si apre il primo), se no "entrati a novembre"
+    const pari = (x) => d.filter((y) => Math.abs(v(y) - v(x)) < 0.005);
+    const dove = (x) => { const p = pari(x); return p.length > 2 ? `${verbo} in ${p.length} mesi` : p.length === 2 ? `${verbo} a ${nomeM(p[0])} e ${nomeM(p[1])}` : `${verbo} a ${nomeM(x)}${tag(x)}`; };
+    const box = (x, t, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${t}</small><b>${eur0(v(x))}</b><span>${dove(x)} ›</span></button>`;
     const testa = `<div class="yc-sub">${tit}</div>`;
     if (Math.abs(v(max) - v(min)) < 0.005) return testa + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ${uguali} <b>${eur0(v(max))}</b> al mese.</span></div>`;
     return testa + box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
