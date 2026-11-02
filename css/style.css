@@ -605,3 +605,10 @@ form.add input.sw:checked { background: var(--accent); }
 .seg.cat-tipo button { flex: 1; border: 0; background: transparent; font: inherit; font-weight: 500; padding: 6px 10px; border-radius: 7px; color: var(--seg-fg); cursor: pointer; }
 .seg.cat-tipo button[aria-pressed="true"] { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 600; }
 .tbl-nota { margin: 8px 12px 4px; font-size: .78rem; }
+
+/* 13ª/14ª al deposito nel mese: Tutta / Una parte / Niente */
+.card.ex-dep { padding: 0; overflow: hidden; background: var(--surface); border-radius: 14px; }
+.card.ex-dep .field { background: transparent; box-shadow: none; border-radius: 0; }
+.card.ex-dep .field + .field { border-top: 1px solid var(--line); }
+.seg.exd button { min-width: 0; padding: 6px 12px; }
+@media (max-width: 560px) { .card.ex-dep .seg-row { grid-template-columns: 1fr; } .card.ex-dep .seg-row > .seg { grid-column: 1; grid-row: 3; margin-top: 8px; justify-self: stretch; } .seg.exd button { flex: 1; } }
