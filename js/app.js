@@ -837,17 +837,19 @@ function yearCardHtml(ms, anno) {
 /** Spese mese per mese: il mese in cui hai speso meno (migliore) e quello in cui hai speso di più (peggiore). */
 function statsAnno(d) {
   if (!d.length) return "";
-  const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), resto = d.reduce((a, x) => a + x.resto, 0);
-  // mese migliore = quello in cui hai speso meno, peggiore = speso di più (tutte le spese, anche con i buoni)
-  const sp = (x) => x.cc.spese;
-  const meglio = d.reduce((m, x) => (sp(x) < sp(m) ? x : m), d[0]);
-  const peggio = d.reduce((m, x) => (sp(x) > sp(m) ? x : m), d[0]);
-  const box = (x, tit, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b>${eur0(sp(x))}</b><span>spesi a ${MESI_NOMI[Number(x.id.slice(5)) - 1].toLowerCase()} ›</span></button>`;
-  // Spese mese per mese: niente "Rimasto in tasca" (sull'anno non serve, scelta di Andrea); i totali sono in cima
-  const head = ""; // niente titolo: solo i due mesi (scelta di Andrea)
-  if (Math.abs(sp(peggio) - sp(meglio)) < 0.005)
-    return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: spendi <b>${eur0(sp(meglio))}</b> al mese.</span></div>`;
-  return head + box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
+  const nomeM = (x) => MESI_NOMI[Number(x.id.slice(5)) - 1].toLowerCase();
+  // Una coppia migliore / peggiore: valore v(x); "piuMeglio" = più alto è meglio (entrate) o più basso (spese)
+  const coppia = (tit, v, piuMeglio, verbo, uguali) => {
+    const max = d.reduce((m, x) => (v(x) > v(m) ? x : m), d[0]), min = d.reduce((m, x) => (v(x) < v(m) ? x : m), d[0]);
+    const [meglio, peggio] = piuMeglio ? [max, min] : [min, max];
+    const tag = (x) => (piuMeglio && x.ex ? ` <span class="tag">${x.ex.corto}</span>` : ""); // 13ª/14ª: solo per le entrate
+    const box = (x, t, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${t}</small><b>${eur0(v(x))}</b><span>${verbo} a ${nomeM(x)}${tag(x)} ›</span></button>`;
+    const testa = `<div class="yc-sub">${tit}</div>`;
+    if (Math.abs(v(max) - v(min)) < 0.005) return testa + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: ${uguali} <b>${eur0(v(max))}</b> al mese.</span></div>`;
+    return testa + box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
+  };
+  // Entrate sopra (soldi nuovi: stipendio, 13ª/14ª, entrate extra; niente "Dal mese prima" né buoni), spese sotto (tutte, anche con i buoni)
+  return coppia("Entrate", (x) => x.cc.entrate, true, "entrati", "entrano") + coppia("Spese", (x) => x.cc.spese, false, "spesi", "spendi");
 }
 // Riepiloghi dell'anno (Mesi e Deposito): cifre precise con i centesimi (scelta di Andrea, prima erano arrotondate all'euro)
 const eur0 = (v) => eur(v);

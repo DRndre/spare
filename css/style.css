@@ -620,3 +620,8 @@ form.add input.sw:checked { background: var(--accent); }
 .tbl-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px 4px; }
 .tbl-foot .tbl-nota { margin: 0; }
 .tbl-foot .link { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+
+/* Mese migliore / peggiore: titoletti "Entrate" e "Spese" */
+.yc-stats > .yc-sub { grid-column: 1 / -1; background: none; padding: 4px 2px 0; font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.yc-stats > .yc-sub:not(:first-child) { margin-top: 6px; }
+.yc-low .tag { font-size: .68rem; }
