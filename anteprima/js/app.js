@@ -741,7 +741,7 @@ function yearCardHtml(ms, anno) {
     <button type="button" class="yc-link" id="yc-toggle" aria-expanded="${showTable}">${showTable ? "Nascondi la tabella" : "Vedi la tabella completa"}<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${showTable ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="tbl-wrap" id="yc-table"${showTable ? "" : " hidden"}>${tabellaAnno(d, anno)}</div>`;
 }
-/** Rimasto in tasca nell'anno, con il mese in cui ti resta di più e quello in cui ti resta di meno. */
+/** Spese mese per mese: il mese in cui hai speso meno (migliore) e quello in cui hai speso di più (peggiore). */
 function statsAnno(d) {
   if (!d.length) return "";
   const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), resto = d.reduce((a, x) => a + x.resto, 0);
@@ -749,18 +749,15 @@ function statsAnno(d) {
   const sp = (x) => x.cc.spese;
   const meglio = d.reduce((m, x) => (sp(x) < sp(m) ? x : m), d[0]);
   const peggio = d.reduce((m, x) => (sp(x) > sp(m) ? x : m), d[0]);
-  const media = d.reduce((a, x) => a + sp(x), 0) / d.length;
-  const p = entrate > 0 ? Math.round((resto / entrate) * 100) : 0;
   const box = (x, tit, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b>${eur0(sp(x))}</b><span>spesi a ${MESI_NOMI[Number(x.id.slice(5)) - 1].toLowerCase()} ›</span></button>`;
-  const med = `<div class="yc-fine yc-media"><span>Spesa media al mese<small>Quanto spendi di solito</small></span><b>${eur0(media)}</b></div>`;
-  const head = `<div class="yr-head"><span class="ya-ic" style="--cc:var(--muted)">${icona("wallet", "var(--muted)", 15)}</span><span class="ya-n">Rimasto in tasca</span><span class="ya-v${resto < 0 ? " neg" : ""}">${eur0(resto)}</span><span class="ya-p">${p}%</span></div>`;
-  const fine = d[d.length - 1].fine;
-  const coda = riportoAttivo() ? `<div class="yc-fine"><span>In tasca a fine ${MESI_NOMI[Number(d[d.length - 1].id.slice(5)) - 1].toLowerCase()}<small>Contando quello che passa da un mese all'altro</small></span><b class="${fine < 0 ? "bad" : ""}">${eur0(fine)}</b></div>` : "";
+  // Spese mese per mese: niente "Rimasto in tasca" (sull'anno non serve, scelta di Andrea); i totali sono in cima
+  const head = `<div class="yr-head"><span class="ya-ic" style="--cc:var(--muted)">${icona("calendar", "var(--muted)", 15)}</span><span class="ya-n">Spese mese per mese</span></div>`;
   if (Math.abs(sp(peggio) - sp(meglio)) < 0.005)
     return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: spendi <b>${eur0(sp(meglio))}</b> al mese.</span></div>`;
   return head + box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
 }
-const eur0 = (v) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0, useGrouping: "always" }).format(Math.round(v)) + " €";
+// Riepiloghi dell'anno (Mesi e Deposito): cifre precise con i centesimi (scelta di Andrea, prima erano arrotondate all'euro)
+const eur0 = (v) => eur(v);
 function chartHtml(d) {
   // somme dell'anno: entrate, spese per categoria, messo da parte, resto in tasca
   const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), usatiA = round(d.reduce((a, x) => a + N(x.cc.buoniUsati), 0));

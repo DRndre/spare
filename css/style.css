@@ -589,3 +589,7 @@ form.add input.sw:checked { background: var(--accent); }
 .field.buoni input.sw:checked { background: var(--accent); }
 .field.buoni.off .bp-row { opacity: .4; }
 .field.buoni.off input[type=text] { background: transparent; }
+
+/* Riepilogo dell'anno con i centesimi: i tre totali in alto stanno su una riga anche sul telefono */
+.ya-head b { font-size: clamp(.92rem, 3.6vw, 1.1rem); }
+.ya-head { column-gap: 10px; }

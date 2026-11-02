@@ -41,9 +41,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   (numero, dal Modello; solo se il valore del buono > 0), Entrate extra (solo quel mese, parte da 0), 13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
-  poi blocchi separati: *Al deposito* (verde) e *Rimasto in tasca* (grigio) con Mese migliore / Mese peggiore **sulle spese**
+  poi blocchi separati: *Al deposito* (verde) e *Spese mese per mese* (grigio, niente più "Rimasto in tasca" sull'anno) con Mese migliore / Mese peggiore **sulle spese**
   (migliore = speso meno, peggiore = speso di più, tutte le spese anche con i buoni; "spesi a <mese>"; frecce verde su /
-  arancio giù; aprono il mese; se tutti uguali una riga sola) (niente spesa media né "In tasca a fine <mese>": tolte da Andrea). Niente percentuali in più. Nel riepilogo dell'anno **cifre all'euro** (`eur0`), compresi i mesi; centesimi sempre nella scheda del mese.
+  arancio giù; aprono il mese; se tutti uguali una riga sola) (niente spesa media né "In tasca a fine <mese>": tolte da Andrea). Niente percentuali in più. Nei riepiloghi dell'anno (Mesi e Deposito) **cifre con i centesimi** (`eur0` ora = `eur`; prima arrotondate, Andrea ha cambiato idea).
   "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").
 - **Scheda Deposito** (ordine): *Sul conto* (numero grande = saldo stimato **di oggi**, sotto "Previsto a <fine periodo>"
   con il dettaglio versati + interessi − bollo), *Obiettivo* ("+ Imposta un obiettivo", poi stato + "Modifica"),

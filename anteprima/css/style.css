@@ -642,3 +642,6 @@ form.add.inv > .per-f { order: 1; }
 .rp-rate { display: flex; flex-direction: column; gap: 4px; }
 .rp-rate .ya-p { width: auto; white-space: nowrap; }
 .goal .rp-vai { display: block; margin-left: auto; margin-top: 8px; }
+
+.ya-head b { font-size: clamp(.92rem, 3.6vw, 1.1rem); }
+.ya-head { column-gap: 10px; }
