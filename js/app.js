@@ -5,10 +5,10 @@ import {
   mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI, modelloOn, valBuono,
 } from "./calc.js";
 import {
-  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep, haRiporto, haModello,
+  sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep, haRiporto, haModello, haEntrate,
 } from "./store.js";
 import { LOGO } from "./logo.js";
-import { categorie, catInfo, badge, icona } from "./categorie.js";
+import { categorie, catInfo, badge, icona, tipiEntrata } from "./categorie.js";
 import { apriCategorie } from "./categorie-ui.js";
 const SLOGAN = "Spare | Quanto ti resta?"; // titolo per accesso, benvenuto e anteprima del link
 import { apriGuida, apriAiuto } from "./guida.js";
@@ -521,6 +521,68 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   card.append(apri, form);
   container.appendChild(card);
 }
+/* ---------- Entrate extra del mese, con il tipo (come le spese con la categoria) ---------- */
+let entAperto = false, entTipo = "lavoro";
+function entrateEditor(container, id, lista) {
+  const cambia = (fn) => { const mm = ensureMese(id); if (!Array.isArray(mm.entrate)) mm.entrate = []; fn(mm.entrate); mm.entrate_extra = round(mm.entrate.reduce((a, x) => a + N(x.importo), 0)); saveMese(id); };
+  const card = document.createElement("section"); card.className = "card spese entrate-ex";
+  card.innerHTML = `<div class="ex-tit">Entrate extra <span>solo questo mese</span></div>`;
+  tipiEntrata(state.piano).forEach((t) => {
+    const vs = lista.filter((x) => (tipiEntrata(state.piano).some((z) => z.k === x.cat) ? x.cat : "altro") === t.k);
+    if (!vs.length) return;
+    const g = document.createElement("div"); g.className = "group";
+    g.innerHTML = `<div class="group-head"><span class="gname">${badge(t, 24)}${esc(t.n)}</span><span class="gsum">${eur(round(vs.reduce((a, x) => a + N(x.importo), 0)))}</span></div>`;
+    // totale del gruppo mentre scrivi
+    const somma = () => { const l = state.mesi[id]?.entrate || []; g.querySelector(".gsum").textContent = eur(round(l.filter((z) => vs.some((w) => w.id === z.id)).reduce((a, z) => a + N(z.importo), 0))); };
+    vs.forEach((x) => {
+      const r = document.createElement("div"); r.className = "row"; r.dataset.riga = x.id;
+      const nome = document.createElement("input"); nome.type = "text"; nome.value = x.nome; nome.id = "en-n-" + x.id; nome.setAttribute("aria-label", "Nome dell'entrata");
+      nome.addEventListener("input", () => cambia((l) => { const y = l.find((z) => z.id === x.id); if (y) y.nome = nome.value; }));
+      const wi = document.createElement("span"); wi.className = "imp";
+      const imp = document.createElement("input"); imp.type = "text"; imp.inputMode = "decimal"; imp.value = fmt.format(N(x.importo)); imp.id = "en-i-" + x.id; imp.setAttribute("aria-label", "Importo di " + x.nome);
+      imp.addEventListener("input", () => { const n = parseNum(imp.value); if (!isNaN(n) && n >= 0) { cambia((l) => { const y = l.find((z) => z.id === x.id); if (y) y.importo = round(n); }); somma(); refresh(); } });
+      imp.addEventListener("blur", () => { const n = parseNum(imp.value); if (!isNaN(n)) imp.value = fmt.format(round(n)); });
+      wi.append(imp, Object.assign(document.createElement("span"), { className: "eur", textContent: "€" }));
+      const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.setAttribute("aria-label", "Elimina " + x.nome);
+      del.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      del.onclick = () => confirmInline(r, `Eliminare “${x.nome}”?`, "Elimina", () => { cambia((l) => { const i = l.findIndex((z) => z.id === x.id); if (i >= 0) l.splice(i, 1); }); render(); });
+      r.append(nome, wi, del); g.appendChild(r);
+    });
+    card.appendChild(g);
+  });
+  const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off";
+  form.innerHTML = `<div class="add-tit">Nuova entrata extra</div><input class="n" type="text" id="en-a-nome" placeholder="Da dove arriva (es. Sito per Mario)" aria-label="Nome dell'entrata"><input type="text" inputmode="decimal" id="en-a-imp" placeholder="0,00" aria-label="Importo"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Tipo di entrata"></div><div class="err" hidden></div>`;
+  const pick = form.querySelector(".cat-pick");
+  const disegnaPick = () => {
+    if (!tipiEntrata(state.piano).some((t) => t.k === entTipo)) entTipo = "lavoro";
+    pick.innerHTML = tipiEntrata(state.piano).map((t) => `<button type="button" role="radio" class="cat-chip" data-k="${t.k}" aria-checked="${t.k === entTipo}" style="--cc:${t.c}">${icona(t.i, t.k === entTipo ? "#fff" : t.c, 15)}${esc(t.n)}</button>`).join("")
+      + `<button type="button" class="cat-chip nuova" data-new="1">${icona("tag", "currentColor", 15)}Nuovo tipo</button>`;
+  };
+  disegnaPick();
+  pick.onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.new) { apriCategorie({ state, savePiano, saveMese, tipo: "entrate", nuova: true, onCreata: (k) => { entTipo = k; }, onChange: () => { entAperto = true; render(); } }); return; }
+    entTipo = b.dataset.k; disegnaPick();
+  };
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+    const nome = $("en-a-nome").value.trim(), imp = parseNum($("en-a-imp").value), err = form.querySelector(".err");
+    if (!nome) { err.textContent = "Scrivi da dove arriva, per esempio \"Sito per Mario\"."; err.hidden = false; $("en-a-nome").focus(); return; }
+    if (isNaN(imp) || imp <= 0) { err.textContent = "Scrivi quanto è entrato, ad esempio 150."; err.hidden = false; $("en-a-imp").focus(); return; }
+    const nid = uid();
+    cambia((l) => l.push({ id: nid, nome, importo: round(imp), cat: entTipo }));
+    entAperto = false; nuovaRiga = nid; render();
+  };
+  const apri = document.createElement("button"); apri.type = "button"; apri.className = "add-open"; apri.id = "en-a-open";
+  apri.innerHTML = `${icona("plus", "currentColor", 16)} Aggiungi un'entrata extra`;
+  form.hidden = !entAperto; apri.hidden = entAperto;
+  apri.onclick = () => { entAperto = true; form.hidden = false; apri.hidden = true; aprire(form); $("en-a-nome").focus({ preventScroll: true }); };
+  const chiudiForm = () => { form.reset(); form.querySelector(".err").hidden = true; entAperto = false; chiudi(form, () => { form.hidden = true; apri.hidden = false; apri.focus(); }); };
+  form.querySelector("[data-annulla]").onclick = chiudiForm;
+  form.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); chiudiForm(); } });
+  card.append(apri, form);
+  container.appendChild(card);
+}
 let addAperto = null; // modulo "nuova spesa" aperto (resta aperto dopo un'aggiunta)
 let addCat = "casa";  // ultima categoria scelta per una nuova spesa
 /** Titolo di sezione piccolo e grigio, con il totale a destra. */
@@ -571,25 +633,21 @@ function mesiPartenza() {
 
 /* ---------- Dal mese prima (resto che passa al mese dopo) ---------- */
 const riportoAttivo = () => haRiporto() && state.piano.riporto;
-function hintDalPrima(id, m) {
-  const primo = id === state.piano.mese_inizio;
-  if (m.dalPrimaMano) return primo ? "Quanto avevi sul conto a inizio mese" : "Cifra vera, scritta da te";
-  return primo ? "Primo mese: scrivi quanto hai sul conto" : `Automatico: resto di ${monthLabelLong(addMonths(id, -1)).toLowerCase()}`;
-}
-/** Campo "Dal mese prima": di base automatico, se lo scrivi diventa la cifra vera (e i mesi dopo ripartono da lì). */
+/** Campo "Dal mese prima": di base automatico, se lo scrivi diventa la cifra vera (e i mesi dopo ripartono da lì).
+ *  Nessuna scritta sotto (scelta di Andrea): solo "Torna all'automatico" quando l'hai corretta tu (non nel primo mese). */
 function campoDalPrima(id, m) {
+  const primo = id === state.piano.mese_inizio;
   const f = moneyField("Dal mese prima", m.dalPrima, (n) => {
     state.piano.residui = { ...(state.piano.residui || {}), [id]: n }; savePiano();
-    const h = f.querySelector(".hint"); if (h) h.firstChild.textContent = hintDalPrima(id, { dalPrimaMano: true });
-    if (!f.querySelector(".link")) h.appendChild(torna());
-  }, { id: "m-dp-" + id, hint: hintDalPrima(id, m), neg: true, cls: "dal-prima" });
+    if (!primo && !h.firstChild) h.appendChild(torna());
+  }, { id: "m-dp-" + id, neg: true, cls: "dal-prima" });
+  const h = document.createElement("span"); h.className = "hint"; f.appendChild(h);
   function torna() {
-    const b = document.createElement("button"); b.type = "button"; b.className = "link"; b.textContent = " · Torna all'automatico";
+    const b = document.createElement("button"); b.type = "button"; b.className = "link"; b.textContent = "Torna all'automatico";
     b.onclick = (e) => { e.preventDefault(); const r = { ...(state.piano.residui || {}) }; delete r[id]; state.piano.residui = r; savePiano(); render(); };
     return b;
   }
-  const h = f.querySelector(".hint");
-  if (h) { h.textContent = ""; h.appendChild(document.createTextNode(hintDalPrima(id, m))); if (m.dalPrimaMano) h.appendChild(torna()); }
+  if (m.dalPrimaMano && !primo) h.appendChild(torna());
   return f;
 }
 
@@ -604,7 +662,7 @@ const hintRisp = (c, ex) => c.extraDep ? `+ ${eur(c.extraDep)} di ${ex?.corto ||
 function ensureMese(id) {
   if (!state.mesi[id]) {
     const t = monthData(id, state.piano, state.mesi);
-    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, extra_dep: null, voci: t.voci.map((v) => ({ ...v })) };
+    state.mesi[id] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: null, risparmio: t.risparmio, prelievo: 0, extra: null, extra_dep: null, entrate: [], voci: t.voci.map((v) => ({ ...v })) };
   }
   return state.mesi[id];
 }
@@ -660,7 +718,7 @@ function renderMesi(v) {
     const copia = () => {
       const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
       state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: t.buoni_num, risparmio: t.risparmio, prelievo: t.prelievo,
-        extra: old ? old.extra : null, extra_dep: old ? old.extra_dep ?? null : null, voci: t.voci.map((x) => ({ ...x, id: uid() })) };
+        extra: old ? old.extra : null, extra_dep: old ? old.extra_dep ?? null : null, entrate: old ? old.entrate || [] : [], voci: t.voci.map((x) => ({ ...x, id: uid() })) };
       saveMese(sel); render();
     };
     cb.onclick = () => (m.custom
@@ -681,11 +739,13 @@ function renderMesi(v) {
     const vb = valBuono(state.piano);
     fe.appendChild(buoniField(m.buoni_num, vb, (n) => { ensureMese(sel).buoni_num = n; saveMese(sel); }, null, { id: "m-buoni-" + sel }));
   }
-  fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { ensureMese(sel).entrate_extra = n; saveMese(sel); }, { id: "m-entr-" + sel, hint: "Solo questo mese" }));
+  // senza la colonna nuova (query 14): la vecchia cifra unica, tenuta allineata all'elenco
+  if (!haEntrate()) fe.appendChild(moneyField("Entrate extra", N(m.entrate_extra), (n) => { const mm = ensureMese(sel); mm.entrate_extra = n; mm.entrate = n > 0 ? [{ id: "ex" + sel, nome: "Entrate extra", importo: n, cat: "altro" }] : []; saveMese(sel); }, { id: "m-entr-" + sel }));
   if (ex) {
     fe.appendChild(moneyField(ex.nome, m.extra, (n) => { ensureMese(sel).extra = n; saveMese(sel); }, { id: "m-extra-" + sel, cls: "extra", hint: hintExtra(m, c) }));
   }
   v.appendChild(fe);
+  if (haEntrate()) entrateEditor(v, sel, m.entrate || []);
 
   v.appendChild(secHead("Risparmio", eur(round(c.toDep - N(m.prelievo))), "risparmio"));
   const fr = document.createElement("div"); fr.className = "fields";
@@ -777,7 +837,16 @@ function chartHtml(d) {
     <div class="ya-list">${(tutteCat ? righe : righe.slice(0, 5)).map((r) => riga(icona(r.i, r.c, 15), r.c, esc(r.n), r.v)).join("")}
       ${righe.length > 5 ? `<button type="button" class="ya-more" id="ya-more" aria-expanded="${tutteCat}">${icona(tutteCat ? "minus" : "plus", "currentColor", 15)}${tutteCat ? "Mostra di meno" : "Mostra di più"}</button>` : ""}
 </div>
+    ${entrateAnnoHtml(d, riga)}
     ${parte > 0 ? `<div class="ya-dep">${riga(icona("piggy-bank", "var(--c-risp)", 15), "var(--c-risp)", usaDep() ? "Al deposito" : "Messo da parte", parte)}</div>` : ""}`;
+}
+/** Entrate extra dell'anno divise per tipo (lavoretti, regali…). */
+function entrateAnnoHtml(d, riga) {
+  const per = {};
+  d.forEach((x) => (monthData(x.id, state.piano, state.mesi).entrate || []).forEach((e) => { const k = tipiEntrata(state.piano).some((t) => t.k === e.cat) ? e.cat : "altro"; per[k] = (per[k] || 0) + N(e.importo); }));
+  const righe = tipiEntrata(state.piano).filter((t) => per[t.k] > 0);
+  if (!righe.length) return "";
+  return `<div class="ya-ent"><div class="ya-ent-tit">Entrate extra</div>${righe.map((t) => riga(icona(t.i, t.c, 15), t.c, esc(t.n), per[t.k])).join("")}</div>`;
 }
 function tabellaAnno(d, anno) {
   let t = { e: 0, s: 0, d: 0, r: 0 };
@@ -1216,7 +1285,7 @@ function guida(primaVolta) {
   });
 }
 $("doGuida").onclick = () => { chiudiMenu(); guida(empty); };
-$("doCategorie").onclick = () => { chiudiMenu(); apriCategorie({ state, savePiano, saveMese, onChange: () => render() }); };
+$("doCategorie").onclick = () => { chiudiMenu(); apriCategorie({ state, savePiano, saveMese, conEntrate: haEntrate(), onChange: () => render() }); };
 $("doAiuto").onclick = () => { chiudiMenu(); apriAiuto(); };
 $("doSicurezza").onclick = () => { chiudiMenu(); apriSicurezza({ sb }); };
 $("doImport").onclick = () => { chiudiMenu(); $("importFile").click(); };

@@ -87,3 +87,15 @@ export function icona(nome, colore = "currentColor", size = 16) {
 export function badge(cat, size = 26) {
   return `<span class="cat-badge" style="--cc:${cat.c};width:${size}px;height:${size}px">${icona(cat.i, cat.c, Math.round(size * 0.6))}</span>`;
 }
+
+/** Tipi di entrata extra di base (da dove arrivano i soldi in più). "altro" resta sempre ultimo. */
+export const ENT_BASE = [["lavoro", "Lavoretto", "#34C759", "briefcase"], ["regalo", "Regalo", "#FF2D55", "gift"], ["vincita", "Vincita", "#FFCC00", "sparkles"], ["rimborso", "Rimborso", "#007AFF", "receipt"], ["vendita", "Vendita", "#FF9500", "tag"], ["altro", "Altro", "#AEAEB2", "ellipsis"]].map(([k, n, c, i]) => ({ k, n, c, i, base: true }));
+/** Tutti i tipi di entrata: base + quelli dell'utente (prima di "Altro"). */
+export function tipiEntrata(piano) {
+  const mie = (piano && Array.isArray(piano.cat_entrate) ? piano.cat_entrate : []).filter((c) => c && c.k && c.n);
+  return [...ENT_BASE.slice(0, -1), ...mie.map((c) => ({ k: c.k, n: c.n, c: c.c || "#8E8E93", i: ICONE[c.i] ? c.i : "tag", base: false })), ENT_BASE[ENT_BASE.length - 1]];
+}
+/** Dati di un tipo di entrata (sconosciuto = "Altro"). */
+export function tipoInfo(piano, k) {
+  return tipiEntrata(piano).find((c) => c.k === k) || ENT_BASE[ENT_BASE.length - 1];
+}

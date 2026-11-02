@@ -593,3 +593,14 @@ form.add input.sw:checked { background: var(--accent); }
 /* Riepilogo dell'anno con i centesimi: i tre totali in alto stanno su una riga anche sul telefono */
 .ya-head b { font-size: clamp(.92rem, 3.6vw, 1.1rem); }
 .ya-head { column-gap: 10px; }
+
+/* Entrate extra del mese (elenco con il tipo) e nel riepilogo dell'anno */
+.entrate-ex .ex-tit { font-weight: 600; padding: 12px 16px 4px; display: flex; gap: 8px; align-items: baseline; }
+.entrate-ex .ex-tit span { font-weight: 400; color: var(--muted); font-size: .8rem; }
+.entrate-ex .add-open { margin: 8px 12px 12px; width: calc(100% - 24px); }
+.entrate-ex form.add { margin: 8px 12px 12px; }
+.ya-ent { margin-top: 14px; }
+.ya-ent-tit { font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px 0 2px; }
+.seg.cat-tipo { margin-bottom: 4px; }
+.seg.cat-tipo button { flex: 1; border: 0; background: transparent; font: inherit; font-weight: 500; padding: 6px 10px; border-radius: 7px; color: var(--seg-fg); cursor: pointer; }
+.seg.cat-tipo button[aria-pressed="true"] { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 600; }

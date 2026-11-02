@@ -38,7 +38,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   arancio `--ing` solo per tredicesima/quattordicesima.
 - **Scheda Mesi** (ordine): anni + mesi (pulsanti con solo il nome; pallino e testo rossi solo nei mesi in negativo, anche in tabella), nome del mese ("Segue il Modello" / "personalizzato · Torna al Modello"),
   sezioni con titolo piccolo grigio e totale a destra (`secHead`): *Resto in tasca*, *Entrate* (Stipendio, Buoni pasto
-  (numero, dal Modello; solo se il valore del buono > 0), Entrate extra (solo quel mese, parte da 0), 13ª/14ª), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
+  (numero, dal Modello; solo se il valore del buono > 0), 13ª/14ª; sotto, riquadro **Entrate extra** "solo questo mese": elenco
+  come le spese, raggruppato per **tipo** (Lavoretto, Regalo, Vincita, Rimborso, Vendita, Altro + tipi dell'utente), modulo "Nuova entrata
+  extra" con i tipi a scelta e "Nuovo tipo"; `entrateEditor`, `mesi.entrate` jsonb, `piani.cat_entrate`, query 14, `haEntrate()`;
+  senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
   poi blocchi separati: *Al deposito* (verde) e *Spese mese per mese* (grigio, niente più "Rimasto in tasca" sull'anno) con Mese migliore / Mese peggiore **sulle spese**
@@ -129,6 +132,10 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   **Stile voluto: come Moneyfarm** — valore totale grande, versato totale, guadagno in € e %, grafico nel tempo
   "valore" contro "versato" (deposito dalla simulazione mese per mese, investimenti dallo storico), scelta del periodo
   (1 anno / tutto), composizione per prodotto in € e %. Rendimenti TW/MW e confronti con altri fondi: no.
+- Tipi di entrata: `ENT_BASE`, `tipiEntrata()`, `tipoInfo()` in categorie.js; menu ☰ → Categorie ha in alto "Spese / Entrate extra"
+  (categorie-ui.js con `tipo`). `mesi.entrate_extra` resta come somma dell'elenco (calc e store la tengono allineata).
+  Riepilogo dell'anno: blocco "Entrate extra" per tipo sotto le categorie di spesa. "Dal mese prima": nessuna scritta sotto,
+  solo "Torna all'automatico" se l'hai corretta (non nel primo mese).
 - `js/categorie.js` — 17 categorie di base (Casa, Auto e trasporti, Abbonamenti, Cura personale, Spesa, Salute,
   Svago e uscite, Animali, Viaggi, Rate e prestiti, Regali, Figli, Sport, Abbigliamento, Formazione, Tasse, Altro)
   con colore e icona (set Lucide, licenza ISC, icone incluse nel file), più quelle dell'utente. Una categoria
@@ -194,6 +201,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 11. `mesi.extra_dep` (13ª/14ª in parte al deposito). **Da eseguire** (finché manca, il campo non compare).
 12. `piani.riporto`, `piani.residui` (Dal mese prima). **Da eseguire** (finché manca, la funzione non compare).
 13. `piani.buoni_on`, `piani.usa_modello` (interruttori di buoni pasto e Modello). **Da eseguire**.
+14. `mesi.entrate` jsonb, `piani.cat_entrate` jsonb (entrate extra con il tipo; vecchie cifre → "Altro"). **Da eseguire**.
 
 ## Come provare le modifiche
 - `node --check js/app.js` e test dei calcoli importando `js/calc.js` da uno script `.mjs`.

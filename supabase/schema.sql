@@ -137,3 +137,11 @@ alter table public.piani add column if not exists residui jsonb not null default
 -- 13. Interruttori: buoni pasto e Modello (spenti = le cifre restano ma non contano)
 alter table public.piani add column if not exists buoni_on boolean not null default true;
 alter table public.piani add column if not exists usa_modello boolean not null default true;
+
+-- 14. Entrate extra con il tipo: elenco per mese e tipi creati dall'utente.
+--     La vecchia cifra unica (mesi.entrate_extra) diventa una voce "Altro"; entrate_extra resta come somma.
+alter table public.mesi add column if not exists entrate jsonb;
+alter table public.piani add column if not exists cat_entrate jsonb not null default '[]'::jsonb;
+update public.mesi
+  set entrate = jsonb_build_array(jsonb_build_object('id', 'ex' || mese, 'nome', 'Entrate extra', 'importo', entrate_extra, 'cat', 'altro'))
+  where entrate is null and coalesce(entrate_extra, 0) > 0;

@@ -24,6 +24,7 @@ export const DEFAULT_PIANO = {
   senza_fine: true, // true = i mesi si allungano da soli fino a dicembre dell'anno dopo
   voci: [],
   categorie: [], // categorie create dall'utente: [{k, n, c, i}]
+  cat_entrate: [], // tipi di entrata extra creati dall'utente: [{k, n, c, i}]
   riporto: true, // il resto in tasca passa al mese dopo ("Dal mese prima")
   buoni_on: true, // interruttore dei buoni pasto (spento = niente buoni, ma le cifre restano)
   usa_modello: true, // spento = niente mese tipo: ogni mese si compila a mano
@@ -159,7 +160,8 @@ function meseBase(id, piano, mesi) {
     return {
       custom: true,
       stipendio: N(d.stipendio),
-      entrate_extra: N(d.entrate_extra), // solo nel mese (null = 0)
+      entrate_extra: Array.isArray(d.entrate) ? round(d.entrate.reduce((a, v) => a + N(v.importo), 0)) : N(d.entrate_extra), // solo nel mese
+      entrate: Array.isArray(d.entrate) ? d.entrate : [], // entrate extra con il tipo
       buoni_num: d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num),
       buoni: round((d.buoni_num == null ? N(piano.buoni_num) : N(d.buoni_num)) * valBuono(piano)),
       risparmio: N(d.risparmio),
