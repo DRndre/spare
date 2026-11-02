@@ -849,13 +849,20 @@ function entrateAnnoHtml(d, riga) {
   return `<div class="ya-ent"><div class="ya-ent-tit">Entrate extra</div>${righe.map((t) => riga(icona(t.i, t.c, 15), t.c, esc(t.n), per[t.k])).join("")}</div>`;
 }
 function tabellaAnno(d, anno) {
-  let t = { e: 0, s: 0, d: 0, r: 0 };
-  let html = `<table><thead><tr><th>Mese</th><th>Entrate</th><th>Spese</th><th>${T().col}</th><th>Resto</th></tr></thead><tbody>`;
+  // Dal mese prima + Entrate − Uscite − Messo da parte = Resto (a fine mese). Uscite = solo spese pagate con i soldi.
+  // Nel totale "Dal mese prima" è la cifra di inizio anno e "Resto" quella di fine anno (sommarle conterebbe gli stessi soldi più volte).
+  const rip = riportoAttivo(), f = (n) => fmt.format(round(n));
+  let t = { e: 0, s: 0, d: 0 };
+  let html = `<table><thead><tr><th>Mese</th>${rip ? "<th>Dal mese prima</th>" : ""}<th>Entrate</th><th>Uscite</th><th>Messo da parte</th><th>Resto</th></tr></thead><tbody>`;
   d.forEach(({ id, cc, ex }) => {
-    t.e += cc.entrate; t.s += cc.speseSoldi; t.d += cc.toDep; t.r += cc.restoMese;
-    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td><td>${fmt.format(cc.entrate)}</td><td>${fmt.format(cc.speseSoldi)}</td><td>${fmt.format(cc.toDep)}</td><td class="${cc.restoMese < 0 ? "neg" : ""}">${fmt.format(cc.restoMese)}</td></tr>`;
+    t.e += cc.entrate; t.s += cc.speseSoldi; t.d += cc.toDep;
+    const r = rip ? cc.resto : cc.restoMese;
+    html += `<tr class="click${id === sel ? " sel" : ""}" data-id="${id}" tabindex="0"><td><span class="pin" data-k="${statoResto(cc.resto, state.piano.soglia)}"></span>${monthLabel(id)}${ex ? ` <span class="tag">${ex.corto}</span>` : ""}</td>${rip ? `<td class="${cc.dalPrima < 0 ? "neg" : ""}">${f(cc.dalPrima)}</td>` : ""}<td>${f(cc.entrate)}</td><td>${f(cc.speseSoldi)}</td><td>${f(cc.toDep)}</td><td class="${r < 0 ? "neg" : ""}">${f(r)}</td></tr>`;
   });
-  return html + `</tbody><tfoot><tr><td>Totale ${anno}</td><td>${fmt.format(round(t.e))}</td><td>${fmt.format(round(t.s))}</td><td>${fmt.format(round(t.d))}</td><td>${fmt.format(round(t.r))}</td></tr></tfoot></table>`;
+  const inizio = d.length ? d[0].cc.dalPrima : 0;
+  const fine = !d.length ? 0 : rip ? d[d.length - 1].cc.resto : d.reduce((a, x) => a + x.cc.restoMese, 0);
+  return html + `</tbody><tfoot><tr><td>Totale ${anno}</td>${rip ? `<td title="Con quanto hai iniziato l'anno">${f(inizio)}</td>` : ""}<td>${f(t.e)}</td><td>${f(t.s)}</td><td>${f(t.d)}</td><td class="${fine < 0 ? "neg" : ""}" title="${rip ? "Quanto hai a fine anno" : "Somma degli avanzi dei mesi"}">${f(fine)}</td></tr></tfoot></table>`
+    + (rip ? `<p class="hint flush tbl-nota">Nel totale, "Dal mese prima" è la cifra di inizio anno e "Resto" quella di fine anno.</p>` : "");
 }
 function apriMese(id) { sel = id; chartSel = id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 function wireYear(ms, anno) {

@@ -47,7 +47,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   poi blocchi separati: *Al deposito* (verde) e riquadro grigio senza titolo (niente "Rimasto in tasca" né "Spese mese per mese") con Mese migliore / Mese peggiore **sulle spese**
   (migliore = speso meno, peggiore = speso di più, tutte le spese anche con i buoni; "spesi a <mese>"; frecce verde su /
   arancio giù; aprono il mese; se tutti uguali una riga sola) (niente spesa media né "In tasca a fine <mese>": tolte da Andrea). Niente percentuali in più. Nei riepiloghi dell'anno (Mesi e Deposito) **cifre con i centesimi** (`eur0` ora = `eur`; prima arrotondate, Andrea ha cambiato idea).
-  "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").
+  "Vedi la tabella completa" apre la tabella: Mese | Dal mese prima (solo con il riporto acceso) | Entrate (soldi veri) | Uscite (spese
+  pagate con i soldi, non con i buoni) | Messo da parte (`toDep`) | Resto (= con il riporto `resto`, se no `restoMese`). Nel totale
+  "Dal mese prima" = cifra di inizio anno e "Resto" = fine anno (non sommati, se no gli stessi soldi contano più volte). Testi corti: "Stipendio" (mai "netto").
 - **Scheda Deposito** (ordine): *Sul conto* (numero grande = saldo stimato **di oggi**, sotto "Previsto a <fine periodo>"
   con il dettaglio versati + interessi − bollo), *Obiettivo* ("+ Imposta un obiettivo", poi stato + "Modifica"),
   *Tasso nel tempo* (periodi, "+ Aggiungi un cambio di tasso"), *Impostazioni del conto* (saldo di partenza, tasse, bollo),

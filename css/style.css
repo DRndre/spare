@@ -604,3 +604,4 @@ form.add input.sw:checked { background: var(--accent); }
 .seg.cat-tipo { margin-bottom: 4px; }
 .seg.cat-tipo button { flex: 1; border: 0; background: transparent; font: inherit; font-weight: 500; padding: 6px 10px; border-radius: 7px; color: var(--seg-fg); cursor: pointer; }
 .seg.cat-tipo button[aria-pressed="true"] { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 600; }
+.tbl-nota { margin: 8px 12px 4px; font-size: .78rem; }
