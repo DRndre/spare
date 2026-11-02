@@ -44,7 +44,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
   aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
-  poi blocchi separati: *Al deposito* (verde) e *Spese mese per mese* (grigio, niente più "Rimasto in tasca" sull'anno) con Mese migliore / Mese peggiore **sulle spese**
+  poi blocchi separati: *Al deposito* (verde) e riquadro grigio senza titolo (niente "Rimasto in tasca" né "Spese mese per mese") con Mese migliore / Mese peggiore **sulle spese**
   (migliore = speso meno, peggiore = speso di più, tutte le spese anche con i buoni; "spesi a <mese>"; frecce verde su /
   arancio giù; aprono il mese; se tutti uguali una riga sola) (niente spesa media né "In tasca a fine <mese>": tolte da Andrea). Niente percentuali in più. Nei riepiloghi dell'anno (Mesi e Deposito) **cifre con i centesimi** (`eur0` ora = `eur`; prima arrotondate, Andrea ha cambiato idea).
   "Vedi la tabella completa" apre la tabella. Testi corti: "Stipendio" (mai "netto").

@@ -811,7 +811,7 @@ function statsAnno(d) {
   const peggio = d.reduce((m, x) => (sp(x) > sp(m) ? x : m), d[0]);
   const box = (x, tit, ic, cls) => `<button type="button" class="yc-low ${cls}" data-open="${x.id}"><small>${icona(ic, "currentColor", 14)}${tit}</small><b>${eur0(sp(x))}</b><span>spesi a ${MESI_NOMI[Number(x.id.slice(5)) - 1].toLowerCase()} ›</span></button>`;
   // Spese mese per mese: niente "Rimasto in tasca" (sull'anno non serve, scelta di Andrea); i totali sono in cima
-  const head = `<div class="yr-head"><span class="ya-ic" style="--cc:var(--muted)">${icona("calendar", "var(--muted)", 15)}</span><span class="ya-n">Spese mese per mese</span></div>`;
+  const head = ""; // niente titolo: solo i due mesi (scelta di Andrea)
   if (Math.abs(sp(peggio) - sp(meglio)) < 0.005)
     return head + `<div class="yc-same">${icona("sparkles", "currentColor", 16)}<span>Tutti i mesi uguali: spendi <b>${eur0(sp(meglio))}</b> al mese.</span></div>`;
   return head + box(meglio, "Mese migliore", "trending-up", "best") + box(peggio, "Mese peggiore", "trending-down", "worst");
