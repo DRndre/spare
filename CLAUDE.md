@@ -50,8 +50,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   "Vedi la tabella completa" apre la tabella: Mese | Dal mese prima (solo con il riporto acceso) | Entrate (soldi veri) | Uscite (spese
   pagate con i soldi, non con i buoni) | Messo da parte (`toDep`) | Resto (= con il riporto `resto`, se no `restoMese`). Nel totale
   "Dal mese prima" = cifra di inizio anno e "Resto" = fine anno (non sommati, se no gli stessi soldi contano più volte). Testi corti: "Stipendio" (mai "netto").
-- **Scheda Deposito** (ordine): *Sul conto* (numero grande = saldo stimato **di oggi**, sotto "Previsto a <fine periodo>"
-  con il dettaglio versati + interessi − bollo), *Obiettivo* ("+ Imposta un obiettivo", poi stato + "Modifica"),
+- **Scheda Deposito** (ordine): *Sul conto* (numero grande = saldo stimato **di oggi**, sotto "Previsto a dicembre <anno in corso>"
+  (a dicembre: dicembre dell'anno dopo; `mesePrevisto()`), con il dettaglio versati + interessi − bollo fino a quel mese), *Obiettivo* ("+ Imposta un obiettivo", poi stato + "Modifica"),
   *Tasso nel tempo* (periodi, "+ Aggiungi un cambio di tasso"), *Impostazioni del conto* (saldo di partenza, tasse, bollo),
   *Il tuo anno* (anni, Versato / Interessi netti, grafico a barre verdi del saldo mese per mese, "Vedi la tabella completa").
   Senza deposito (*Risparmi*) stessa struttura: *Messo da parte*, *Obiettivo*, *Impostazioni*, *Il tuo anno* (Messo da parte / Prelievi).

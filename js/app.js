@@ -1000,15 +1000,25 @@ function depChartHtml(righe) {
   return `<div class="yc-plot"><span class="yc-grid" style="bottom:0"></span><span class="yc-grid dash" style="bottom:50%"></span><span class="yc-grid dash" style="bottom:100%"><em>${f0(top)}</em></span><div class="yc-cols">${cols}</div></div><div class="yc-x">${lab}</div>
     <p class="hint dep-tap">${depChartSel ? "" : "Tocca un mese per vedere il saldo"}</p>`;
 }
+/** Mese del "Previsto": dicembre dell'anno in corso; a dicembre, dicembre dell'anno dopo (scelta di Andrea). */
+function mesePrevisto(ms) {
+  const oggi = meseCorrente(), y = Number(oggi.slice(0, 4)) + (oggi.slice(5) === "12" ? 1 : 0);
+  const t = y + "-12", fine = ms[ms.length - 1];
+  return t > fine ? fine : t < ms[0] ? ms[0] : t;
+}
 function depHero(d, ms) {
   const fine = ms[ms.length - 1], oggi = meseCorrente(), dep = usaDep();
   const base = N(state.deposito.saldo_iniziale);
+  // previsto e dettaglio fino a fine anno (non fino all'ultimo mese calcolato)
+  const prev = mesePrevisto(ms), fino = d.rows.filter((r) => r.id <= prev);
+  const tv = fino.reduce((a, r) => a + r.versato - r.prelievo, 0), tn = fino.reduce((a, r) => a + r.netto, 0), tb = fino.reduce((a, r) => a + r.bollo, 0);
+  const saldoPrev = fino.length ? fino[fino.length - 1].saldo : base;
   const dettaglio = dep
-    ? `${base ? `<b>${eur0(base)}</b> di partenza + ` : ""}<b>${eur0(d.totVersato)}</b> versati + <b>${eur0(d.totNetto)}</b> di interessi − <b>${eur0(d.totBollo)}</b> di bollo`
-    : `${base ? `<b>${eur0(base)}</b> già da parte + ` : ""}<b>${eur0(d.totVersato)}</b> messi da parte`;
+    ? `${base ? `<b>${eur0(base)}</b> di partenza + ` : ""}<b>${eur0(tv)}</b> versati + <b>${eur0(tn)}</b> di interessi − <b>${eur0(tb)}</b> di bollo`
+    : `${base ? `<b>${eur0(base)}</b> già da parte + ` : ""}<b>${eur0(tv)}</b> messi da parte`;
   return `<div class="dh-label">${dep ? "Oggi sul conto" : "Messo da parte oggi"}</div><div class="big" data-k="dep-oggi" data-n="${saldoAl(d, oggi)}" data-f="eur">${eur(saldoAl(d, oggi))}</div>
     <div class="hint dh-stima">${modelloVuoto() ? "Stima solo sui mesi che hai compilato" : "Stima dai tuoi conti"}, fino a ${monthLabelLong(oggi < ms[0] ? ms[0] : oggi > fine ? fine : oggi).toLowerCase()}${oggi < ms[0] ? " (i tuoi conti partono da " + monthLabelLong(ms[0]).toLowerCase() + ")" : ""}</div>
-    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(fine).toLowerCase()}</span><b data-k="dep-fine" data-n="${d.saldo}" data-f="eur0">${eur0(d.saldo)}</b></div><div class="formula">${dettaglio}</div></div>`;
+    <div class="dh-prev"><div class="dh-prev-top"><span>${icona("calendar", "currentColor", 14)} Previsto a ${monthLabelLong(prev).toLowerCase()}</span><b data-k="dep-fine" data-n="${saldoPrev}" data-f="eur0">${eur0(saldoPrev)}</b></div><div class="formula">${dettaglio}</div></div>`;
 }
 
 function renderRisparmi(v) {
