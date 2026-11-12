@@ -117,7 +117,9 @@ export const attivaNel = (v, id) => !v || !v.da || (id >= v.da && (!fineSpesa(v)
 /** Categorie dove si può pagare con i buoni pasto (interruttore "Pagata con i buoni"). */
 export const CAT_BUONI = ["spesa", "svago"];
 /** Spese di un mese pagate con i buoni (solo categorie ammesse). */
-const conBuoni = (voci) => round(voci.filter((v) => v.buoni && CAT_BUONI.includes(v.cat)).reduce((a, v) => a + N(v.importo), 0));
+/** Categorie che si possono pagare con i buoni: Spesa, Svago e uscite + quelle dell'utente con "b" (es. Bar e distributori). */
+export const catBuoni = (piano) => [...CAT_BUONI, ...((piano && piano.categorie) || []).filter((c) => c && c.b).map((c) => c.k)];
+const conBuoni = (voci, piano) => { const ok = catBuoni(piano); return round(voci.filter((v) => v.buoni && ok.includes(v.cat)).reduce((a, v) => a + N(v.importo), 0)); };
 
 /** Dati effettivi di un mese: quelli personalizzati se esistono, altrimenti il Modello.
  *  buoniAvanzati = buoni pasto non spesi nei mesi prima (si accumulano dal primo mese dei conti). */
@@ -148,7 +150,7 @@ function buoniAvanzatiPrima(id, piano, mesi) {
   for (const x of monthRange(piano.mese_inizio, id)) {
     if (x >= id) break;
     const b = meseBase(x, piano, mesi), disp = av + N(b.buoni);
-    av = round(disp - conBuoni(b.voci));
+    av = round(disp - conBuoni(b.voci, piano));
   }
   return av;
 }
@@ -184,7 +186,7 @@ export function calcMonth(m, piano) {
   // (avanzati + ricevuti) e non toccano mai il resto.
   const buoni = round(N(m.buoni));
   const buoniDisp = round(N(m.buoniAvanzati) + buoni);
-  const speseBuoni = conBuoni(m.voci);
+  const speseBuoni = conBuoni(m.voci, piano);
   const buoniUsati = speseBuoni;
   const buoniAvanzo = round(buoniDisp - buoniUsati);
   const speseSoldi = round(spese - buoniUsati);

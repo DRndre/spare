@@ -34,7 +34,7 @@ function fixVoci(v) {
 const cleanVoci = (v) => fixVoci(v);
 function fixCategorie(v) {
   return Array.isArray(v)
-    ? v.filter((c) => c && c.k && String(c.n || "").trim()).map((c) => ({ k: String(c.k), n: String(c.n).trim().slice(0, 40), c: /^#[0-9a-f]{6}$/i.test(c.c) ? c.c : "#8E8E93", i: String(c.i || "tag") }))
+    ? v.filter((c) => c && c.k && String(c.n || "").trim()).map((c) => ({ k: String(c.k), n: String(c.n).trim().slice(0, 40), c: /^#[0-9a-f]{6}$/i.test(c.c) ? c.c : "#8E8E93", i: String(c.i || "tag"), ...(c.b ? { b: true } : {}) }))
     : [];
 }
 

@@ -625,3 +625,4 @@ form.add input.sw:checked { background: var(--accent); }
 .yc-stats > .yc-sub { grid-column: 1 / -1; background: none; padding: 4px 2px 0; font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .yc-stats > .yc-sub:not(:first-child) { margin-top: 6px; }
 .yc-low .tag { font-size: .68rem; }
+.cat-buoni { margin-top: 14px; }

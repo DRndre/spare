@@ -2,7 +2,7 @@
 import {
   N, round, fmt, eur, parseNum, uid, monthRange, monthLabel, monthLabelLong,
   extraInfo, monthData, calcMonth, statoResto, testoResto, simulaDeposito, ordinaPeriodi, periodoDelMese, addMonths,
-  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, CAT_BUONI, modelloOn, valBuono,
+  mesiPiano, meseCorrente, MESI_NOMI, fineSpesa, attivaNel, catBuoni, modelloOn, valBuono,
 } from "./calc.js";
 import {
   sb, configured, state, onStatus, loadAll, savePiano, saveDeposito, saveMese, resetMese, exportData, importData, haExtraDep, haRiporto, haModello, haEntrate,
@@ -145,7 +145,7 @@ function meseRif() { const ms = months(), o = meseCorrente(); return o < ms[0] ?
 const vociModello = () => (state.piano.voci || []).filter((v) => attivaNel(v, meseRif()));
 /** Buoni pasto attivi (valore del buono impostato nel Modello) e spese che si possono pagare con i buoni. */
 const buoniAttivi = () => valBuono(state.piano) > 0;
-const puoBuoni = (cat) => buoniAttivi() && CAT_BUONI.includes(ck(cat));
+const puoBuoni = (cat) => buoniAttivi() && catBuoni(state.piano).includes(ck(cat));
 /** Riga dei buoni pasto sotto il resto in tasca: disponibili, usati, avanzano (o quanto è uscito di tasca). */
 function bpHtml(c, modello = false) {
   if (!buoniAttivi()) return "";
@@ -454,7 +454,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   let bpOn = false, swb = null;
   if (buoniAttivi()) {
     swb = switchRow(prefix + "a-bp", "Pagata con i buoni pasto", "Esce dai buoni, non dal resto in tasca", false, (x) => { bpOn = x; });
-    swb.classList.add("per-sw"); swb.hidden = !CAT_BUONI.includes(catScelta); form.querySelector(".cat-pick").after(swb);
+    swb.classList.add("per-sw"); swb.hidden = !catBuoni(state.piano).includes(catScelta); form.querySelector(".cat-pick").after(swb);
   }
   // Modello: "Solo per un periodo" (spesa a rate)
   const wPer = { da: meseRif(), rate: 0 }; let perOn = false, perBox = null;
@@ -476,7 +476,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.new) { apriCategorie({ state, savePiano, saveMese, nuova: true, onCreata: (k) => { addCat = k; }, onChange: () => { addAperto = prefix; render(); } }); return; }
     catScelta = addCat = b.dataset.k; disegnaPick();
-    if (swb) { swb.hidden = !CAT_BUONI.includes(catScelta); if (swb.hidden) { bpOn = false; swb.querySelector("input").checked = false; } }
+    if (swb) { swb.hidden = !catBuoni(state.piano).includes(catScelta); if (swb.hidden) { bpOn = false; swb.querySelector("input").checked = false; } }
   };
   form.onsubmit = (ev) => {
     ev.preventDefault();
@@ -488,7 +488,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     if (perOn && !wPer.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; perBox?.querySelector("input").focus(); return; }
     const cat = catScelta;
     const nid = uid();
-    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && CAT_BUONI.includes(cat) ? { buoni: true } : {}) };
+    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && catBuoni(state.piano).includes(cat) ? { buoni: true } : {}) };
     const aggiungi = (ancheMesi) => {
       change((list) => list.push(nuova));
       if (ancheMesi) mesiPersNelPeriodo(nuova).forEach((id) => { state.mesi[id].voci.push({ ...nuova, id: uid() }); saveMese(id); });
@@ -613,7 +613,7 @@ function hero(m, c, extraNome, { conTitolo = false } = {}) {
 }
 function fillBar(bar, leg, m, c) {
   const fb = c.speseBuoni ? c.buoniUsati / c.speseBuoni : 0; // quota pagata con i buoni (non pesa sulle entrate in soldi)
-  const quota = (v) => N(v.importo) * (v.buoni && CAT_BUONI.includes(ck(v.cat)) ? 1 - fb : 1);
+  const quota = (v) => N(v.importo) * (v.buoni && catBuoni(state.piano).includes(ck(v.cat)) ? 1 - fb : 1);
   const parts = categorie(state.piano).map((x) => ({ n: x.n, c: x.c, i: x.i, v: m.voci.filter((v) => ck(v.cat) === x.k).reduce((a, v) => a + quota(v), 0) })).filter((p) => p.v > 0);
   if (c.toDep > 0) parts.push({ n: T().leg, c: "--c-risp", v: c.toDep });
   const base = Math.max(c.entrate + Math.max(0, N(c.dalPrima)), parts.reduce((a, p) => a + p.v, 0)) || 1;
@@ -861,7 +861,7 @@ function chartHtml(d) {
   const entrate = d.reduce((a, x) => a + x.cc.entrate, 0), usatiA = round(d.reduce((a, x) => a + N(x.cc.buoniUsati), 0));
   const perCat = {};
   d.forEach((x) => { const fb = x.cc.speseBuoni ? x.cc.buoniUsati / x.cc.speseBuoni : 0;
-    monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo) * (v.buoni && CAT_BUONI.includes(k) ? 1 - fb : 1); }); });
+    monthData(x.id, state.piano, state.mesi).voci.forEach((v) => { const k = ck(v.cat); perCat[k] = (perCat[k] || 0) + N(v.importo) * (v.buoni && catBuoni(state.piano).includes(k) ? 1 - fb : 1); }); });
   const parte = d.reduce((a, x) => a + x.parte, 0), resto = d.reduce((a, x) => a + x.resto, 0);
   const spese = Object.values(perCat).reduce((a, v) => a + v, 0);
   const righe = categorie(state.piano).filter((c) => perCat[c.k] > 0).map((c) => ({ n: c.n, c: c.c, i: c.i, v: perCat[c.k] })).sort((a, b) => b.v - a.v);

@@ -92,7 +92,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   Spese del Modello contano le spese attive nel mese di oggi (`meseRif()`), con "a <mese>" se ci sono spese a tempo.
 - **Buoni pasto (di lato)**: `piani.buoni_num`/`buoni_valore` ("20 × 6,50 €"), `mesi.buoni_num` (null = come il Modello).
   **Non** entrano nel resto in tasca: sotto il resto c'è la riga "Buoni pasto: X disponibili · usati Y · avanzano Z" (nel
-  Modello "+ X in buoni pasto · ne usi Y"). Le spese di **Spesa** e **Svago e uscite** (`CAT_BUONI` in calc.js) hanno il chip
+  Modello "+ X in buoni pasto · ne usi Y"). Le spese di **Spesa** e **Svago e uscite** (`CAT_BUONI` in calc.js) e delle categorie dell'utente con l'interruttore
+  "Si può pagare con i buoni pasto" (menu ☰ → Categorie → modifica; `b: true` in `piani.categorie`, nessuna colonna; `catBuoni(piano)`;
+  esempio di Andrea: "Bar e distributori" per il distributore Foorban al lavoro) hanno il chip
   "Paga con i buoni" / "Pagata con i buoni" (`v.buoni = true` in `voci`, nessuna colonna; anche interruttore nel modulo Nuova
   spesa, visibile solo per quelle categorie): escono dai buoni e **non toccano mai il resto**. I buoni non usati si accumulano
   (`buoniAvanzati` in monthData, da 0 dal primo mese); se "avanzano" va sotto zero il numero è rosso, senza frasi né blocchi

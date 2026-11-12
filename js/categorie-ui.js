@@ -105,6 +105,13 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
     };
     disegnaIcone();
     f.body.appendChild(ig);
+    // Solo per le categorie di spesa: si può pagare con i buoni pasto (come Spesa e Svago e uscite)
+    if (tipo === "spese") {
+      const sb = document.createElement("label"); sb.className = "field riga sw-row cat-buoni"; sb.htmlFor = "cat-buoni";
+      sb.innerHTML = `<span class="label">Si può pagare con i buoni pasto</span><input type="checkbox" role="switch" class="sw" id="cat-buoni"${w.b ? " checked" : ""}><span class="hint">Le spese di questa categoria avranno "Paga con i buoni"</span>`;
+      sb.querySelector("input").onchange = (e) => { w.b = e.target.checked; };
+      f.body.appendChild(sb);
+    }
     const err = document.createElement("div"); err.className = "err"; err.hidden = true; f.body.appendChild(err);
 
     f.foot.innerHTML = "";
@@ -118,7 +125,7 @@ export function apriCategorie({ state, savePiano, saveMese, onChange, nuova = fa
       if (K.lista(state.piano).some((c) => c.k !== w.k && c.n.toLowerCase() === nome.toLowerCase())) { err.textContent = `Esiste già ${tipo === "entrate" ? "un tipo" : "una categoria"} con questo nome.`; err.hidden = false; return; }
       const lista = state.piano[K.campo] || (state.piano[K.campo] = []);
       const i = lista.findIndex((c) => c.k === w.k);
-      const dato = { k: w.k, n: nome, c: w.c, i: w.i };
+      const dato = { k: w.k, n: nome, c: w.c, i: w.i, ...(tipo === "spese" && w.b ? { b: true } : {}) };
       if (i >= 0) lista[i] = dato; else lista.push(dato);
       savePiano();
       if (nuova && !cat) { f.close(); onCreata && onCreata(w.k); onChange && onChange(); return; }
