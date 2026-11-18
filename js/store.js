@@ -27,6 +27,7 @@ function fixVoci(v) {
       // spesa a tempo (facoltativo): dal mese "AAAA-MM" per n rate
       if (/^\d{4}-\d{2}$/.test(String(x.da || "")) && N(x.rate) >= 1) { o.da = String(x.da); o.rate = Math.round(N(x.rate)); }
       if (x.buoni === true) o.buoni = true; // pagata con i buoni pasto
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(x.d || ""))) o.d = String(x.d); // data della spesa (facoltativa, solo nei mesi)
       return o;
     })
     : [];

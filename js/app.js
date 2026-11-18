@@ -374,14 +374,16 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   const perIns = ordineSpese() === "ins";
   if (voci.length > 1) {
     const sg = document.createElement("div"); sg.className = "seg ord-spese"; sg.setAttribute("role", "group"); sg.setAttribute("aria-label", "Ordine delle spese");
-    [["cat", "Per categoria"], ["ins", "Per inserimento"]].forEach(([k, t]) => {
+    [["cat", "Per categoria"], ["ins", mese ? "Per data" : "Per inserimento"]].forEach(([k, t]) => {
       const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String((k === "ins") === perIns));
       b.onclick = () => { if ((k === "ins") !== perIns) { try { localStorage.setItem("spare-ordine-spese", k); } catch {} render(); } };
       sg.appendChild(b);
     });
     card.appendChild(sg);
   }
-  const gruppi = perIns ? [{ c: null, vs: [...voci].reverse() }] : categorie(state.piano).map((c) => ({ c, vs: voci.filter((v) => ck(v.cat) === c.k) }));
+  // "Per data" (nei mesi): le più recenti in alto, quelle senza data in fondo (a pari data, l'ultima inserita prima)
+  const perData = (lst) => lst.map((v, i) => [v, i]).sort(([a, i], [b, j]) => (b.d || "").localeCompare(a.d || "") || j - i).map(([v]) => v);
+  const gruppi = perIns ? [{ c: null, vs: mese ? perData(voci) : [...voci].reverse() }] : categorie(state.piano).map((c) => ({ c, vs: voci.filter((v) => ck(v.cat) === c.k) }));
   gruppi.forEach(({ c, vs }) => {
     if (!vs.length) return;
     const g = document.createElement("div"); g.className = "group" + (c ? "" : " group-ins");
@@ -447,6 +449,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
           r.classList.add("con-tag"); r.appendChild(tag);
         }
       }
+      if (mese && (v.d || perIns)) r.appendChild(tagData(v, change, mese));
       if (puoBuoni(v.cat)) {
         // spesa di Spesa o Svago e uscite: si può segnare "pagata con i buoni pasto"
         const bc = document.createElement("button"); bc.type = "button"; bc.className = "per-tag bp-chip" + (v.buoni ? " on" : "");
@@ -503,7 +506,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     if (perOn && !wPer.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; perBox?.querySelector("input").focus(); return; }
     const cat = catScelta;
     const nid = uid();
-    const nuova = { id: nid, nome, importo: round(imp), cat, ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && catBuoni(state.piano).includes(cat) ? { buoni: true } : {}) };
+    const nuova = { id: nid, nome, importo: round(imp), cat, ...(mese ? { d: dataPerMese(mese) } : {}), ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && catBuoni(state.piano).includes(cat) ? { buoni: true } : {}) };
     const aggiungi = (ancheMesi) => {
       change((list) => list.push(nuova));
       if (ancheMesi) mesiPersNelPeriodo(nuova).forEach((id) => { state.mesi[id].voci.push({ ...nuova, id: uid() }); saveMese(id); });
@@ -702,6 +705,25 @@ function sceltaExtraDep(id, m, ex) {
   return box;
 }
 
+/** Data di una spesa nuova: oggi se il mese è quello in corso, se no il primo del mese. */
+function dataPerMese(mese) {
+  const o = new Date(), oggi = `${o.getFullYear()}-${String(o.getMonth() + 1).padStart(2, "0")}-${String(o.getDate()).padStart(2, "0")}`;
+  return oggi.slice(0, 7) === mese ? oggi : mese + "-01";
+}
+const dataCorta = (d) => `${Number(d.slice(8))} ${MESI_NOMI[Number(d.slice(5, 7)) - 1].slice(0, 3).toLowerCase()}`;
+/** Etichetta con la data ("12 nov"): toccandola si cambia; senza data "Aggiungi la data". */
+function tagData(v, change, mese) {
+  const b = document.createElement("button"); b.type = "button"; b.className = "per-tag data-tag" + (v.d ? "" : " vuota");
+  b.innerHTML = `${icona("calendar", "currentColor", 12)} ${v.d ? dataCorta(v.d) : "Aggiungi la data"}`;
+  b.setAttribute("aria-label", v.d ? `Data: ${dataCorta(v.d)}, cambia` : "Aggiungi la data");
+  const inp = document.createElement("input"); inp.type = "date"; inp.className = "data-input"; inp.tabIndex = -1;
+  inp.min = mese + "-01"; inp.max = mese + "-" + String(new Date(Number(mese.slice(0, 4)), Number(mese.slice(5)), 0).getDate()).padStart(2, "0");
+  inp.value = v.d || dataPerMese(mese);
+  inp.addEventListener("change", () => { if (!inp.value) return; change((list) => { const x = list.find((z) => z.id === v.id); if (x) x.d = inp.value; }); render(); });
+  b.onclick = () => { try { inp.showPicker(); } catch { inp.focus(); inp.click(); } };
+  b.appendChild(inp);
+  return b;
+}
 const ordineSpese = () => { try { return localStorage.getItem("spare-ordine-spese") === "ins" ? "ins" : "cat"; } catch { return "cat"; } };
 
 /* ---------- Mesi personalizzati ---------- */
@@ -771,7 +793,7 @@ function renderMesi(v) {
     const copia = () => {
       const t = monthData(prima, state.piano, state.mesi), old = state.mesi[sel];
       state.mesi[sel] = { stipendio: t.stipendio, entrate_extra: null, buoni_num: t.buoni_num, risparmio: t.risparmio, prelievo: t.prelievo,
-        extra: old ? old.extra : null, extra_dep: old ? old.extra_dep ?? null : null, entrate: old ? old.entrate || [] : [], voci: t.voci.map((x) => ({ ...x, id: uid() })) };
+        extra: old ? old.extra : null, extra_dep: old ? old.extra_dep ?? null : null, entrate: old ? old.entrate || [] : [], voci: t.voci.map(({ d, ...x }) => ({ ...x, id: uid() })) }; // le date non si copiano
       saveMese(sel); render();
     };
     cb.onclick = () => (m.custom

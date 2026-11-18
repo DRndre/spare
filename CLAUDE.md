@@ -41,8 +41,11 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   (numero, dal Modello; solo se il valore del buono > 0), 13ª/14ª; sotto, riquadro **Entrate extra** "solo questo mese": elenco
   come le spese, raggruppato per **tipo** (Lavoretto, Regalo, Vincita, Rimborso, Vendita, Altro + tipi dell'utente), modulo "Nuova entrata
   extra" con i tipi a scelta e "Nuovo tipo"; `entrateEditor`, `mesi.entrate` jsonb, `piani.cat_entrate`, query 14, `haEntrate()`;
-  senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (in cima, con almeno 2 spese, selettore **Per categoria | Per inserimento**:
-  a gruppi come sempre oppure elenco unico con le più recenti in alto e l'icona della categoria davanti al nome; scelta per dispositivo
+  senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (in cima, con almeno 2 spese, selettore **Per categoria | Per data** (nel Modello
+  "Per inserimento"): a gruppi come sempre oppure elenco unico, le più recenti in alto e le senza data in fondo, con l'icona della categoria davanti al nome.
+  **Data delle spese** (solo nei mesi, `v.d` "AAAA-MM-GG" in `voci`, nessuna colonna; `fixVoci` la conserva): una spesa nuova prende oggi
+  (o il primo del mese se non è il mese in corso, `dataPerMese`); etichetta "12 nov" sotto il nome che apre il calendario (`tagData`);
+  in "Per data" le spese senza data hanno "Aggiungi la data". Le spese del Modello non hanno data; "Copia dal mese prima" non copia le date; scelta per dispositivo
   in `localStorage` "spare-ordine-spese", vale anche nel Modello; modulo aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
   poi blocchi separati: *Al deposito* (verde) e riquadro grigio senza titolo (niente "Rimasto in tasca" né "Spese mese per mese") con due coppie Mese migliore / Mese peggiore:
