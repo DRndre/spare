@@ -370,11 +370,22 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   const card = document.createElement("section"); card.className = "card spese";
   card.innerHTML = titoloFuori ? "" : `<div class="card-head"><h2>Spese</h2><span class="tot" data-live="spese">${tot}</span></div>`;
   if (!voci.length) card.insertAdjacentHTML("beforeend", '<div class="empty">Nessuna spesa: aggiungi la prima qui sotto.</div>');
-  categorie(state.piano).forEach((c) => {
-    const vs = voci.filter((v) => ck(v.cat) === c.k);
+  // Ordine: per categoria (a gruppi, come sempre) o per inserimento (elenco unico, le più recenti in alto); scelta ricordata sul dispositivo
+  const perIns = ordineSpese() === "ins";
+  if (voci.length > 1) {
+    const sg = document.createElement("div"); sg.className = "seg ord-spese"; sg.setAttribute("role", "group"); sg.setAttribute("aria-label", "Ordine delle spese");
+    [["cat", "Per categoria"], ["ins", "Per inserimento"]].forEach(([k, t]) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String((k === "ins") === perIns));
+      b.onclick = () => { if ((k === "ins") !== perIns) { try { localStorage.setItem("spare-ordine-spese", k); } catch {} render(); } };
+      sg.appendChild(b);
+    });
+    card.appendChild(sg);
+  }
+  const gruppi = perIns ? [{ c: null, vs: [...voci].reverse() }] : categorie(state.piano).map((c) => ({ c, vs: voci.filter((v) => ck(v.cat) === c.k) }));
+  gruppi.forEach(({ c, vs }) => {
     if (!vs.length) return;
-    const g = document.createElement("div"); g.className = "group";
-    g.innerHTML = `<div class="group-head"><span class="gname">${badge(c, 24)}${esc(c.n)}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
+    const g = document.createElement("div"); g.className = "group" + (c ? "" : " group-ins");
+    if (c) g.innerHTML = `<div class="group-head"><span class="gname">${badge(c, 24)}${esc(c.n)}</span><span class="gsum" data-gsum="${c.k}"></span></div>`;
     vs.forEach((v) => {
       const r = document.createElement("div"); r.className = "row"; r.dataset.riga = v.id;
       const nome = document.createElement("input"); nome.type = "text"; nome.value = v.nome; nome.id = prefix + "n-" + v.id; nome.setAttribute("aria-label", "Nome voce");
@@ -387,7 +398,11 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
       const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.setAttribute("aria-label", "Elimina " + v.nome);
       del.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       del.onclick = () => confirmInline(r, `Eliminare “${v.nome}”?`, "Elimina", () => { change((list) => { const i = list.findIndex((z) => z.id === v.id); if (i >= 0) list.splice(i, 1); }); render(); });
-      r.append(nome, wi);
+      if (perIns) {
+        // elenco unico: l'icona della categoria davanti al nome
+        const nc = document.createElement("span"); nc.className = "nome-cat"; nc.title = catInfo(state.piano, v.cat).n;
+        nc.innerHTML = badge(catInfo(state.piano, v.cat), 24); nc.appendChild(nome); r.append(nc, wi);
+      } else r.append(nome, wi);
       if (periodi) {
         // spesa a tempo: etichetta sotto il nome e pulsante per impostare / cambiare il periodo
         r.classList.add("con-per");
@@ -686,6 +701,8 @@ function sceltaExtraDep(id, m, ex) {
   }
   return box;
 }
+
+const ordineSpese = () => { try { return localStorage.getItem("spare-ordine-spese") === "ins" ? "ins" : "cat"; } catch { return "cat"; } };
 
 /* ---------- Mesi personalizzati ---------- */
 // Testi sotto 13ª/14ª e risparmio: cambiano mentre scrivi quanta 13ª/14ª va al deposito

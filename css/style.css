@@ -626,3 +626,11 @@ form.add input.sw:checked { background: var(--accent); }
 .yc-stats > .yc-sub:not(:first-child) { margin-top: 6px; }
 .yc-low .tag { font-size: .68rem; }
 .cat-buoni { margin-top: 14px; }
+
+/* Spese: ordine per categoria / per inserimento */
+.seg.ord-spese { display: flex; margin: 12px 16px 4px; }
+.seg.ord-spese button { flex: 1; border: 0; background: transparent; font: inherit; font-size: .9rem; font-weight: 500; padding: 6px 10px; border-radius: 7px; color: var(--seg-fg); cursor: pointer; }
+.seg.ord-spese button[aria-pressed="true"] { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 600; }
+.nome-cat { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nome-cat > input { flex: 1; min-width: 0; }
+.group-ins { padding-top: 6px; }

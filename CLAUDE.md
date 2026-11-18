@@ -41,8 +41,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   (numero, dal Modello; solo se il valore del buono > 0), 13ª/14ª; sotto, riquadro **Entrate extra** "solo questo mese": elenco
   come le spese, raggruppato per **tipo** (Lavoretto, Regalo, Vincita, Rimborso, Vendita, Altro + tipi dell'utente), modulo "Nuova entrata
   extra" con i tipi a scelta e "Nuovo tipo"; `entrateEditor`, `mesi.entrate` jsonb, `piani.cat_entrate`, query 14, `haEntrate()`;
-  senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (scheda invariata, modulo
-  aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
+  senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (in cima, con almeno 2 spese, selettore **Per categoria | Per inserimento**:
+  a gruppi come sempre oppure elenco unico con le più recenti in alto e l'icona della categoria davanti al nome; scelta per dispositivo
+  in `localStorage` "spare-ordine-spese", vale anche nel Modello; modulo aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
   poi blocchi separati: *Al deposito* (verde) e riquadro grigio senza titolo (niente "Rimasto in tasca" né "Spese mese per mese") con due coppie Mese migliore / Mese peggiore:
   sopra titoletto **Entrate** (migliore = entrato di più, soldi nuovi senza "Dal mese prima" né buoni, con etichetta 13ª/14ª; "entrati a <mese>"),
