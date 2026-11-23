@@ -465,7 +465,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     card.appendChild(g);
   });
   const form = document.createElement("form"); form.className = "add"; form.autocomplete = "off";
-  form.innerHTML = `<div class="add-tit">Nuova spesa</div><input class="n" type="text" id="${prefix}a-nome" placeholder="Nome (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile"><div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
+  form.innerHTML = `<div class="add-tit">Nuova spesa</div><input class="n" type="text" id="${prefix}a-nome" placeholder="Nome (es. Palestra)" aria-label="Nome della voce"><input type="text" inputmode="decimal" id="${prefix}a-imp" placeholder="0,00" aria-label="Importo mensile">${mese ? `<label class="add-data" for="${prefix}a-data">${icona("calendar", "currentColor", 16)}<span>Data</span><input type="date" id="${prefix}a-data" value="${dataPerMese(mese)}" min="${mese}-01" max="${fineMese(mese)}"></label>` : ""}<div class="add-act"><button class="btn" type="button" data-annulla="1">Annulla</button><button class="btn primary" type="submit">Aggiungi</button></div><div class="cat-pick" role="radiogroup" aria-label="Categoria"></div><div class="err" hidden></div>`;
   const pick = form.querySelector(".cat-pick");
   let catScelta = addCat;
   // "Pagata con i buoni pasto": solo per le categorie dove si possono usare
@@ -506,7 +506,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
     if (perOn && !wPer.rate) { err.textContent = "Scrivi quante rate sono, ad esempio 12."; err.hidden = false; perBox?.querySelector("input").focus(); return; }
     const cat = catScelta;
     const nid = uid();
-    const nuova = { id: nid, nome, importo: round(imp), cat, ...(mese ? { d: dataPerMese(mese) } : {}), ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && catBuoni(state.piano).includes(cat) ? { buoni: true } : {}) };
+    const nuova = { id: nid, nome, importo: round(imp), cat, ...(mese ? { d: dataScelta(form.querySelector('input[type="date"]'), mese) } : {}), ...(perOn ? { da: wPer.da, rate: wPer.rate } : {}), ...(bpOn && catBuoni(state.piano).includes(cat) ? { buoni: true } : {}) };
     const aggiungi = (ancheMesi) => {
       change((list) => list.push(nuova));
       if (ancheMesi) mesiPersNelPeriodo(nuova).forEach((id) => { state.mesi[id].voci.push({ ...nuova, id: uid() }); saveMese(id); });
@@ -705,6 +705,9 @@ function sceltaExtraDep(id, m, ex) {
   return box;
 }
 
+const fineMese = (mese) => mese + "-" + String(new Date(Number(mese.slice(0, 4)), Number(mese.slice(5)), 0).getDate()).padStart(2, "0");
+/** Data scelta nel modulo "Nuova spesa" (dentro il mese), se no quella di base. */
+const dataScelta = (inp, mese) => { const d = inp && inp.value; return d && d.slice(0, 7) === mese ? d : dataPerMese(mese); };
 /** Data di una spesa nuova: oggi se il mese è quello in corso, se no il primo del mese. */
 function dataPerMese(mese) {
   const o = new Date(), oggi = `${o.getFullYear()}-${String(o.getMonth() + 1).padStart(2, "0")}-${String(o.getDate()).padStart(2, "0")}`;
@@ -1202,6 +1205,10 @@ function renderModello(v) {
   if (haModello()) v.appendChild(switchRow("t-usamod", "Usa il Modello", modOn ? "I mesi seguono il mese tipo qui sotto" : "Spento: compili ogni mese a mano nella scheda Mesi", modOn, (x) => { p.usa_modello = x; savePiano(); render(); }));
   // Modello spento: il conto deposito resta attivo, subito sotto
   if (!modOn) v.appendChild(switchRow("t-usadep", "Uso un conto deposito", usaDep() ? "Scheda Deposito, con tassi e interessi" : "Scheda Risparmi, senza interessi", usaDep(), (x) => { p.usa_deposito = x; savePiano(); render(); }));
+  // Modello spento: i buoni pasto restano attivi qui sotto (valgono in ogni mese)
+  const campoBuoni = () => buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni",
+    ...(haModello() ? { acceso: p.buoni_on !== false, onAcceso: (x) => { p.buoni_on = x; savePiano(); render(); } } : {}) });
+  if (!modOn) { const fb = campoBuoni(); fb.classList.add("buoni-fuori"); v.appendChild(fb); }
   const vv = document.createElement("div"); vv.className = "mod-corpo" + (modOn ? "" : " spento");
   if (!modOn) vv.inert = true;
   v.appendChild(vv);
@@ -1214,10 +1221,9 @@ function renderModello(v) {
   vv.appendChild(secHead("Entrate", eur(c.entrate), "entrate"));
   // Buoni pasto: il riquadro resta, con il suo interruttore; spento si "spegne" (cifre tenute, niente buoni nei mesi)
   const fs = document.createElement("div"); fs.className = "fields";
-  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip" }));
-  fs.appendChild(buoniField(N(p.buoni_num), N(p.buoni_valore), (n) => { p.buoni_num = n; savePiano(); }, (n) => { p.buoni_valore = n; savePiano(); }, { id: "t-buoni",
-    ...(haModello() ? { acceso: p.buoni_on !== false, onAcceso: (x) => { p.buoni_on = x; savePiano(); render(); } } : {}) }));
-  vv.appendChild(fs);
+  fs.appendChild(moneyField("Stipendio", N(p.stipendio), (n) => { p.stipendio = n; savePiano(); }, { id: "t-stip", cls: modOn ? "" : "riga" }));
+  if (modOn) fs.appendChild(campoBuoni());
+  vv.appendChild(modOn ? fs : fs.firstChild);
   vv.insertAdjacentHTML("beforeend", '<p class="hint flush mod-nota">Le entrate che non arrivano tutti i mesi (rimborsi, extra) scrivile solo nel mese, nella scheda Mesi.</p>');
 
   // Mensilità: 12, 13 o 14, con importo e mese di 13ª e 14ª

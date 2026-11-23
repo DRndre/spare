@@ -43,8 +43,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   extra" con i tipi a scelta e "Nuovo tipo"; `entrateEditor`, `mesi.entrate` jsonb, `piani.cat_entrate`, query 14, `haEntrate()`;
   senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (in cima, con almeno 2 spese, selettore **Per categoria | Per data** (nel Modello
   "Per inserimento"): a gruppi come sempre oppure elenco unico, le più recenti in alto e le senza data in fondo, con l'icona della categoria davanti al nome.
-  **Data delle spese** (solo nei mesi, `v.d` "AAAA-MM-GG" in `voci`, nessuna colonna; `fixVoci` la conserva): una spesa nuova prende oggi
-  (o il primo del mese se non è il mese in corso, `dataPerMese`); etichetta "12 nov" sotto il nome che apre il calendario (`tagData`);
+  **Data delle spese** (solo nei mesi, `v.d` "AAAA-MM-GG" in `voci`, nessuna colonna; `fixVoci` la conserva): nel modulo "Nuova spesa" c'è il campo
+  **Data** (calendario, di base oggi o il primo del mese se non è il mese in corso, `dataPerMese`; limitato al mese); etichetta "12 nov" sotto il nome che apre il calendario (`tagData`);
   in "Per data" le spese senza data hanno "Aggiungi la data". Le spese del Modello non hanno data; "Copia dal mese prima" non copia le date; scelta per dispositivo
   in `localStorage` "spare-ordine-spese", vale anche nel Modello; modulo aperto con "+ Aggiungi una spesa"), *Il tuo anno*: Entrate / Spese / Al deposito dell'anno, barra colorata
   delle entrate dell'anno (come quella del resto in tasca), elenco delle 5 categorie più pesanti ("+ Mostra di più" / "− Mostra di meno"),
@@ -110,7 +110,9 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
 - **Modello spento** (`piani.usa_modello`, query 13; interruttore "Usa il Modello" sotto "I tuoi conti partono da"): tutto il
   Modello (Entrate, Mensilità, Risparmio, Spese) resta visibile ma grigio e bloccato (`.mod-corpo.spento`, `inert`), cifre tenute;
   restano attivi mese di partenza, "Uso un conto deposito" (subito sotto "Usa il Modello") e *Altre impostazioni*. `modelloOn()` in calc.js:
-  mesi non personalizzati vuoti, niente 13ª/14ª automatica (`extraInfo` null: si scrivono come entrate extra), niente buoni.
+  mesi non personalizzati vuoti, niente 13ª/14ª automatica (`extraInfo` null: si scrivono come entrate extra).
+  **I buoni pasto restano attivi anche con il Modello spento** (scelta di Andrea): il riquadro "Buoni pasto" esce dal corpo grigio e
+  sta sotto "Uso un conto deposito"; `valBuono()` non guarda più `usa_modello`, ogni mese riceve i buoni del riquadro.
   Scelta di Andrea: "tutto spento tranne le impostazioni". Gli interruttori compaiono solo se la colonna esiste (`haModello()`).
 - **Ogni mese a mano**: in Mesi il link
   **"Copia dal mese prima"** (entrate, risparmio, prelievo e spese; non la 13ª/14ª; se il mese è già personalizzato chiede

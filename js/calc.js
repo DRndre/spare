@@ -100,7 +100,8 @@ export const addMonths = (id, n) => { let [y, m] = id.split("-").map(Number); m 
 /** Il Modello è acceso? (spento = i mesi non personalizzati sono vuoti, niente 13ª/14ª automatica) */
 export const modelloOn = (piano) => piano.usa_modello !== false;
 /** Valore di un buono che conta davvero: 0 se i buoni (o il Modello) sono spenti. */
-export const valBuono = (piano) => (!modelloOn(piano) || piano.buoni_on === false ? 0 : N(piano.buoni_valore));
+// i buoni pasto valgono anche con il Modello spento (scelta di Andrea: sono "fuori" dal Modello, come il conto deposito)
+export const valBuono = (piano) => (piano.buoni_on === false ? 0 : N(piano.buoni_valore));
 export function extraInfo(id, piano) {
   if (!modelloOn(piano)) return null;
   const m = Number(id.slice(5, 7)), n = N(piano.mensilita) || 13;
@@ -173,7 +174,7 @@ function meseBase(id, piano, mesi) {
       voci: (d.voci || []).filter((v) => attivaNel(v, id)),
     };
   }
-  if (!modelloOn(piano)) return { custom: false, stipendio: 0, entrate_extra: 0, buoni_num: 0, buoni: 0, risparmio: 0, prelievo: 0, extra: 0, voci: [] };
+  if (!modelloOn(piano)) return { custom: false, stipendio: 0, entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * valBuono(piano)), risparmio: 0, prelievo: 0, extra: 0, voci: [] };
   return { custom: false, stipendio: N(piano.stipendio), entrate_extra: 0, buoni_num: N(piano.buoni_num), buoni: round(N(piano.buoni_num) * valBuono(piano)), risparmio: N(piano.risparmio), prelievo: 0, extra: exDefault, voci: (piano.voci || []).filter((v) => attivaNel(v, id)) };
 }
 
