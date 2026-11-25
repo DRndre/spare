@@ -42,7 +42,7 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   come le spese, raggruppato per **tipo** (Lavoretto, Regalo, Vincita, Rimborso, Vendita, Altro + tipi dell'utente), modulo "Nuova entrata
   extra" con i tipi a scelta e "Nuovo tipo"; `entrateEditor`, `mesi.entrate` jsonb, `piani.cat_entrate`, query 14, `haEntrate()`;
   senza colonna resta la vecchia cifra unica), *Risparmio* (deposito/messo da parte, Prelievo "Ripresi dal deposito"), *Spese* (in cima, con almeno 2 spese, selettore **Per categoria | Per data** (nel Modello
-  "Per inserimento"): a gruppi come sempre oppure elenco unico, le più recenti in alto e le senza data in fondo, con l'icona della categoria davanti al nome.
+  "Per inserimento"): a gruppi (nei mesi, dentro ogni categoria le più recenti in alto e le senza data in fondo) oppure elenco unico, le più recenti in alto e le senza data in fondo, con l'icona della categoria davanti al nome.
   **Data delle spese** (solo nei mesi, `v.d` "AAAA-MM-GG" in `voci`, nessuna colonna; `fixVoci` la conserva): nel modulo "Nuova spesa" c'è il campo
   **Data** (calendario, di base oggi o il primo del mese se non è il mese in corso, `dataPerMese`; limitato al mese); etichetta "12 nov" sotto il nome che apre il calendario (`tagData`);
   in "Per data" le spese senza data hanno "Aggiungi la data". Le spese del Modello non hanno data; "Copia dal mese prima" non copia le date; scelta per dispositivo

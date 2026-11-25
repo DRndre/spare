@@ -383,7 +383,7 @@ function vociEditor(container, getVoci, change, prefix, { titoloFuori = false, p
   }
   // "Per data" (nei mesi): le più recenti in alto, quelle senza data in fondo (a pari data, l'ultima inserita prima)
   const perData = (lst) => lst.map((v, i) => [v, i]).sort(([a, i], [b, j]) => (b.d || "").localeCompare(a.d || "") || j - i).map(([v]) => v);
-  const gruppi = perIns ? [{ c: null, vs: mese ? perData(voci) : [...voci].reverse() }] : categorie(state.piano).map((c) => ({ c, vs: voci.filter((v) => ck(v.cat) === c.k) }));
+  const gruppi = perIns ? [{ c: null, vs: mese ? perData(voci) : [...voci].reverse() }] : categorie(state.piano).map((c) => { const vs = voci.filter((v) => ck(v.cat) === c.k); return { c, vs: mese ? perData(vs) : vs }; });
   gruppi.forEach(({ c, vs }) => {
     if (!vs.length) return;
     const g = document.createElement("div"); g.className = "group" + (c ? "" : " group-ins");
