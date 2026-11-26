@@ -129,6 +129,8 @@ Su Supabase *Site URL* e *Redirect URLs* devono contenere `https://drndre.github
   dell'anno, mese migliore/peggiore), più riga "In tasca a fine <mese>". Interruttore "Porta il resto al mese dopo" in
   *Altre impostazioni* del Modello. Spiegato in Come funziona.
 - **In sospeso (Andrea ha detto di aspettare):** regole più severe per la password.
+  Domanda aperta (Andrea non ha ancora risposto): aggiungere una coppia **"Da parte"** (mese migliore / peggiore per i soldi
+  messi da parte) nel riepilogo dell'anno, sotto Entrate e Spese?
   **Dashboard / Riepilogo** (Andrea deve capire bene come farla): bozza nel branch **`anteprima-riepilogo-2`** (= main del 30/10/2026 +
   riepilogo; il vecchio `anteprima-riepilogo` è superato), **online in `anteprima/`** (copia con `git archive anteprima-riepilogo-2
   index.html css js fonts icons`, senza manifest né service worker, noindex, bollino arancio). Composizione: deposito/risparmi,
